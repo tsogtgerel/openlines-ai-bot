@@ -1,0 +1,246 @@
+[
+  {
+    "id": "log-1789359843350-nukp",
+    "timestamp": "2026-09-14T04:24:03.350Z",
+    "dialogId": "sim-1789359843350",
+    "customerMessage": "Танайд сар луу нисэх сансрын пуужингийн сэлбэг зардаг уу?",
+    "botAnswer": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+    "handedOff": true,
+    "handoffReason": "low_confidence",
+    "matchedArticles": [],
+    "durationMs": 0
+  },
+  {
+    "id": "log-1789359841035-11kk",
+    "timestamp": "2026-09-14T04:24:01.035Z",
+    "dialogId": "sim-1789359841035",
+    "customerMessage": "Надад оператор хэрэгтэй байна, хүнтэй холбогдъё",
+    "botAnswer": "Би таныг яг одоо харилцагчийн үйлчилгээний ажилтантай (оператортой) холбож байна. Түр хүлээнэ үү...",
+    "handedOff": true,
+    "handoffReason": "keyword",
+    "matchedArticles": [],
+    "durationMs": 0
+  },
+  {
+    "id": "log-1789359839257-2qmq",
+    "timestamp": "2026-09-14T04:23:59.257Z",
+    "dialogId": "sim-1789359838592",
+    "customerMessage": "StorePay болон PocketZero-оор хүүгүй хувааж төлж болох уу?",
+    "botAnswer": "Тийм ээ, та StorePay болон PocketZero үйлчилгээг ашиглан урьдчилгаагүй, 0% хүүтэй хуваан төлөх боломжтой.",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-payment",
+        "title": "Төлбөрийн нөхцөл, Хүүгүй хуваан төлөлт & НӨАТ",
+        "score": 0.9407407407407408
+      }
+    ],
+    "durationMs": 665
+  },
+  {
+    "id": "log-1789359833911-wqdq",
+    "timestamp": "2026-09-14T04:23:53.911Z",
+    "dialogId": "sim-1789359832517",
+    "customerMessage": "Танай ажлын цагийн хуваарь ямар байдаг вэ?",
+    "botAnswer": "Сайн байна уу? Таны асуултад хариулъя.\n\nМанай ажлын цагийн хуваарь дараах байдалтай байна:\n\n* **Харилцагчийн үйлчилгээний төв болон төв оффис:** Даваа - Баасан гаригт 09:00 - 18:30 цагийн хооронд ажиллана.\n* **БСБ-гийн бүх салбар их дэлгүүрүүд:** Даваа-Ням гаригт 10:00 - 20:00 цаг хүртэл өдөр бүр ажиллана.\n* **Онлайн дэлгүүр:** Захиалгыг 24/7 цагийн турш хүлээн авна.",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 1
+      }
+    ],
+    "durationMs": 1393
+  },
+  {
+    "id": "log-1789359817972-vq2g",
+    "timestamp": "2026-09-14T04:23:37.972Z",
+    "dialogId": "sim-1789359817971",
+    "customerMessage": "Танай хүргэлт хэдэн цагт ирдэг вэ? Үнэгүй юу?",
+    "botAnswer": "I couldn't find an exact answer to your question in our knowledge base. Connecting you with a specialist who will be happy to assist!",
+    "handedOff": true,
+    "handoffReason": "low_confidence",
+    "matchedArticles": [],
+    "durationMs": 1
+  },
+  {
+    "id": "log-1789359566566-m3xm",
+    "timestamp": "2026-09-14T04:19:26.566Z",
+    "dialogId": "sim-1789359566566",
+    "customerMessage": "/operator",
+    "botAnswer": "I am connecting you with a human specialist right now. Please hold on...",
+    "handedOff": true,
+    "handoffReason": "user_button",
+    "matchedArticles": [],
+    "durationMs": 0
+  },
+  {
+    "id": "log-1789359353917-tnrk",
+    "timestamp": "2026-09-14T04:15:53.917Z",
+    "dialogId": "sim-1789359352566",
+    "customerMessage": "What are your working hours?",
+    "botAnswer": "Our customer support and sales teams operate Monday through Friday from 09:00 to 18:30 (EST). While you can place orders online 24/7, please note that non-urgent inquiries received outside of these working hours are prioritized first thing the next business morning.",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 1
+      },
+      {
+        "id": "art-contact",
+        "title": "How to Reach a Live Specialist or Operator",
+        "score": 0.16000000000000003
+      }
+    ],
+    "durationMs": 1351
+  },
+  {
+    "id": "log-1789359334293-q8px",
+    "timestamp": "2026-09-14T04:15:34.293Z",
+    "dialogId": "sim-1789359334293",
+    "customerMessage": "/operator",
+    "botAnswer": "I am connecting you with a human specialist right now. Please hold on...",
+    "handedOff": true,
+    "handoffReason": "user_button",
+    "matchedArticles": [],
+    "durationMs": 0
+  },
+  {
+    "id": "log-1789359326856-f21v",
+    "timestamp": "2026-09-14T04:15:26.856Z",
+    "dialogId": "sim-1789359326854",
+    "customerMessage": "hello",
+    "botAnswer": "I couldn't find an exact answer to your question in our knowledge base. Connecting you with a specialist who will be happy to assist!",
+    "handedOff": true,
+    "handoffReason": "low_confidence",
+    "matchedArticles": [],
+    "durationMs": 2
+  },
+  {
+    "id": "log-1789358895485-n2tr",
+    "timestamp": "2026-09-14T04:08:15.485Z",
+    "dialogId": "sim-1789358895485",
+    "customerMessage": "/operator",
+    "botAnswer": "I am connecting you with a human specialist right now. Please hold on...",
+    "handedOff": true,
+    "handoffReason": "user_button",
+    "matchedArticles": [],
+    "durationMs": 0
+  },
+  {
+    "id": "log-1789358893437-7xcb",
+    "timestamp": "2026-09-14T04:08:13.437Z",
+    "dialogId": "sim-1789358892995",
+    "customerMessage": "Can I fly to Mars on a spaceship?",
+    "botAnswer": "I don't have enough verified information in our knowledge base to answer this completely. Let me transfer you to a specialist.",
+    "handedOff": true,
+    "handoffReason": "model_declined",
+    "matchedArticles": [
+      {
+        "id": "art-contact",
+        "title": "How to Reach a Live Specialist or Operator",
+        "score": 0.5777777777777778
+      },
+      {
+        "id": "art-delivery",
+        "title": "Delivery Times & Order Tracking",
+        "score": 0.25555555555555554
+      },
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 0.2444444444444444
+      }
+    ],
+    "durationMs": 442
+  },
+  {
+    "id": "log-1789358890824-jcd6",
+    "timestamp": "2026-09-14T04:08:10.824Z",
+    "dialogId": "sim-1789358889694",
+    "customerMessage": "What are your business hours?",
+    "botAnswer": "Our customer support and sales teams operate Monday through Friday from 09:00 to 18:30 (EST).",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 1
+      },
+      {
+        "id": "art-delivery",
+        "title": "Delivery Times & Order Tracking",
+        "score": 0.16000000000000003
+      }
+    ],
+    "durationMs": 1129
+  },
+  {
+    "id": "log-1789358868697-qku7",
+    "timestamp": "2026-09-14T04:07:48.697Z",
+    "dialogId": "sim-1789358866741",
+    "customerMessage": "What are your business hours?",
+    "botAnswer": "I don't have enough verified information in our knowledge base to answer this completely. Let me transfer you to a specialist.",
+    "handedOff": true,
+    "handoffReason": "model_declined",
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 1
+      },
+      {
+        "id": "art-delivery",
+        "title": "Delivery Times & Order Tracking",
+        "score": 0.16000000000000003
+      }
+    ],
+    "durationMs": 1956
+  },
+  {
+    "id": "log-1789358860328-6rcb",
+    "timestamp": "2026-09-14T04:07:40.328Z",
+    "dialogId": "sim-1789358858033",
+    "customerMessage": "What are your business hours?",
+    "botAnswer": "I don't have enough verified information in our knowledge base to answer this completely. Let me transfer you to a specialist.",
+    "handedOff": true,
+    "handoffReason": "model_declined",
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 1
+      },
+      {
+        "id": "art-delivery",
+        "title": "Delivery Times & Order Tracking",
+        "score": 0.16000000000000003
+      }
+    ],
+    "durationMs": 2295
+  },
+  {
+    "id": "log-1789358829217-xjw1",
+    "timestamp": "2026-09-14T04:07:09.217Z",
+    "dialogId": "sim-1789358827541",
+    "customerMessage": "What are your business hours?",
+    "botAnswer": "I don't have enough verified information in our knowledge base to answer this completely. Let me transfer you to a specialist.",
+    "handedOff": true,
+    "handoffReason": "model_declined",
+    "matchedArticles": [
+      {
+        "id": "art-hours",
+        "title": "Working Hours & Customer Support Schedule",
+        "score": 1
+      },
+      {
+        "id": "art-delivery",
+        "title": "Delivery Times & Order Tracking",
+        "score": 0.16000000000000003
+      }
+    ],
+    "durationMs": 1675
+  }
+]

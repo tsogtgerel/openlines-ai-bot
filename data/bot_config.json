@@ -1,0 +1,32 @@
+{
+  "botId": 19170,
+  "botCode": "kb_ai_helper",
+  "botName": "BSB AI Туслах",
+  "selectedLineId": null,
+  "selectedLineName": "",
+  "isPollingActive": false,
+  "currentOffset": 9,
+  "tone": "professional",
+  "language": "mn",
+  "handoffThreshold": 0.2,
+  "fallbackMessage": "Уучлаарай, системийн түр саатлын улмаас таныг харилцагчийн үйлчилгээний ажилтантай шууд холбож байна. Түр хүлээнэ үү.",
+  "operatorKeywords": [
+    "оператор",
+    "хүн",
+    "хүнтэй",
+    "хүнтэй ярих",
+    "менежер",
+    "ажилтан",
+    "мэргэжилтэн",
+    "туслах",
+    "утсаар",
+    "холбогдох",
+    "operator",
+    "human",
+    "specialist",
+    "manager",
+    "/operator"
+  ],
+  "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.",
+  "model": "bitrix/bitrixgpt-5.5"
+}

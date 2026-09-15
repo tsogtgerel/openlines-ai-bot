@@ -1,0 +1,8 @@
+{
+  "name": "AI Bot for Open Channels",
+  "description": "Bitrix24 Open Lines AI bot with omnichannel live chat workplace, customer inquiry classification across channels, AI-powered automated response generation, and analytical reporting.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

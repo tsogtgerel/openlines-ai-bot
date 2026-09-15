@@ -1,0 +1,1284 @@
+{
+  "currentAgentId": "bx-15",
+  "agents": [
+    {
+      "id": "agent-1",
+      "name": "Болдбаатар Ц.",
+      "role": "Ахлах онлайн оператор",
+      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
+      "status": "online",
+      "email": "boldbaatar@bsb.mn",
+      "phone": "9911-0021",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": "shift-1"
+    },
+    {
+      "id": "agent-2",
+      "name": "Анударь Э.",
+      "role": "Борлуулалтын зөвлөх",
+      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
+      "status": "busy",
+      "email": "anudari@bsb.mn",
+      "phone": "8811-3344",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": "shift-2"
+    },
+    {
+      "id": "agent-3",
+      "name": "Тэмүүлэн М.",
+      "role": "Хүргэлт & Сервис туслах",
+      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
+      "status": "break",
+      "email": "temuulen@bsb.mn",
+      "phone": "9555-8899",
+      "isClockedIn": true,
+      "isOnBreak": true,
+      "activeShiftId": "shift-3"
+    },
+    {
+      "id": "agent-4",
+      "name": "Сарнай Б.",
+      "role": "Харилцагчийн үйлчилгээний менежер",
+      "avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150",
+      "status": "offline",
+      "email": "sarnai@bsb.mn",
+      "phone": "9901-5566",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null
+    },
+    {
+      "id": "bx-15",
+      "bitrixUserId": 15,
+      "name": "Цогтгэрэл Ч",
+      "role": "Мэдээллийн технологийн захирал",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
+      "status": "online",
+      "email": "tsogtgerel@bsb.mn",
+      "phone": "+976 75100272",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        9,
+        11,
+        13,
+        15,
+        17,
+        21,
+        27,
+        29,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant",
+        "live chat - bsbgroup.mn ",
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram",
+        "БСБ Оффис Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "Chat bot test - bsb . mn ",
+        "Chat bot n8n",
+        "БСБ Оффис Мебель - Facebook - Comments",
+        "БСБ Мебель - Facebook - Comments",
+        "Viber Test Channel"
+      ],
+      "activeSessions": 16
+    },
+    {
+      "id": "bx-121",
+      "bitrixUserId": 121,
+      "name": "Азжаргал Чулуунбат",
+      "role": "Дэлгүүрийн менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/8d6/8d68ae334a8f6f77e45c97b4511fd97d/12.jpg.png",
+      "status": "offline",
+      "email": "azjargal@bsb.mn",
+      "phone": "976-75108585",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        13,
+        15
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-123",
+      "bitrixUserId": 123,
+      "name": "Чойжамц Нацагдорж",
+      "role": "Электрон барааны борлуулалтын мэргэжилтэн ",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/c75/c7505a622eecddb52e76b95170368386/567977721_24908208622164748_4936827512471618772_n.jpg.png",
+      "status": "online",
+      "email": "choijamts@bsb.mn",
+      "phone": "+976 80208585",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        9,
+        11,
+        13,
+        15
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant"
+      ],
+      "activeSessions": 12
+    },
+    {
+      "id": "bx-125",
+      "bitrixUserId": 125,
+      "name": "Nomi N",
+      "role": "Электрон барааны борлуулалтын мэргэжилтэн ",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/916/91610f3cd8a9d1efa1f2b36ba0b7f4e1/488922801_680552734560338_3006429725501461024_n.jpg.png",
+      "status": "offline",
+      "email": "nomin@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        9,
+        11,
+        13,
+        15
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-127",
+      "bitrixUserId": 127,
+      "name": "Хашчулуун Батсуурь",
+      "role": "Компьютерийн борлуулалтын мэргэжилтэн",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%A5%D0%B0%D1%88%D1%87%D1%83%D0%BB%D1%83%D1%83%D0%BD%20%D0%91%D0%B0%D1%82%D1%81%D1%83%D1%83%D1%80%D1%8C&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "khashchuluun@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        9,
+        11,
+        13,
+        15
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-3065",
+      "bitrixUserId": 3065,
+      "name": "Номин Баттөмөр",
+      "role": "Интернэт дэлгүүр мебелийн борлуулалтын мэргэжилтэн",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9D%D0%BE%D0%BC%D0%B8%D0%BD%20%D0%91%D0%B0%D1%82%D1%82%D3%A9%D0%BC%D3%A9%D1%80&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "eshop_mebel@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        1,
+        3,
+        9,
+        11,
+        13
+      ],
+      "assignedChannelNames": [
+        "Бидэнтэй чатлаарай! BSB.mn",
+        "Интернэт дэлгүүр - Facebook - comments only",
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram"
+      ],
+      "activeSessions": 15
+    },
+    {
+      "id": "bx-17",
+      "bitrixUserId": 17,
+      "name": "Хосмөнх Түвшинбаяр",
+      "role": "Web Developer",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/2b4/2b44dfedc739e96499328704caa916ee/481996495_3935820270008425_1321683341411346652_n.jpg.png",
+      "status": "online",
+      "email": "khosmunkh@bsb.mn",
+      "phone": "+97699218020",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        9,
+        11,
+        13,
+        15,
+        21,
+        27,
+        31,
+        33,
+        35,
+        37,
+        39,
+        41
+      ],
+      "assignedChannelNames": [
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger",
+        "Интернэт дэлгүүр - Telegram",
+        "Интернэт дэлгүүр - WhatsApp - Instant",
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "Chat bot test - bsb . mn ",
+        "Chat bot n8n",
+        "БСБ Оффис Мебель - Facebook - Comments",
+        "БСБ Мебель - Facebook - Comments",
+        "Viber Test Channel"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-6751",
+      "bitrixUserId": 6751,
+      "name": "Zultsetseg Erdene",
+      "role": "Харилцагчийн үйлчилгээний ажилтан",
+      "avatar": "https://ui-avatars.com/api/?name=Zultsetseg%20Erdene&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "eshop_it@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        9,
+        11
+      ],
+      "assignedChannelNames": [
+        "Интернэт дэлгүүр - Instagram",
+        "Интернэт дэлгүүр - Facebook - Messenger"
+      ],
+      "activeSessions": 14
+    },
+    {
+      "id": "bx-193",
+      "bitrixUserId": 193,
+      "name": "Tumenkhuslen Khureltsooj",
+      "role": "Харилцагчийн үйлчилгээний ажилтан",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/90f/90f7e2c3e7fad58b9a99f9df987b665c/Image.png",
+      "status": "online",
+      "email": "tumenkhuslen@bsb.mn",
+      "phone": "",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        15
+      ],
+      "assignedChannelNames": [
+        "Интернэт дэлгүүр - WhatsApp - Instant"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-43",
+      "bitrixUserId": 43,
+      "name": "Агиймаа Т.",
+      "role": "Хэлтсийн менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/344/344df39702f32eb6ebc7e5b3fcb99c2f/avatar.png",
+      "status": "offline",
+      "email": "agiimaa@bsb.mn",
+      "phone": "+97677000272",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        27,
+        31,
+        37,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-45",
+      "bitrixUserId": 45,
+      "name": "Нэргүй Х.",
+      "role": "Үйл ажиллагааны мэргэжилтэн",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/818/818a737467049140c25d183d35c167e7/Image _9_.jpg.png",
+      "status": "offline",
+      "email": "nergui@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        27,
+        31,
+        37,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-47",
+      "bitrixUserId": 47,
+      "name": "Баяржаргал Т.",
+      "role": "Оффис мебелийн ахлах мэргэжилтэн",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%91%D0%B0%D1%8F%D1%80%D0%B6%D0%B0%D1%80%D0%B3%D0%B0%D0%BB%20%D0%A2.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "bayarjargal@bsb.mn",
+      "phone": "+97677000272",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        27
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-51",
+      "bitrixUserId": 51,
+      "name": "Ариунболд Б.",
+      "role": "Мебелийн сошиал медиа маркетингийн мэргэжилтэн",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/d50/d500616fb3f03231fa38cdddf8c6c0b5/Andy-avatar.jpg.png",
+      "status": "offline",
+      "email": "ariunbold@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        27,
+        31
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-77",
+      "bitrixUserId": 77,
+      "name": "Оюундалай Г.",
+      "role": "Дэлгүүрийн менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/1de/1de0b0237d6bb05b012decbacb79fc76/bi.jpg.png",
+      "status": "offline",
+      "email": "off.mebmanager@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4677",
+      "bitrixUserId": 4677,
+      "name": "Номинцэцэг Л.",
+      "role": "Худалдааны зөвлөх",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9D%D0%BE%D0%BC%D0%B8%D0%BD%D1%86%D1%8D%D1%86%D1%8D%D0%B3%20%D0%9B.&background=3b82f6&color=fff",
+      "status": "online",
+      "email": "ym.ofmanager@bsb.mn",
+      "phone": "",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4679",
+      "bitrixUserId": 4679,
+      "name": "Даваасүрэн Ц.",
+      "role": "Худалдааны зөвлөх",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%94%D0%B0%D0%B2%D0%B0%D0%B0%D1%81%D2%AF%D1%80%D1%8D%D0%BD%20%D0%A6.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "mish.ofnyarav@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        37
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4681",
+      "bitrixUserId": 4681,
+      "name": "Оюун-Эрдэнэ Г.",
+      "role": "Худалдааны зөвлөх - Кассчин",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/f93/f93fab2cf59da2a31e1cb03dab4728bb/Image _24_.jpg.png",
+      "status": "offline",
+      "email": "mm.ofcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        37
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 306
+    },
+    {
+      "id": "bx-4683",
+      "bitrixUserId": 4683,
+      "name": "Биндэръяа Б.",
+      "role": "Худалдааны зөвлөх-кассчин",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%91%D0%B8%D0%BD%D0%B4%D1%8D%D1%80%D1%8A%D1%8F%D0%B0%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "off.mebcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        37
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 6
+    },
+    {
+      "id": "bx-4687",
+      "bitrixUserId": 4687,
+      "name": "Шинэчулуун Д.",
+      "role": "Худалдааны зөвлөх-кассчин",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%A8%D0%B8%D0%BD%D1%8D%D1%87%D1%83%D0%BB%D1%83%D1%83%D0%BD%20%D0%94.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "mish.ofcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        21,
+        37
+      ],
+      "assignedChannelNames": [
+        "БСБ Оффис Мебель - Facebook - Messenger",
+        "БСБ Оффис Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 2
+    },
+    {
+      "id": "bx-49",
+      "bitrixUserId": 49,
+      "name": "Одгэрэл Б.",
+      "role": "Гэрийн мебелийн ахлах мэргэжилтэн",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9E%D0%B4%D0%B3%D1%8D%D1%80%D1%8D%D0%BB%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "odgerel@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-57",
+      "bitrixUserId": 57,
+      "name": "Гантулга Г.",
+      "role": "Дэлгүүрийн менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/02f/02f9e33a7ad238a155049b7cac0ac68e/Image _82_.jpg.png",
+      "status": "offline",
+      "email": "mm.hfmanager@bsb.mn",
+      "phone": "97675011001",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4597",
+      "bitrixUserId": 4597,
+      "name": "Айсулу Х.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%90%D0%B9%D1%81%D1%83%D0%BB%D1%83%20%D0%A5.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "khaysulu4@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 12
+    },
+    {
+      "id": "bx-4601",
+      "bitrixUserId": 4601,
+      "name": "Номунзарлигт Б.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9D%D0%BE%D0%BC%D1%83%D0%BD%D0%B7%D0%B0%D1%80%D0%BB%D0%B8%D0%B3%D1%82%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "style.hfnyarav@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4603",
+      "bitrixUserId": 4603,
+      "name": "Сарантуяа Т.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%A1%D0%B0%D1%80%D0%B0%D0%BD%D1%82%D1%83%D1%8F%D0%B0%20%D0%A2.&background=3b82f6&color=fff",
+      "status": "online",
+      "email": "sarantuyaa77@gmail.com",
+      "phone": "",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4605",
+      "bitrixUserId": 4605,
+      "name": "Энхзаяа А.",
+      "role": "ХЗ, касс гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/394/39416f428f082fbe895b4998711540df/avatar.png",
+      "status": "online",
+      "email": "style.hfcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 165
+    },
+    {
+      "id": "bx-4607",
+      "bitrixUserId": 4607,
+      "name": "Агиймаа Х.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%90%D0%B3%D0%B8%D0%B9%D0%BC%D0%B0%D0%B0%20%D0%A5.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "agiimaa.1216@icloud.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4609",
+      "bitrixUserId": 4609,
+      "name": "Одбаяр Б.",
+      "role": "ХЗ, касс гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9E%D0%B4%D0%B1%D0%B0%D1%8F%D1%80%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "mish.hfcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4613",
+      "bitrixUserId": 4613,
+      "name": "Анар Цолмон",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/5ec/5ece845cbf6d70656c384e24580b0438/avatar.png",
+      "status": "offline",
+      "email": "anaruuush0604@gmail.com",
+      "phone": "+97675071001",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4615",
+      "bitrixUserId": 4615,
+      "name": "Аюурзана Ш.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/58e/58ec2708d6b92278beac0e51058f949f/avatar.png",
+      "status": "offline",
+      "email": "ayurdemo09@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4617",
+      "bitrixUserId": 4617,
+      "name": "Буян-Өлзий Г.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%91%D1%83%D1%8F%D0%BD-%D3%A8%D0%BB%D0%B7%D0%B8%D0%B9%20%D0%93.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "ganbaatartse759@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4619",
+      "bitrixUserId": 4619,
+      "name": "Жавхлан Д.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/5a0/5a0d3346532073c2e7096a3ab67d9608/avatar.png",
+      "status": "offline",
+      "email": "Jamika9587@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 6
+    },
+    {
+      "id": "bx-4621",
+      "bitrixUserId": 4621,
+      "name": "Оюунчимэг Б.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/9fe/9fee8fd0015b57ca320a8744e26cd1bc/avatar.png",
+      "status": "offline",
+      "email": "Oyukabatochir26@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4623",
+      "bitrixUserId": 4623,
+      "name": "Равжаалхам М.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/fa1/fa11431229677243704ef608d17edcce/avatar.png",
+      "status": "offline",
+      "email": "mm.hfcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4625",
+      "bitrixUserId": 4625,
+      "name": "Эрдэнэтуул Д.",
+      "role": "ХЗ нярав гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/46c/46cea19b61f9aedc5877bf3b84bc276a/avatar.png",
+      "status": "offline",
+      "email": "mm.hfnyarav@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4629",
+      "bitrixUserId": 4629,
+      "name": "Батжин Э.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%91%D0%B0%D1%82%D0%B6%D0%B8%D0%BD%20%D0%AD.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "batjinbaji@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4631",
+      "bitrixUserId": 4631,
+      "name": "Мөнхтөгс Б.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9C%D3%A9%D0%BD%D1%85%D1%82%D3%A9%D0%B3%D1%81%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "ym.hfnyarav@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 3
+    },
+    {
+      "id": "bx-4633",
+      "bitrixUserId": 4633,
+      "name": "Нандин-Эрдэнэ Б.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%9D%D0%B0%D0%BD%D0%B4%D0%B8%D0%BD-%D0%AD%D1%80%D0%B4%D1%8D%D0%BD%D1%8D%20%D0%91.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "nndnrdn54@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 3
+    },
+    {
+      "id": "bx-4635",
+      "bitrixUserId": 4635,
+      "name": "Энхсувд Г.",
+      "role": "ХЗ касс гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/311/311ef85ec90e45e0b201b04d8d5d4a4f/avatar.png",
+      "status": "offline",
+      "email": "ym.hfcash@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4805",
+      "bitrixUserId": 4805,
+      "name": "Буянбат О.",
+      "role": "Худалдааны зөвлөх (6FL)",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%91%D1%83%D1%8F%D0%BD%D0%B1%D0%B0%D1%82%20%D0%9E.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "bbykkana@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-5223",
+      "bitrixUserId": 5223,
+      "name": "Сэргэлэнцогт Б.",
+      "role": "ХЗ гэрийн мебель",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/952/95295ca0a96e0a691c66c67c62fd96aa/avatar.png",
+      "status": "offline",
+      "email": "sergelentsogtwork@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        27,
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Instagram",
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-59",
+      "bitrixUserId": 59,
+      "name": "Гомбосүрэн С.",
+      "role": "Дэлгүүрийн менежер",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%93%D0%BE%D0%BC%D0%B1%D0%BE%D1%81%D2%AF%D1%80%D1%8D%D0%BD%20%D0%A1.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "mish.hfmanager@bsb.mn",
+      "phone": "+97675550272",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        31
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-61",
+      "bitrixUserId": 61,
+      "name": "Бүрэнчимэг Б.",
+      "role": "Дэлгүүрийн менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/03d/03d037d13af821f74896c2ab49085f30/download.png",
+      "status": "offline",
+      "email": "style.hfmanager@bsb.mn",
+      "phone": "+97675050272",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        31,
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Messenger",
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-14131",
+      "bitrixUserId": 14131,
+      "name": "Э. Нандинцэцэг",
+      "role": "Харилцагчийн үйлчилгээний ажилтан",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%AD.%20%D0%9D%D0%B0%D0%BD%D0%B4%D0%B8%D0%BD%D1%86%D1%8D%D1%86%D1%8D%D0%B3&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "nandintsetsegn535@gmail.com",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        31
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Messenger"
+      ],
+      "activeSessions": 11
+    },
+    {
+      "id": "bx-55",
+      "bitrixUserId": 55,
+      "name": "Хосбаяр Д.",
+      "role": "Менежер",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/b06/b06b99a59bdb17d8799ac3e8c96e9a7f/avatar.png",
+      "status": "offline",
+      "email": "whs.furmanager@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4593",
+      "bitrixUserId": 4593,
+      "name": "Буянтогтох Г.",
+      "role": "Мужаан",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/d57/d570ca857aed2092a9a2c58da3fba0ac/avatar.png",
+      "status": "offline",
+      "email": "whs.furmujaan@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-4639",
+      "bitrixUserId": 4639,
+      "name": "Шинэбаяр Д.",
+      "role": "Нярав гэрийн мебель",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%A8%D0%B8%D0%BD%D1%8D%D0%B1%D0%B0%D1%8F%D1%80%20%D0%94.&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "erd.hfnyarav@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-16921",
+      "bitrixUserId": 16921,
+      "name": "Чулуунбаатар Б",
+      "role": "Харилцагчийн үйлчилгээний ажилтан",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/15a/15a80e45df0df3d90dbee21332aa7904/690033712_27135620512700134_2022237548310355747_n.jpg.png",
+      "status": "offline",
+      "email": "whs.hfassembly@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 1
+    },
+    {
+      "id": "bx-16923",
+      "bitrixUserId": 16923,
+      "name": "Энх-Амгалан Б",
+      "role": "Харилцагчийн үйлчилгээний ажилтан",
+      "avatar": "https://ui-avatars.com/api/?name=%D0%AD%D0%BD%D1%85-%D0%90%D0%BC%D0%B3%D0%B0%D0%BB%D0%B0%D0%BD%20%D0%91&background=3b82f6&color=fff",
+      "status": "offline",
+      "email": "whs.furdispetcher@bsb.mn",
+      "phone": "",
+      "isClockedIn": false,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        39
+      ],
+      "assignedChannelNames": [
+        "БСБ Мебель - Facebook - Comments"
+      ],
+      "activeSessions": 0
+    },
+    {
+      "id": "bx-11",
+      "bitrixUserId": 11,
+      "name": "Даваадорж П",
+      "role": "System Administrator",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/d77/d7758e6101196447a4c1a50754e14238/c9925e541d2e09d51b208e21c6e310f3.JPG",
+      "status": "online",
+      "email": "davaadorj@bsb.mn",
+      "phone": "+97675100272",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        41
+      ],
+      "assignedChannelNames": [
+        "Viber Test Channel"
+      ],
+      "activeSessions": 0
+    }
+  ],
+  "shifts": [
+    {
+      "id": "shift-1",
+      "agentId": "agent-1",
+      "agentName": "Болдбаатар Ц.",
+      "date": "2026-09-14",
+      "clockInTime": "2026-09-14T09:00:00.000Z",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "totalBreakSeconds": 900,
+      "workedSeconds": -17094,
+      "chatsResolved": 8
+    },
+    {
+      "id": "shift-2",
+      "agentId": "agent-2",
+      "agentName": "Анударь Э.",
+      "date": "2026-09-14",
+      "clockInTime": "2026-09-14T09:15:00.000Z",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "totalBreakSeconds": 600,
+      "workedSeconds": -17694,
+      "chatsResolved": 12
+    },
+    {
+      "id": "shift-3",
+      "agentId": "agent-3",
+      "agentName": "Тэмүүлэн М.",
+      "date": "2026-09-14",
+      "clockInTime": "2026-09-14T09:30:00.000Z",
+      "isClockedIn": true,
+      "isOnBreak": true,
+      "breakStartTime": "2026-09-14T04:15:06.743Z",
+      "totalBreakSeconds": 1200,
+      "workedSeconds": -19194,
+      "chatsResolved": 5
+    }
+  ]
+}
