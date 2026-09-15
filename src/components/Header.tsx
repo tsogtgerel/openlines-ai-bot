@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Radio, Server, CheckCircle2, AlertTriangle, Unlink, Link2 } from 'lucide-react';
+import { Bot, Radio, Server, CheckCircle2, AlertTriangle, Unlink, Link2, Rocket } from 'lucide-react';
 import { BotConfig, PortalInfo } from '../types';
 
 interface HeaderProps {
@@ -10,6 +10,7 @@ interface HeaderProps {
   onUnbindLine?: (lineId: number) => Promise<void>;
   onNavigateToChannels?: () => void;
   isAgentRole?: boolean;
+  onOpenRedeploy?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -20,6 +21,7 @@ export const Header: React.FC<HeaderProps> = ({
   onUnbindLine,
   onNavigateToChannels,
   isAgentRole = false,
+  onOpenRedeploy,
 }) => {
   const isPolling = botConfig?.isPollingActive ?? false;
 
@@ -87,6 +89,19 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ) : null}
           </div>
+
+          {/* Redeploy Button for Admin/Supervisor */}
+          {onOpenRedeploy && !isAgentRole && (
+            <button
+              id="header-redeploy-btn"
+              onClick={onOpenRedeploy}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 transition shrink-0"
+              title="Код шинэчлэгдсэн үед дахин Build & Deploy хийх"
+            >
+              <Rocket className="w-3.5 h-3.5 text-blue-400" />
+              <span className="hidden sm:inline">Redeploy</span>
+            </button>
+          )}
 
           {/* Polling Switch Button */}
           <button

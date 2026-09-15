@@ -28,6 +28,8 @@ export class BitrixOpenlinesSyncService {
   private lastSyncTime: string | null = null;
   private isSyncing = false;
   private timer: NodeJS.Timeout | null = null;
+  private activeChatTimer: NodeJS.Timeout | null = null;
+  private isSingleSyncing = false;
 
   // Track session message counts & statuses to avoid wasteful calls to unchanged chats
   private knownSessionCounts: Map<number, number> = new Map();
@@ -62,6 +64,11 @@ export class BitrixOpenlinesSyncService {
     }
     const num = typeof chatId === 'string' ? parseInt(chatId.replace(/^chat-?/, ''), 10) : chatId;
     this.activeChatId = isNaN(num) ? null : num;
+
+    // Trigger immediate background sync for newly activated chat to minimize latency
+    if (this.activeChatId) {
+      this.syncSingleChat(this.activeChatId).catch(() => {});
+    }
   }
 
   /**
@@ -430,22 +437,45 @@ export class BitrixOpenlinesSyncService {
     if (this.timer) {
       clearInterval(this.timer);
     }
+    if (this.activeChatTimer) {
+      clearInterval(this.activeChatTimer);
+    }
+
     // Initial sync
     this.syncOpenlineSessions().catch((err) => {
       console.warn('[OpenlinesSync] Initial sync error:', err.message);
     });
 
+    // 1. Periodic background sync for all open sessions
     this.timer = setInterval(() => {
       this.syncOpenlineSessions(25).catch((err) => {
         console.warn('[OpenlinesSync] Interval sync error:', err.message);
       });
     }, intervalMs);
+
+    // 2. High-frequency sync for the active chat currently open on the operator screen (1.2s interval)
+    this.activeChatTimer = setInterval(() => {
+      if (this.activeChatId && !this.isSingleSyncing) {
+        this.isSingleSyncing = true;
+        this.syncSingleChat(this.activeChatId)
+          .catch((err) => {
+            console.warn('[OpenlinesSync] High-frequency sync error:', err.message);
+          })
+          .finally(() => {
+            this.isSingleSyncing = false;
+          });
+      }
+    }, 1200);
   }
 
   stopAutoSync() {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
+    }
+    if (this.activeChatTimer) {
+      clearInterval(this.activeChatTimer);
+      this.activeChatTimer = null;
     }
   }
 

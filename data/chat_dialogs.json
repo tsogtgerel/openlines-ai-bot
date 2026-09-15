@@ -489,6 +489,22 @@
         "text": "Enquiry assigned to all agents in the queue",
         "timestamp": "2026-09-15T10:11:36+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1110304",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This enquiry has also been assigned to Нэргүй Х..",
+        "timestamp": "2026-09-15T10:50:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110308",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:51:42+03:00",
+        "status": "delivered"
       }
     ]
   },

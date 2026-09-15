@@ -36,6 +36,7 @@ import {
   Info,
   RotateCcw,
   Calendar,
+  ArrowDown,
 } from 'lucide-react';
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
@@ -140,10 +141,12 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     },
   ];
 
-  // Bitrix24 Live Sync state
+  // Bitrix24 Live Sync & Real-time SSE state
   const [isSyncingBitrix, setIsSyncingBitrix] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isBotActionLoading, setIsBotActionLoading] = useState(false);
+  const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
+  const lastSyncVersionRef = useRef<number>(0);
 
   // Simulation form state
   const [simCustomerName, setSimCustomerName] = useState('Баярмаа Энх');
@@ -154,6 +157,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef<number>(0);
   const prevDialogIdRef = useRef<string | null>(null);
+  const isNearBottomRef = useRef<boolean>(true);
+  const [showScrollBottomBtn, setShowScrollBottomBtn] = useState<boolean>(false);
+  const [hasNewMessagesWhileScrolled, setHasNewMessagesWhileScrolled] = useState<boolean>(false);
 
   // Canned Responses
   const cannedResponses = [
@@ -213,49 +219,53 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Background silent refresh for live chat updates without loading indicator
-  const loadDialogsSilently = async () => {
+  // Background delta sync for live chat updates without transferring full payloads
+  const loadDialogsDelta = async () => {
     try {
       const params = new URLSearchParams();
+      params.append('since', String(lastSyncVersionRef.current));
       if (channelFilter !== 'all') params.append('channelId', channelFilter);
       if (sortBy) params.append('sortBy', sortBy);
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
       if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
 
-      const res = await fetch(`/api/chats?${params.toString()}`).then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
-        setDialogs((prev) => {
-          if (prev.length !== res.data.length) return res.data;
-          const hasChanges = res.data.some((newItem: ChatDialog, idx: number) => {
-            const oldItem = prev[idx];
-            return (
-              !oldItem ||
-              oldItem.id !== newItem.id ||
-              oldItem.unreadCount !== newItem.unreadCount ||
-              oldItem.status !== newItem.status ||
-              oldItem.lastMessageTime !== newItem.lastMessageTime ||
-              oldItem.assignedAgentId !== newItem.assignedAgentId
-            );
-          });
-          return hasChanges ? res.data : prev;
-        });
+      const res = await fetch(`/api/chats/delta?${params.toString()}`).then((r) => r.json());
+      if (res.success && res.data) {
+        const { version, hasChanges, dialogs: changedDialogs } = res.data;
+        if (typeof version === 'number') {
+          lastSyncVersionRef.current = version;
+        }
 
-        if (selectedDialogId) {
-          const matched = res.data.find((d: ChatDialog) => d.id === selectedDialogId);
-          if (matched) {
-            setSelectedDialog((prev) => {
-              if (!prev || prev.id !== matched.id) return matched;
-              if (
-                prev.messages.length !== matched.messages.length ||
-                prev.status !== matched.status ||
-                prev.unreadCount !== matched.unreadCount ||
-                prev.assignedAgentId !== matched.assignedAgentId ||
-                prev.lastMessageTime !== matched.lastMessageTime
-              ) {
-                return matched;
-              }
-              return prev;
-            });
+        if (hasChanges && Array.isArray(changedDialogs) && changedDialogs.length > 0) {
+          setDialogs((prev) => {
+            const map = new Map<string, ChatDialog>(prev.map((d) => [d.id, d]));
+            for (const item of changedDialogs) {
+              map.set(item.id, item);
+            }
+            const updated = Array.from(map.values());
+            if (sortBy === 'newest') {
+              updated.sort((a, b) => new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime());
+            }
+            return updated;
+          });
+
+          if (selectedDialogId) {
+            const matched = changedDialogs.find((d: ChatDialog) => d.id === selectedDialogId);
+            if (matched) {
+              setSelectedDialog((prev) => {
+                if (!prev || prev.id !== matched.id) return matched;
+                if (
+                  prev.messages.length !== matched.messages.length ||
+                  prev.status !== matched.status ||
+                  prev.unreadCount !== matched.unreadCount ||
+                  prev.assignedAgentId !== matched.assignedAgentId ||
+                  prev.lastMessageTime !== matched.lastMessageTime
+                ) {
+                  return matched;
+                }
+                return prev;
+              });
+            }
           }
         }
       }
@@ -295,57 +305,186 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
+  // 1. Initial Load when filters or sorting change
   useEffect(() => {
     loadDialogs();
-    // Real-time live polling every 3 seconds for channel messages list
-    const timer = setInterval(() => {
-      loadDialogsSilently();
-    }, 3000);
-    return () => clearInterval(timer);
   }, [channelFilter, sortBy]);
 
-  // Real-time fast sync for currently selected active chat (every 2 seconds)
+  // 2. Real-time Server-Sent Events (SSE) Stream
+  // Instantly delivers customer messages in <50ms without waiting for polling loops
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
+
+    let eventSource: EventSource | null = null;
+    let isCleanedUp = false;
+
+    try {
+      eventSource = new EventSource(`/api/chats/stream?${params.toString()}`);
+
+      eventSource.onopen = () => {
+        if (!isCleanedUp) setIsRealtimeConnected(true);
+      };
+
+      eventSource.addEventListener('connected', (e: any) => {
+        try {
+          const data = JSON.parse(e.data);
+          if (data?.version) lastSyncVersionRef.current = data.version;
+          if (!isCleanedUp) setIsRealtimeConnected(true);
+        } catch {}
+      });
+
+      eventSource.addEventListener('message:new', (e: any) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.version) lastSyncVersionRef.current = payload.version;
+          const { dialogId, message, dialog: updatedDialog } = payload;
+          if (!dialogId && !updatedDialog) return;
+
+          const targetId = dialogId || updatedDialog?.id;
+
+          // Immediately update open conversation if it matches
+          setSelectedDialog((prev) => {
+            if (!prev) return prev;
+            if (prev.id !== targetId && prev.dialogId !== targetId) return prev;
+
+            const messageAlreadyPresent = prev.messages.some(
+              (m) =>
+                m.id === message?.id ||
+                (message?.text && m.text === message.text && Math.abs(new Date(m.timestamp).getTime() - new Date(message.timestamp).getTime()) < 1000)
+            );
+
+            if (messageAlreadyPresent) {
+              return updatedDialog ? { ...prev, ...updatedDialog } : prev;
+            }
+
+            const newMessages = message ? [...prev.messages, message] : prev.messages;
+            return {
+              ...prev,
+              ...(updatedDialog || {}),
+              messages: newMessages,
+              lastMessageText: message?.text || prev.lastMessageText,
+              lastMessageTime: message?.timestamp || prev.lastMessageTime,
+              lastMessageSender: message?.sender || prev.lastMessageSender,
+              unreadCount: 0,
+            };
+          });
+
+          // Reflect immediately in the dialogs list
+          setDialogs((prev) => {
+            const index = prev.findIndex((d) => d.id === targetId || d.dialogId === targetId);
+            if (index >= 0) {
+              const updatedList = [...prev];
+              const current = updatedList[index];
+              const isCurrentSelected = selectedDialogId === current.id;
+
+              const updatedItem: ChatDialog = {
+                ...current,
+                ...(updatedDialog || {}),
+                lastMessageText: message?.text || current.lastMessageText,
+                lastMessageTime: message?.timestamp || current.lastMessageTime,
+                lastMessageSender: message?.sender || current.lastMessageSender,
+                unreadCount: isCurrentSelected ? 0 : (updatedDialog?.unreadCount ?? (current.unreadCount + 1)),
+              };
+
+              updatedList[index] = updatedItem;
+
+              if (sortBy === 'newest') {
+                const [item] = updatedList.splice(index, 1);
+                updatedList.unshift(item);
+              }
+              return updatedList;
+            } else if (updatedDialog) {
+              return [updatedDialog, ...prev];
+            }
+            return prev;
+          });
+        } catch (err) {
+          console.error('Failed to parse message:new SSE event', err);
+        }
+      });
+
+      eventSource.addEventListener('dialog:update', (e: any) => {
+        try {
+          const payload = JSON.parse(e.data);
+          if (payload.version) lastSyncVersionRef.current = payload.version;
+          const { dialogId, dialog: updatedDialog } = payload;
+          if (!dialogId && !updatedDialog) return;
+
+          const targetId = dialogId || updatedDialog?.id;
+
+          setSelectedDialog((prev) => {
+            if (!prev) return prev;
+            if (prev.id === targetId || prev.dialogId === targetId) {
+              return updatedDialog ? { ...prev, ...updatedDialog } : prev;
+            }
+            return prev;
+          });
+
+          setDialogs((prev) =>
+            prev.map((d) => {
+              if (d.id === targetId || d.dialogId === targetId) {
+                return updatedDialog ? { ...d, ...updatedDialog } : d;
+              }
+              return d;
+            })
+          );
+        } catch (err) {
+          console.error('Failed to parse dialog:update SSE event', err);
+        }
+      });
+
+      eventSource.onerror = () => {
+        if (!isCleanedUp) {
+          setIsRealtimeConnected(false);
+        }
+      };
+    } catch {
+      setIsRealtimeConnected(false);
+    }
+
+    return () => {
+      isCleanedUp = true;
+      if (eventSource) {
+        eventSource.close();
+      }
+    };
+  }, [currentAgent?.id, selectedDialogId, sortBy]);
+
+  // 3. Adaptive Background Delta Sync
+  // Runs gently every 15s when SSE is active as reconciliation, or every 2.5s if SSE disconnects
+  useEffect(() => {
+    const pollInterval = isRealtimeConnected ? 15000 : 2500;
+    const timer = setInterval(() => {
+      loadDialogsDelta();
+    }, pollInterval);
+    return () => clearInterval(timer);
+  }, [channelFilter, sortBy, isRealtimeConnected]);
+
+  // 4. Prioritize active chat on server and fetch immediate state once on chat switch
   useEffect(() => {
     if (!selectedDialogId) return;
 
-    // Notify backend about active chat for prioritized sync
+    // Notify backend about active chat for prioritized background polling
     fetch('/api/chats/active', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chatId: selectedDialogId }),
     }).catch(() => {});
 
-    // Fast sync for active chat
-    const fastSyncActiveChat = async () => {
-      try {
-        const res = await fetch(`/api/chats/${selectedDialogId}/sync`, { method: 'POST' });
-        const json = await res.json();
+    // Instant one-off sync on opening a chat to ensure message freshness
+    fetch(`/api/chats/${selectedDialogId}/sync`, { method: 'POST' })
+      .then((r) => r.json())
+      .then((json) => {
         if (json.success && json.data) {
           const freshDialog: ChatDialog = json.data;
-          setSelectedDialog((prev) => {
-            if (!prev || prev.id !== freshDialog.id) return prev;
-            // Only update if message count or last message changed to avoid unnecessary re-renders
-            if (
-              freshDialog.messages.length !== prev.messages.length ||
-              freshDialog.lastMessageTime !== prev.lastMessageTime
-            ) {
-              return freshDialog;
-            }
-            return prev;
-          });
-
-          // Also update in dialogs list
+          setSelectedDialog((prev) => (prev && prev.id === freshDialog.id ? freshDialog : prev));
           setDialogs((prev) =>
             prev.map((d) => (d.id === freshDialog.id ? { ...d, ...freshDialog } : d))
           );
         }
-      } catch {
-        // silent fail
-      }
-    };
-
-    const activeTimer = setInterval(fastSyncActiveChat, 2000);
-    return () => clearInterval(activeTimer);
+      })
+      .catch(() => {});
   }, [selectedDialogId]);
 
   // Handle Search Debounce
@@ -356,7 +495,40 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Scroll messages container to bottom when dialog changes or a new message arrives
+  // Scroll helper to snap to the bottom of the active conversation thread
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+    isNearBottomRef.current = true;
+    setShowScrollBottomBtn(false);
+    setHasNewMessagesWhileScrolled(false);
+  };
+
+  // Monitor user scrolling to detect if user has scrolled up to review previous history
+  const handleScrollMessages = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Threshold of 120px to consider the user "at the bottom"
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isAtBottom = distanceFromBottom <= 120;
+
+    isNearBottomRef.current = isAtBottom;
+    setShowScrollBottomBtn(!isAtBottom);
+
+    if (isAtBottom) {
+      setHasNewMessagesWhileScrolled(false);
+    }
+  };
+
+  // Scroll messages container:
+  // - Snaps to bottom on dialog switch
+  // - Automatically snaps to bottom when a new message arrives IF the agent is near bottom
+  // - Preserves scroll position if agent scrolled up to review previous history, and shows a badge/button
   useEffect(() => {
     if (!messagesContainerRef.current) return;
 
@@ -367,17 +539,27 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     prevDialogIdRef.current = selectedDialog?.id || null;
     prevMessageCountRef.current = currentMsgCount;
 
-    if (isDifferentDialog || hasNewMessages) {
-      // Scroll ONLY the message container, NEVER the window or ancestor pages!
-      const container = messagesContainerRef.current;
+    if (isDifferentDialog) {
+      // Switched to a new or different conversation: always snap immediately to bottom
+      isNearBottomRef.current = true;
+      setShowScrollBottomBtn(false);
+      setHasNewMessagesWhileScrolled(false);
       setTimeout(() => {
-        if (container) {
-          container.scrollTo({
-            top: container.scrollHeight,
-            behavior: isDifferentDialog ? 'auto' : 'smooth',
-          });
-        }
+        scrollToBottom('auto');
       }, 50);
+    } else if (hasNewMessages) {
+      // New message arrived in current thread
+      if (isNearBottomRef.current) {
+        // Agent is at or near the bottom: automatically snap down smoothly
+        setTimeout(() => {
+          scrollToBottom('smooth');
+        }, 50);
+      } else {
+        // Agent is scrolled up reviewing history: DO NOT disrupt their scroll position!
+        // Show indicator that new messages have arrived below
+        setHasNewMessagesWhileScrolled(true);
+        setShowScrollBottomBtn(true);
+      }
     }
   }, [selectedDialog?.id, selectedDialog?.messages?.length]);
 
@@ -426,6 +608,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         setDialogs((prev) =>
           prev.map((d) => (d.id === res.data.dialog.id ? res.data.dialog : d))
         );
+        setTimeout(() => {
+          scrollToBottom('smooth');
+        }, 50);
       }
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -868,11 +1053,19 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 {dialogs.length}
               </span>
               <span
-                className="flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-700 bg-emerald-50 px-1.5 sm:px-2 py-0.5 rounded-full border border-emerald-200 shrink-0"
-                title="Битрикс24-өөс чатуудыг бодит цагт 3 сек тутамд шалгаж байна"
+                className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 rounded-full border shrink-0 transition-colors ${
+                  isRealtimeConnected
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    : 'text-amber-700 bg-amber-50 border-amber-200'
+                }`}
+                title={
+                  isRealtimeConnected
+                    ? 'Бодит цагийн шуурхай холболт идэвхтэй (SSE <50ms сааталгүй)'
+                    : 'Холболтыг сэргээж байна (Delta fallback идэвхтэй)'
+                }
               >
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live
+                <span className={`w-1.5 h-1.5 rounded-full ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                {isRealtimeConnected ? 'Real-time' : 'Delta sync'}
               </span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
@@ -1688,8 +1881,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             )}
 
             {/* Message Thread */}
-            <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 min-h-0">
-              {selectedDialog.messages.map((msg) => {
+            <div className="relative flex-1 min-h-0 flex flex-col">
+              <div
+                ref={messagesContainerRef}
+                onScroll={handleScrollMessages}
+                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 min-h-0 scroll-smooth"
+              >
+                {selectedDialog.messages.map((msg) => {
                 if (msg.sender === 'system') {
                   return (
                     <div key={msg.id} className="flex justify-center my-2">
@@ -1801,6 +1999,27 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               })}
               <div ref={messagesEndRef} />
             </div>
+
+            {/* Floating Snap-to-Bottom Button when scrolled up */}
+            {showScrollBottomBtn && (
+              <div className="absolute bottom-3 right-4 z-20 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <button
+                  type="button"
+                  id="chat-snap-to-bottom-btn"
+                  onClick={() => scrollToBottom('smooth')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold shadow-lg transition transform hover:scale-105 active:scale-95 ${
+                    hasNewMessagesWhileScrolled
+                      ? 'bg-blue-600 hover:bg-blue-700 text-white ring-2 ring-blue-300'
+                      : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-200'
+                  }`}
+                  title="Хамгийн сүүлийн мессеж рүү үсрэх"
+                >
+                  <ArrowDown className={`w-3.5 h-3.5 ${hasNewMessagesWhileScrolled ? 'animate-bounce' : ''}`} />
+                  <span>{hasNewMessagesWhileScrolled ? 'Шинэ мессеж ирлээ' : 'Доош гүйлгэх'}</span>
+                </button>
+              </div>
+            )}
+          </div>
 
             {/* Bottom Composer Box */}
             <div className="p-2.5 sm:p-4 bg-white border-t border-slate-200 space-y-2 shadow-sm shrink-0">

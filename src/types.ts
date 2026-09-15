@@ -279,3 +279,19 @@ export interface InquiryAnalyticsReport {
   }[];
 }
 
+export interface DeployState {
+  status: 'idle' | 'building' | 'success' | 'failed';
+  lastDeployedAt: string | null;
+  logs: string[];
+  durationMs?: number;
+  error?: string;
+  targetServer?: {
+    id: string;
+    name: string;
+    displayName?: string;
+    appUrl?: string;
+    subdomain?: string;
+    status: string;
+  } | null;
+}
+

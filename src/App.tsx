@@ -15,6 +15,7 @@ import {
   Clock,
   BarChart3,
   Shield,
+  Rocket,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { ChannelSelector } from './components/ChannelSelector';
@@ -28,6 +29,7 @@ import { WorktimeBar } from './components/WorktimeBar';
 import { WorktimeModal } from './components/WorktimeModal';
 import { InquiryAnalyticsTab } from './components/InquiryAnalyticsTab';
 import { AgentPermissionsModal } from './components/AgentPermissionsModal';
+import { RedeployModal } from './components/RedeployModal';
 import {
   KnowledgeArticle,
   BotConfig,
@@ -62,6 +64,7 @@ export default function App() {
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showTeamModal, setShowTeamModal] = useState<boolean>(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState<boolean>(false);
+  const [showRedeployModal, setShowRedeployModal] = useState<boolean>(false);
 
   // Loading States
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -554,6 +557,7 @@ export default function App() {
         onUnbindLine={handleUnbindLine}
         onNavigateToChannels={() => setActiveTab('channels')}
         isAgentRole={isAgentRole}
+        onOpenRedeploy={() => setShowRedeployModal(true)}
       />
 
       {/* Operator Worktime & Shift Control Bar */}
@@ -613,15 +617,26 @@ export default function App() {
           {/* Right quick actions: Permissions modal button for Admin/Supervisor or role chip for Agent */}
           <div className="flex items-center gap-2 shrink-0 py-1 pl-2">
             {!isAgentRole ? (
-              <button
-                id="subnav-permissions-btn"
-                onClick={() => setShowPermissionsModal(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
-                title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
-              >
-                <Shield className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">Эрхийн тохиргоо</span>
-              </button>
+              <>
+                <button
+                  id="subnav-redeploy-btn"
+                  onClick={() => setShowRedeployModal(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
+                  title="Код өөрчлөгдсөн тохиолдолд дахин Build & Deploy хийх"
+                >
+                  <Rocket className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="hidden sm:inline">Redeploy</span>
+                </button>
+                <button
+                  id="subnav-permissions-btn"
+                  onClick={() => setShowPermissionsModal(true)}
+                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                  title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
+                >
+                  <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                  <span className="hidden sm:inline">Эрхийн тохиргоо</span>
+                </button>
+              </>
             ) : (
               <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
@@ -703,10 +718,17 @@ export default function App() {
               isLoading={isLoadingServers}
               onRefresh={loadServers}
               onCreateServer={handleCreateServer}
+              onOpenRedeployModal={() => setShowRedeployModal(true)}
             />
           )}
         </main>
       )}
+
+      {/* Redeploy Modal */}
+      <RedeployModal
+        isOpen={showRedeployModal}
+        onClose={() => setShowRedeployModal(false)}
+      />
 
       {/* Team Presence & Worktime Modal */}
       <WorktimeModal

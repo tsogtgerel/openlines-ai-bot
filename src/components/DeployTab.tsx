@@ -1,12 +1,25 @@
-import React, { useState } from 'react';
-import { Server, Cloud, RefreshCw, CheckCircle2, ShieldAlert, Play, Terminal, ArrowUpRight } from 'lucide-react';
-import { InfraServer } from '../types';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Server,
+  Cloud,
+  RefreshCw,
+  CheckCircle2,
+  ShieldAlert,
+  Play,
+  Terminal,
+  ArrowUpRight,
+  Rocket,
+  AlertCircle,
+  RotateCcw,
+} from 'lucide-react';
+import { InfraServer, DeployState } from '../types';
 
 interface DeployTabProps {
   servers: InfraServer[];
   isLoading: boolean;
   onRefresh: () => void;
   onCreateServer: (name: string) => Promise<void>;
+  onOpenRedeployModal?: () => void;
 }
 
 export const DeployTab: React.FC<DeployTabProps> = ({
@@ -14,10 +27,63 @@ export const DeployTab: React.FC<DeployTabProps> = ({
   isLoading,
   onRefresh,
   onCreateServer,
+  onOpenRedeployModal,
 }) => {
   const [serverName, setServerName] = useState('openlines-ai-bot');
   const [isCreating, setIsCreating] = useState(false);
   const [deployStep, setDeployStep] = useState<string | null>(null);
+
+  // One-click redeploy state
+  const [deployState, setDeployState] = useState<DeployState>({
+    status: 'idle',
+    lastDeployedAt: null,
+    logs: [],
+  });
+  const [isRedeploying, setIsRedeploying] = useState(false);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  const fetchDeployStatus = async () => {
+    try {
+      const res = await fetch('/api/system/deploy-status').then((r) => r.json());
+      if (res.success && res.data) {
+        setDeployState(res.data);
+      }
+    } catch {
+      // silent
+    }
+  };
+
+  useEffect(() => {
+    fetchDeployStatus();
+    const interval = setInterval(fetchDeployStatus, deployState.status === 'building' ? 1000 : 5000);
+    return () => clearInterval(interval);
+  }, [deployState.status]);
+
+  useEffect(() => {
+    if (logRef.current) {
+      logRef.current.scrollTop = logRef.current.scrollHeight;
+    }
+  }, [deployState.logs]);
+
+  const handleTriggerRedeploy = async () => {
+    try {
+      setIsRedeploying(true);
+      const res = await fetch('/api/system/redeploy', { method: 'POST' }).then((r) => r.json());
+      if (res.success) {
+        setDeployState((prev) => ({
+          ...prev,
+          status: 'building',
+          logs: ['[Redeploy] Барилт эхэллээ...'],
+        }));
+      } else {
+        alert(res.error?.message || 'Deploy эхлүүлэхэд алдаа гарлаа');
+      }
+    } catch (err: any) {
+      alert(`Алдаа: ${err.message}`);
+    } finally {
+      setIsRedeploying(false);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +102,134 @@ export const DeployTab: React.FC<DeployTabProps> = ({
 
   return (
     <div className="space-y-4 sm:space-y-6 max-w-5xl">
+      {/* One-Click Redeploy Card (On Code Changes) */}
+      <div className="bg-white rounded-xl border border-blue-200 p-4 sm:p-6 shadow-xs relative overflow-hidden">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="p-1.5 rounded-lg bg-blue-600 text-white shadow-xs">
+                <Rocket className="w-4 h-4" />
+              </span>
+              <h2 className="text-base font-semibold text-slate-900">
+                VibeCode Үүлэн Дэд Бүтэц рүү Дахин Deploy хийх
+              </h2>
+              <span
+                className={`px-2 py-0.5 text-xs font-semibold rounded-full border ${
+                  deployState.status === 'building'
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : deployState.status === 'success'
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                    : deployState.status === 'failed'
+                    ? 'bg-rose-50 text-rose-700 border-rose-200'
+                    : 'bg-slate-100 text-slate-700 border-slate-200'
+                }`}
+              >
+                {deployState.status === 'building'
+                  ? 'Үүлэн серверт байршуулж байна...'
+                  : deployState.status === 'success'
+                  ? 'VibeCode серверт амжилттай байршсан'
+                  : deployState.status === 'failed'
+                  ? 'Алдаа гарсан'
+                  : 'Бэлэн (Idle)'}
+              </span>
+            </div>
+            <p className="text-xs sm:text-sm text-slate-600">
+              Код шинэчлэгдсэний дараа <code>npm run build</code> хийж шинэ хувилбарын багцыг VibeCode Bitrix24 Cloud дэд бүтцийн Galaxy сервер (Node 20) рүү шууд илгээн контейнерийг дахин асаана.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            {deployState.targetServer?.appUrl && (
+              <a
+                href={deployState.targetServer.appUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-semibold transition"
+                title="VibeCode дээрх бодит апп холбоос"
+              >
+                <span>Үүлэн Апп</span>
+                <ArrowUpRight className="w-3.5 h-3.5" />
+              </a>
+            )}
+
+            <button
+              id="redeploy-action-btn"
+              onClick={handleTriggerRedeploy}
+              disabled={deployState.status === 'building' || isRedeploying}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold shadow-xs hover:shadow transition disabled:opacity-50"
+            >
+              <Rocket className={`w-4 h-4 ${deployState.status === 'building' ? 'animate-bounce' : ''}`} />
+              <span>{deployState.status === 'building' ? 'Deploy хийж байна...' : '🚀 VibeCode-д Deploy хийх'}</span>
+            </button>
+
+            {onOpenRedeployModal && (
+              <button
+                onClick={onOpenRedeployModal}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-medium transition"
+                title="Дэлгэрэнгүй цонхоор харах"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>Терминал</span>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Live build output log preview */}
+        <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-medium flex items-center gap-1.5">
+              <Terminal className="w-3.5 h-3.5 text-slate-400" />
+              <span>Байршуулалтын явцын лог</span>
+            </span>
+            <div className="flex items-center gap-2 text-[11px]">
+              {deployState.lastDeployedAt && (
+                <span>
+                  Сүүлд: {new Date(deployState.lastDeployedAt).toLocaleTimeString('mn-MN')}
+                </span>
+              )}
+              {deployState.status === 'success' && (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="inline-flex items-center gap-1 text-emerald-700 hover:underline font-semibold"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  <span>Хуудас сэргээх</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div
+            ref={logRef}
+            className="bg-slate-950 text-slate-200 font-mono text-[11px] p-3 rounded-xl h-28 overflow-y-auto border border-slate-800 select-text"
+          >
+            {deployState.logs.length === 0 ? (
+              <div className="text-slate-500 italic py-2">
+                Сүүлийн байршуулалтын түүх бэлэн. Дээрх "Дахин Deploy хийх" товчийг дарж шинэ барилт хийнэ.
+              </div>
+            ) : (
+              deployState.logs.map((logLine, i) => (
+                <div
+                  key={i}
+                  className={`leading-relaxed whitespace-pre-wrap ${
+                    logLine.includes('❌') || logLine.includes('error')
+                      ? 'text-rose-400 font-semibold'
+                      : logLine.includes('✅')
+                      ? 'text-emerald-400 font-semibold'
+                      : logLine.includes('🚀')
+                      ? 'text-blue-300'
+                      : 'text-slate-300'
+                  }`}
+                >
+                  {logLine}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
       {/* Overview Card */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 sm:p-6 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -124,7 +318,26 @@ export const DeployTab: React.FC<DeployTabProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-emerald-600 font-medium">Ажиллаж байна</span>
+                  {srv.appUrl && (
+                    <a
+                      href={srv.appUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium rounded-lg transition"
+                    >
+                      <span>Нээх</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
+                  )}
+                  <button
+                    onClick={handleTriggerRedeploy}
+                    disabled={deployState.status === 'building' || isRedeploying}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold rounded-lg transition disabled:opacity-50"
+                    title="Шинэчилсэн кодыг энэ сервер рүү байршуулах"
+                  >
+                    <Rocket className={`w-3.5 h-3.5 ${deployState.status === 'building' ? 'animate-bounce' : ''}`} />
+                    <span>{deployState.status === 'building' ? 'Deploying...' : 'Энд Deploy хийх'}</span>
+                  </button>
                 </div>
               </div>
             ))}

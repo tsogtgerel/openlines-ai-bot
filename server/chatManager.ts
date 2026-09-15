@@ -21,6 +21,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { EventEmitter } from 'events';
 
 /**
  * Нэг мессежийн бүтэц
@@ -334,10 +335,13 @@ const INITIAL_DIALOGS: ChatDialog[] = [
   },
 ];
 
-export class ChatManagerService {
+export class ChatManagerService extends EventEmitter {
   private dialogs: ChatDialog[] = [];
+  private version: number = 1;
+  private dialogVersions: Map<string, number> = new Map();
 
   constructor() {
+    super();
     this.ensureDataDir();
     this.loadDialogs();
   }
@@ -455,13 +459,73 @@ export class ChatManagerService {
     }
   }
 
-  private saveDialogs() {
+  private saveDialogs(
+    dialogId?: string,
+    changeType: 'dialog:update' | 'message:new' | 'dialog:create' = 'dialog:update',
+    extra?: any
+  ) {
     try {
       this.ensureDataDir();
       fs.writeFileSync(CHATS_FILE, JSON.stringify(this.dialogs, null, 2), 'utf-8');
     } catch (e) {
       console.error('Failed to save chat dialogs:', e);
     }
+
+    this.version++;
+    if (dialogId) {
+      this.dialogVersions.set(dialogId, this.version);
+    }
+
+    const dialog = dialogId ? this.getDialogById(dialogId) : null;
+    this.emit('change', {
+      type: changeType,
+      dialogId: dialogId || (dialog ? dialog.id : null),
+      version: this.version,
+      dialog,
+      timestamp: new Date().toISOString(),
+      ...extra,
+    });
+  }
+
+  getVersion(): number {
+    return this.version;
+  }
+
+  getDelta(
+    sinceVersion: number,
+    filters?: Parameters<ChatManagerService['getAllDialogs']>[0]
+  ): {
+    version: number;
+    hasChanges: boolean;
+    dialogs: ChatDialog[];
+  } {
+    if (sinceVersion >= this.version) {
+      return {
+        version: this.version,
+        hasChanges: false,
+        dialogs: [],
+      };
+    }
+
+    const all = this.getAllDialogs(filters);
+    if (sinceVersion === 0) {
+      return {
+        version: this.version,
+        hasChanges: true,
+        dialogs: all,
+      };
+    }
+
+    const changed = all.filter((d) => {
+      const v = this.dialogVersions.get(d.id) || 1;
+      return v > sinceVersion;
+    });
+
+    return {
+      version: this.version,
+      hasChanges: changed.length > 0,
+      dialogs: changed,
+    };
   }
 
   getAllDialogs(filters?: {
@@ -653,7 +717,7 @@ export class ChatManagerService {
       }
     }
 
-    this.saveDialogs();
+    this.saveDialogs(dialog.id, 'message:new', { message: newMessage });
     return { dialog, message: newMessage };
   }
 
@@ -661,7 +725,7 @@ export class ChatManagerService {
     const dialog = this.getDialogById(id);
     if (dialog && dialog.unreadCount > 0) {
       dialog.unreadCount = 0;
-      this.saveDialogs();
+      this.saveDialogs(id, 'dialog:update');
     }
     return dialog;
   }
@@ -683,7 +747,7 @@ export class ChatManagerService {
       dialog.unreadCount = 0;
     }
 
-    this.saveDialogs();
+    this.saveDialogs(id, 'dialog:update');
     return dialog;
   }
 
@@ -703,7 +767,7 @@ export class ChatManagerService {
       timestamp: new Date().toISOString(),
     });
 
-    this.saveDialogs();
+    this.saveDialogs(id, 'dialog:update');
     return dialog;
   }
 
@@ -735,7 +799,7 @@ export class ChatManagerService {
       timestamp: new Date().toISOString(),
     });
 
-    this.saveDialogs();
+    this.saveDialogs(id, 'dialog:update');
     return dialog;
   }
 
@@ -753,7 +817,7 @@ export class ChatManagerService {
       timestamp: new Date().toISOString(),
     });
 
-    this.saveDialogs();
+    this.saveDialogs(id, 'dialog:update');
     return dialog;
   }
 
@@ -801,7 +865,7 @@ export class ChatManagerService {
     };
 
     this.dialogs.unshift(newDialog);
-    this.saveDialogs();
+    this.saveDialogs(newDialog.id, 'message:new', { message: newDialog.messages[0] });
     return newDialog;
   }
 
@@ -856,7 +920,7 @@ export class ChatManagerService {
       }
     }
 
-    dialog.messages.push({
+    const newBxMsg: ChatMessage = {
       id: `msg-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       sender: 'customer',
       senderName: params.senderName || dialog.customer.name,
@@ -864,9 +928,11 @@ export class ChatManagerService {
       text: params.text,
       timestamp: nowIso,
       status: 'delivered',
-    });
+    };
 
-    this.saveDialogs();
+    dialog.messages.push(newBxMsg);
+
+    this.saveDialogs(dialog.id, 'message:new', { message: newBxMsg });
     return dialog;
   }
 
@@ -879,7 +945,7 @@ export class ChatManagerService {
     dialog.lastMessageTime = nowIso;
     dialog.lastMessageSender = 'bot';
 
-    dialog.messages.push({
+    const botMsg: ChatMessage = {
       id: `bot-msg-${Date.now()}`,
       sender: 'bot',
       senderName: botName,
@@ -887,7 +953,9 @@ export class ChatManagerService {
       timestamp: nowIso,
       keyboard: handedOff ? undefined : [{ text: 'Оператор дуудах', action: '/operator' }],
       status: 'delivered',
-    });
+    };
+
+    dialog.messages.push(botMsg);
 
     if (handedOff) {
       dialog.status = 'new';
@@ -901,7 +969,7 @@ export class ChatManagerService {
       dialog.status = 'bot';
     }
 
-    this.saveDialogs();
+    this.saveDialogs(dialog.id, 'message:new', { message: botMsg });
     return dialog;
   }
 
@@ -910,8 +978,13 @@ export class ChatManagerService {
       (d) => d.id === newDialog.id || d.dialogId === newDialog.dialogId
     );
 
+    let hasNewMessages = false;
+    let latestMsg: ChatMessage | null = null;
+
     if (existingIndex >= 0) {
       const existing = this.dialogs[existingIndex];
+      const prevMsgCount = existing.messages.length;
+
       // Keep any internal notes added locally
       const internalNotes = existing.messages.filter((m) => m.isInternalNote);
       const combinedMessages = [...newDialog.messages];
@@ -931,6 +1004,11 @@ export class ChatManagerService {
         finalStatus = 'bot';
       }
 
+      hasNewMessages = combinedMessages.length > prevMsgCount;
+      if (hasNewMessages) {
+        latestMsg = combinedMessages[combinedMessages.length - 1];
+      }
+
       this.dialogs[existingIndex] = {
         ...newDialog,
         status: finalStatus,
@@ -941,10 +1019,18 @@ export class ChatManagerService {
         messages: combinedMessages,
       };
     } else {
+      hasNewMessages = newDialog.messages.length > 0;
+      if (hasNewMessages) {
+        latestMsg = newDialog.messages[newDialog.messages.length - 1];
+      }
       this.dialogs.unshift(newDialog);
     }
 
-    this.saveDialogs();
+    if (hasNewMessages && latestMsg) {
+      this.saveDialogs(newDialog.id, 'message:new', { message: latestMsg });
+    } else {
+      this.saveDialogs(newDialog.id, 'dialog:update');
+    }
   }
 }
 
