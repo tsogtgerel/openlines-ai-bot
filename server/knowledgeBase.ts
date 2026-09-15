@@ -1,13 +1,36 @@
+/**
+ * ============================================================================
+ * 📚 BSB Knowledge Base & RAG Semantic Search Service
+ * ============================================================================
+ * 
+ * Энэхүү сервис нь AI бот болон операторуудад зориулсан мэдлэгийн сан (Knowledge Base)-г
+ * удирдаж, семантик түлхүүр үгийн хайлтыг (BM25/TF-IDF маягийн token matching & scoring)
+ * хийдэг:
+ * 
+ * 1. Өгүүллийн сан (Articles Storage):
+ *    - Гарчиг (title), Ангилал (category), Дэлгэрэнгүй агуулга (content),
+ *      түлхүүр үгс (keywords) агуулсан ба `data/knowledge_base.json` файлд хадгалагдана.
+ * 2. RAG Хайлтын алгоритм (Scoring Algorithm):
+ *    - Бүрэн хэллэгээр таарсан тохиолдолд өндөр жин өгөх (phrase matching).
+ *    - Монгол үгсийн үндэс, токен хуваалт (token overlap) болон түлхүүр үгийн хамаарлыг тооцох.
+ *    - 0.0-оос 1.0 хоорондох confidence score-оор эрэмбэлэн хамгийн дээд 3 нийтлэлийг буцаах.
+ * 3. Түргэн засвар & Автомат цоорхой нөхөлт (Gap filling):
+ *    - Аналитик тайлангаас дутуу сэдвүүдийг 1 товшилтоор энэ санд автоматаар нэмэх боломжтой.
+ */
+
 import fs from 'fs';
 import path from 'path';
 
+/**
+ * Мэдээллийн сангийн нийтлэлийн загвар
+ */
 export interface KnowledgeArticle {
-  id: string;
-  title: string;
-  category: string;
-  content: string;
-  keywords: string[];
-  updatedAt: string;
+  id: string; // Нийтлэлийн давтагдашгүй ID
+  title: string; // Нийтлэлийн гарчиг
+  category: string; // Ангилал (Ерөнхий, Төлбөр, Хүргэлт, Баталгаа г.м)
+  content: string; // Албан ёсны баталгаажсан дэлгэрэнгүй мэдээлэл
+  keywords: string[]; // Хайлтад ашиглагдах холбогдох түлхүүр үгс
+  updatedAt: string; // Сүүлд шинэчилсэн огноо
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -94,14 +117,23 @@ export class KnowledgeBaseService {
     }
   }
 
+  /**
+   * Бүх нийтлэлийн хуулбарыг буцаана.
+   */
   getAll(): KnowledgeArticle[] {
     return [...this.articles];
   }
 
+  /**
+   * ID-аар нийтлэл олох.
+   */
   getById(id: string): KnowledgeArticle | undefined {
     return this.articles.find((a) => a.id === id);
   }
 
+  /**
+   * Шинэ нийтлэл нэмж хадгалах.
+   */
   add(article: Omit<KnowledgeArticle, 'id' | 'updatedAt'>): KnowledgeArticle {
     const newArticle: KnowledgeArticle = {
       ...article,
@@ -113,6 +145,9 @@ export class KnowledgeBaseService {
     return newArticle;
   }
 
+  /**
+   * Нийтлэлийн агуулгыг шинэчлэх.
+   */
   update(id: string, updates: Partial<Omit<KnowledgeArticle, 'id'>>): KnowledgeArticle | null {
     const idx = this.articles.findIndex((a) => a.id === id);
     if (idx === -1) return null;
@@ -125,6 +160,9 @@ export class KnowledgeBaseService {
     return this.articles[idx];
   }
 
+  /**
+   * Нийтлэлийг устгах.
+   */
   delete(id: string): boolean {
     const initialLen = this.articles.length;
     this.articles = this.articles.filter((a) => a.id !== id);
@@ -135,6 +173,13 @@ export class KnowledgeBaseService {
     return false;
   }
 
+  /**
+   * Мэдээллийн сангаас харилцагчийн асуултад хамаарах өгүүллүүдийг семантик болон
+   * түлхүүр үгийн оновчлолоор хайж, 0-1 хоорондох магадлалын оноогоор (score) эрэмбэлж буцаана.
+   * 
+   * @param query Харилцагчийн бичсэн текст
+   * @param maxResults Хамгийн ихдээ буцаах илэрцийн тоо (өгөгдмөл: 3)
+   */
   search(query: string, maxResults = 3): { article: KnowledgeArticle; score: number }[] {
     const normalizedQuery = query.toLowerCase().trim();
     if (!normalizedQuery) return [];

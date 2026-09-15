@@ -1,8 +1,33 @@
+/**
+ * ============================================================================
+ * 📊 BSB Omnichannel Customer Inquiry Analytics & AI Intelligence Service
+ * ============================================================================
+ * 
+ * Энэхүү сервис нь Bitrix24 нээлттэй сувгуудаар (Facebook, WebChat, Telegram, Instagram,
+ * WhatsApp) ирж буй харилцагчдын асуултуудыг бодит цагт нэгтгэн, семантик дүн шинжилгээ
+ * хийж дараах боломжуудыг олгодог:
+ * 
+ * 1. Семантик ангилал (Semantic Classification):
+ *    - Монгол хэлний худалдаа үйлчилгээний түлхүүр үгс, хэллэгүүдийг таньж 8 үндсэн
+ *      чиглэлд (хүргэлт, төлбөр, үлдэгдэл, баталгаа, B2B, салбар цаг, урамшуулал, оператор) хуваах.
+ * 2. Мэдрэмжийн үнэлгээ (Sentiment Detection):
+ *    - Сөрөг, гомдолтой, яаралтай (urgent) эсвэл эерэг хандлагатай эсэхийг илрүүлэх.
+ * 3. AI Зөвлөмж & Түргэн хариулт (Quick Shortcuts):
+ *    - Ангилал бүрт тохирох мэргэжлийн бэлэн хариулт болон операторын ашиглах командыг санал болгох.
+ * 4. Мэдээллийн сангийн цоорхой (Knowledge Base Gap Analysis):
+ *    - Ботын санд хараахан ороогүй ч харилцагчид олноор асууж буй сэдвүүдийг илрүүлж 1 товшилтоор нэмэх.
+ * 5. Gemini 2.5 Flash тайлан (Executive Summary):
+ *    - Удирдлагад зориулсан бодит өгөгдөлд суурилсан нэгдсэн хураангуй тайлан боловсруулах.
+ */
+
 import { chatManager, ChatDialog } from './chatManager';
 import { knowledgeBase } from './knowledgeBase';
 import { GoogleGenAI } from '@google/genai';
 import { vibeRequest } from './vibeApi';
 
+/**
+ * Нэг харилцагчийн асуулт / мессежийн загвар
+ */
 export interface CustomerInquiryItem {
   id: string;
   dialogId: string;
@@ -17,16 +42,22 @@ export interface CustomerInquiryItem {
   resolvedBy?: 'bot' | 'agent' | 'pending';
 }
 
+/**
+ * Харилцагчийн асуултын семантик 8 үндсэн ангилал
+ */
 export type InquiryCategory =
-  | 'delivery' // Хүргэлт & Хаяг, Хугацаа
-  | 'payment_loan' // Төлбөр, Данс, StorePay & Зээл
-  | 'product_stock' // Барааны бэлэн байдал & Үнэ
-  | 'warranty_service' // Баталгаат засвар & Буцаалт
-  | 'b2b_tax' // Байгууллага, НӨАТ & Нэхэмжлэх
-  | 'store_hours' // Салбарын байршил & Цагийн хуваарь
-  | 'promotions' // Хямдрал, Урамшуулал & Бэлэг
-  | 'operator_handoff'; // Хүнтэй / оператортой шууд ярих
+  | 'delivery' // Хүргэлт & Хаяг, Хугацаа, Орон нутгийн унаа
+  | 'payment_loan' // Төлбөр, Данс, StorePay, PocketZero & Лизинг
+  | 'product_stock' // Барааны бэлэн байдал, Загвар & Үнэ
+  | 'warranty_service' // Баталгаат засвар, Сервис төв & Буцаалт
+  | 'b2b_tax' // Байгууллага, НӨАТ, e-barimt & Нэхэмжлэх
+  | 'store_hours' // Салбарын байршил, Зогсоол & Цагийн хуваарь
+  | 'promotions' // Хямдрал, Урамшуулал, Купон & Бэлэг
+  | 'operator_handoff'; // Хүнтэй / оператортой шууд ярих хүсэлт
 
+/**
+ * Ангилал бүрийн статистик тоон үзүүлэлт
+ */
 export interface CategoryStat {
   category: InquiryCategory;
   title: string;
@@ -48,6 +79,9 @@ export interface CategoryStat {
   inKb: boolean;
 }
 
+/**
+ * Суваг бүрийн (Facebook, Web, Telegram гэх мэт) нарийвчилсан статистик
+ */
 export interface ChannelStat {
   channelId: number | string;
   channelName: string;
@@ -59,6 +93,9 @@ export interface ChannelStat {
   botHandledRate: number;
 }
 
+/**
+ * AI-аар үүсгэгдсэн нэгдсэн тайлангийн бүтэц
+ */
 export interface InquiryAnalyticsReport {
   generatedAt: string;
   period: string;
@@ -354,10 +391,14 @@ export class InquiryAnalyticsService {
   }
 
   private init() {
-    // Initial sync from existing live chats in chatManager
+    // Чатын менежерээс ирсэн бодит мессежүүдийг анхлан ачаалах
     this.refreshFromChats();
   }
 
+  /**
+   * Бодит чатуудаас (chatManager) шинээр орж ирсэн харилцагчийн асуултуудыг татаж,
+   * семантик ангилал ба мэдрэмжийн үнэлгээг хийн нэгтгэх.
+   */
   public refreshFromChats() {
     try {
       const dialogs = chatManager.getAllDialogs();
@@ -385,7 +426,7 @@ export class InquiryAnalyticsService {
         });
       });
 
-      // Combine historical + live unique items
+      // Бодит чатууд + түүхэн өгөгдлийг давхардуулалгүйгээр нэгтгэх
       const existingIds = new Set(extracted.map((e) => e.text.trim()));
       const filteredHistorical = HISTORICAL_INQUIRIES.filter((h) => !existingIds.has(h.text.trim()));
 
@@ -396,35 +437,56 @@ export class InquiryAnalyticsService {
     }
   }
 
-  // Automatic semantic classifier for Mongolian retail/openlines queries
+  /**
+   * Монгол хэлний худалдаа үйлчилгээний түлхүүр үгсэд суурилсан семантик ангилагч.
+   * Жишээ: 'унаанд', 'хүргэлт' -> 'delivery'; 'storepay', 'зээл' -> 'payment_loan'
+   * 
+   * @param text Харилцагчийн илгээсэн мессежийн текст
+   * @returns Тодорхойлогдсон InquiryCategory ангилал
+   */
   public classifyText(text: string): InquiryCategory {
     const t = text.toLowerCase();
 
+    // 1. Оператор, амьд хүнтэй шууд холбогдох хүсэлт
     if (t.includes('оператор') || t.includes('хүнтэй') || t.includes('хүн байна уу') || t.includes('менежер') || t.includes('хүнтэй ярих')) {
       return 'operator_handoff';
     }
+    // 2. Хүргэлт, хаяг, хэзээ очих, орон нутгийн унаа
     if (t.includes('хүргэлт') || t.includes('хаяг') || t.includes('хэзээ ирэх') || t.includes('унаанд') || t.includes('хөдөө') || t.includes('орон нутаг') || t.includes('ачигдсан') || t.includes('захиалга')) {
       return 'delivery';
     }
+    // 3. Төлбөр тооцоо, данс, StorePay, PocketZero, лизинг
     if (t.includes('storepay') || t.includes('pocketzero') || t.includes('зээл') || t.includes('хувааж') || t.includes('данс') || t.includes('шилжүүлэг') || t.includes('төлбөр') || t.includes('хаан банк') || t.includes('урьдчилгаа')) {
       return 'payment_loan';
     }
+    // 4. B2B, байгууллагын худалдан авалт, НӨАТ, нэхэмжлэх
     if (t.includes('нөат') || t.includes('нэхэмжлэх') || t.includes('байгууллага') || t.includes('компани') || t.includes('рег') || t.includes('e-barimt') || t.includes('баримт')) {
       return 'b2b_tax';
     }
+    // 5. Баталгаат хугацаа, засвар, сервис, бараа буцаалт
     if (t.includes('баталгаа') || t.includes('засвар') || t.includes('сервис') || t.includes('буцаах') || t.includes('солих') || t.includes('эвдэрсэн') || t.includes('ажиллахгүй') || t.includes('гэмтэлтэй')) {
       return 'warranty_service';
     }
+    // 6. Салбар дэлгүүрүүдийн ажиллах цаг, байршил, зогсоол
     if (t.includes('цаг') || t.includes('онгорхой') || t.includes('салбар') || t.includes('дэлгүүр') || t.includes('хаана') || t.includes('байршил') || t.includes('зогсоол')) {
       return 'store_hours';
     }
+    // 7. Хямдрал, урамшуулал, бэлэгтэй худалдаа
     if (t.includes('хямдрал') || t.includes('урамшуулал') || t.includes('бэлэг') || t.includes('купон') || t.includes('хөнгөлөлт') || t.includes('%')) {
       return 'promotions';
     }
 
+    // Бусад ерөнхий барааны лавлагаа
     return 'product_stock';
   }
 
+  /**
+   * Мессежийн үгийн сэтгэл хөдлөл / төлөвийг (Sentiment) илрүүлэх:
+   * - 'urgent': яаралтай тусламж, холбогдох хүсэлт
+   * - 'negative': эвдрэл, гомдол, буцаалт
+   * - 'positive': баярлалаа, худалдан авах сонирхолтой
+   * - 'neutral': энгийн лавлагаа
+   */
   public detectSentiment(text: string): 'positive' | 'neutral' | 'negative' | 'urgent' {
     const t = text.toLowerCase();
     if (t.includes('яаралтай') || t.includes('хүнтэй холбогд') || t.includes('залгахгүй байна') || t.includes('хүлээлээ')) {
@@ -439,7 +501,9 @@ export class InquiryAnalyticsService {
     return 'neutral';
   }
 
-  // Filter inquiries by channels
+  /**
+   * Сонгосон сувгуудын ID-аар шүүн харилцагчийн асуултуудыг буцаана.
+   */
   public getInquiries(selectedChannelIds?: (number | string)[]): CustomerInquiryItem[] {
     this.refreshFromChats();
 
@@ -451,7 +515,16 @@ export class InquiryAnalyticsService {
     return this.customInquiries.filter((inq) => strIds.has(String(inq.channelId)));
   }
 
-  // Generate comprehensive report and AI recommendations
+  /**
+   * Сонгосон сувгуудын асуултуудыг нэгтгэн:
+   * 1. 8 чиглэлээр бүлэглэсэн хувь, мэдрэмжийн харьцаа, шилдэг сувгууд
+   * 2. Суваг бүрийн онцлог, ачаалал, тулгамдсан гол асуудал
+   * 3. Мэдээллийн санд байхгүй дутуу сэдвүүдийг илрүүлэх (KB Gap Analysis)
+   * 4. Google Gemini 2.5 Flash ашиглан Удирдлагын нэгдсэн Дүгнэлт Тайлан үүсгэх.
+   * 
+   * @param selectedChannelIds Шүүх сувгуудын ID жагсаалт (Хоосон бол бүх суваг)
+   * @returns InquiryAnalyticsReport
+   */
   public async generateReport(selectedChannelIds?: (number | string)[]): Promise<InquiryAnalyticsReport> {
     const inquiries = this.getInquiries(selectedChannelIds);
     const totalCount = inquiries.length;
@@ -717,7 +790,12 @@ export class InquiryAnalyticsService {
     };
   }
 
-  // Gemini / Vibe / analytical summarizer
+  /**
+   * Удирдлагын нэгдсэн дүгнэлт тайлан (Executive Summary) бэлтгэх.
+   * Google Gemini 2.5 Flash API түлхүүр байгаа тохиолдолд бодит AI генерат хийж,
+   * үгүй тохиолдолд бүтцийн дагуу аналитик өгөгдлөөс загварчилсан өндөр түвшний
+   * дүгнэлтийг буцаана.
+   */
   private async generateExecutiveSummary(
     categories: CategoryStat[],
     channels: ChannelStat[],

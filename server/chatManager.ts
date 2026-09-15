@@ -1,52 +1,82 @@
+/**
+ * ============================================================================
+ * 💬 BSB Omnichannel Contact Center & Chat Manager Service
+ * ============================================================================
+ * 
+ * Энэхүү сервис нь операторын ажлын байрны (Contact Center Workplace) чатын харилцан
+ * яриа, харилцагчийн мэдээлэл, статус болон мессежийн түүхийг бүрэн хариуцдаг:
+ * 
+ * 1. Олон сувгийн чатын удирдлага (Omnichannel Dialog Management):
+ *    - Facebook, Instagram, Telegram, WhatsApp, Web Live Chat-аас ирсэн бүх яриаг нэгтгэх.
+ * 2. Төлөв ба шилжүүлэг (Status & Handoff Lifecycle):
+ *    - 'new' (шинэ), 'assigned' (оператор оноосон), 'in_progress' (ярилцаж буй),
+ *      'bot' (ботын хяналтанд), 'closed' (шийдвэрлэгдсэн).
+ * 3. Харилцагчийн карт & CRM Lead интеграци:
+ *    - Нэр, утас, и-мэйл, хаяг, захиалгын түүх, сэдэвчилсэн шошгууд (tags).
+ * 4. Операторын дотоод тэмдэглэл (Internal Notes):
+ *    - Зөвхөн ажилтнуудад харагдах, харилцагчид илгээгдэхгүй дотоод зөвлөмж/тэмдэглэл бичих.
+ * 5. Persistent Storage:
+ *    - Бүх чат болон мессежийг `data/chat_dialogs.json` файлд найдвартай хадгалах.
+ */
+
 import fs from 'fs';
 import path from 'path';
 
+/**
+ * Нэг мессежийн бүтэц
+ */
 export interface ChatMessage {
-  id: string;
-  sender: 'customer' | 'bot' | 'agent' | 'system';
-  senderName?: string;
-  senderAvatar?: string;
-  text: string;
-  timestamp: string;
-  isInternalNote?: boolean;
-  keyboard?: { text: string; action: string }[];
-  status?: 'sent' | 'delivered' | 'read';
+  id: string; // Мессежийн давтагдашгүй ID
+  sender: 'customer' | 'bot' | 'agent' | 'system'; // Илгээгч
+  senderName?: string; // Илгээгчийн бүтэн нэр
+  senderAvatar?: string; // Аватар зураг
+  text: string; // Мессежийн агуулга
+  timestamp: string; // Илгээсэн огноо, цаг
+  isInternalNote?: boolean; // Ажилтны дотоод тэмдэглэл эсэх (харилцагчид харагдахгүй)
+  keyboard?: { text: string; action: string }[]; // Инлайн товчлуурууд
+  status?: 'sent' | 'delivered' | 'read'; // Хүргэлтийн төлөв
 }
 
+/**
+ * Харилцагчийн CRM профиль мэдээлэл
+ */
 export interface CustomerProfile {
-  name: string;
-  avatar?: string;
-  phone?: string;
-  email?: string;
-  city?: string;
-  address?: string;
-  crmLeadId?: string;
-  totalOrders?: number;
-  lastOrderDate?: string;
-  tags?: string[];
+  name: string; // Харилцагчийн нэр
+  avatar?: string; // Профайл зураг
+  phone?: string; // Утасны дугаар
+  email?: string; // И-мэйл хаяг
+  city?: string; // Хот / Аймаг
+  address?: string; // Гэрийн буюу хүргэлтийн хаяг
+  crmLeadId?: string; // Bitrix24 CRM Lead дугаар
+  totalOrders?: number; // Нийт хийсэн захиалгын тоо
+  lastOrderDate?: string; // Сүүлийн захиалгын огноо
+  tags?: string[]; // Харилцагчийн шошгууд (ж: VIP, Баталгаа, Тавилга)
 }
 
+/**
+ * Чат диалог / сессийн бүтэн загвар
+ */
 export interface ChatDialog {
-  id: string;
-  dialogId: string;
-  customer: CustomerProfile;
-  channelId: number | string;
-  channelName: string;
-  channelType: 'facebook' | 'instagram' | 'telegram' | 'whatsapp' | 'webchat';
-  status: 'new' | 'assigned' | 'bot' | 'in_progress' | 'closed';
-  priority: 'low' | 'normal' | 'high' | 'urgent';
-  assignedAgentId?: string | null;
-  assignedAgentName?: string | null;
-  assignedAgentAvatar?: string | null;
-  lastMessageText: string;
-  lastMessageTime: string;
+  id: string; // Системийн дотоод ID
+  dialogId: string; // Bitrix24 буюу сувгийн dialogId
+  customer: CustomerProfile; // Харилцагчийн дэлгэрэнгүй мэдээлэл
+  channelId: number | string; // Сувгийн ID
+  channelName: string; // Сувгийн нэр (ж: БСБ Онлайн Их Дэлгүүр)
+  channelType: 'facebook' | 'instagram' | 'telegram' | 'whatsapp' | 'webchat'; // Сувгийн төрөл
+  status: 'new' | 'assigned' | 'bot' | 'in_progress' | 'closed'; // Чатны явцын статус
+  priority: 'low' | 'normal' | 'high' | 'urgent'; // Яаралтай зэрэглэл
+  assignedAgentId?: string | null; // Хариуцаж буй операторын ID
+  assignedAgentName?: string | null; // Хариуцаж буй операторын нэр
+  assignedAgentAvatar?: string | null; // Операторын аватар
+  lastMessageText: string; // Сүүлийн мессежийн хураангуй
+  lastMessageTime: string; // Сүүлийн мессеж ирсэн цаг
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
-  unreadCount: number;
-  isStarred?: boolean;
-  resolutionSummary?: string;
-  closedAt?: string;
-  createdAt: string;
-  messages: ChatMessage[];
+  unreadCount: number; // Уншаагүй мессежийн тоо
+  isStarred?: boolean; // Онцолсон/од тавьсан эсэх
+  resolutionSummary?: string; // Чат хаах үеийн шийдвэрлэлтийн дүгнэлт
+  closedAt?: string; // Чат хаагдсан цаг
+  createdAt: string; // Чат үүссэн цаг
+  messages: ChatMessage[]; // Чат дахь бүх мессежүүд
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');

@@ -1,3 +1,27 @@
+/**
+ * ============================================================================
+ * 🤖 BSB Bitrix24 AI Bot Worker Service (AI Туслах Бот & Чат Ажиллагаа)
+ * ============================================================================
+ * 
+ * Энэхүү сервис нь Bitrix24 Open Lines-д зориулсан AI Welcome Bot-ийг удирдах үндсэн цөм юм.
+ * 
+ * Үндсэн чиг үүрэг:
+ * 1. Event Polling & Message Ingestion:
+ *    - Bitrix24 Bot API (/v1/bots/:id/events) дээрх шинэ мессежүүдийг (ONIMBOTV2MESSAGEADD) тогтмол шалгах.
+ *    - Bitrix24 Open Lines чатын сессүүдээс ирсэн харилцагчийн мессежийг давхар хүлээн авах.
+ * 2. Мэдээллийн сантай харьцах (RAG Search):
+ *    - Харилцагчийн асуултаас PII (утас, и-мэйл) мэдээллийг цэвэрлэсний дараа KnowledgeBase-аас семантик хайлт хийх.
+ * 3. AI хариулт боловсруулах (BitrixGPT / LLM):
+ *    - Мэдээллийн сангаас олдсон баримтуудыг System Prompt-д оруулан үнэн зөв хариулт үүсгэх.
+ * 4. Оператор луу шилжүүлэх (Intelligent Escalation / Handoff):
+ *    - Хэрэглэгч өөрөө оператор хүссэн үед (түлхүүр үгс эсвэл /operator товчлуур).
+ *    - Мэдээллийн санд тохирох нийтлэл олдоогүй эсвэл confidence score босгоос доогуур байвал.
+ *    - AI загвар хариулахаас татгалзсан эсвэл алдаа гарсан үед хиймэл төөрөгдөл (hallucination)
+ *      үүсгэлгүйгээр бот чатыг орхиж (leave chat), амьд операторын дараалалд автоматаар шилжүүлэх.
+ * 5. Операторын AI Ноорог туслах (Suggest Draft Response):
+ *    - Ажилтан харилцагчтай чаталж байх үед 1 товшилтоор илгээх бэлэн хариултыг мэдээллийн сангаас боловсруулж өгөх.
+ */
+
 import fs from 'fs';
 import path from 'path';
 import { knowledgeBase, KnowledgeArticle } from './knowledgeBase';
@@ -8,23 +32,29 @@ const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'bot_config.json');
 const LOGS_FILE = path.join(DATA_DIR, 'dialog_logs.json');
 
+/**
+ * AI Ботын тохиргооны бүтэц
+ */
 export interface BotConfig {
-  botId: number | null;
-  botCode: string;
-  botName: string;
-  selectedLineId: number | null;
-  selectedLineName: string;
-  isPollingActive: boolean;
-  currentOffset: number;
-  tone: 'professional' | 'friendly' | 'concise';
-  language: string;
-  handoffThreshold: number;
-  fallbackMessage: string;
-  operatorKeywords: string[];
-  systemPromptAddition: string;
-  model: string;
+  botId: number | null; // Bitrix24 дээр бүртгэгдсэн ботын ID
+  botCode: string; // Системийн кодын нэр (ж: kb_ai_helper)
+  botName: string; // Дэлгэцэнд харагдах нэр (ж: BSB AI Туслах)
+  selectedLineId: number | null; // Холбогдсон Open Line сувгийн ID
+  selectedLineName: string; // Холбогдсон сувгийн нэр (ж: БСБ Мебель Facebook)
+  isPollingActive: boolean; // Мессеж шалгах давтамж идэвхтэй эсэх
+  currentOffset: number; // Bitrix event дарааллын одоогийн офсет
+  tone: 'professional' | 'friendly' | 'concise'; // Хариултын өнгө аяс
+  language: string; // Хариулах үндсэн хэл (mn)
+  handoffThreshold: number; // Операторт шилжүүлэх хамгийн бага магадлалын босго (0.2)
+  fallbackMessage: string; // Алдаа гарах үеийн нөөц мэдэгдэл
+  operatorKeywords: string[]; // Оператор дуудах монгол/англи түлхүүр үгс
+  systemPromptAddition: string; // Системийн нэмэлт зааварчилгаа
+  model: string; // Ашиглах AI загвар (ж: bitrix/bitrixgpt-5.5)
 }
 
+/**
+ * Ботын боловсруулсан харилцан яриа бүрийн бүртгэлийн бүтэц (Audit Log)
+ */
 export interface DialogLog {
   id: string;
   timestamp: string;
@@ -233,6 +263,11 @@ export class BotWorkerService {
     return { botId: newBotId, name: botName, code: botCode };
   }
 
+  /**
+   * Ботыг сонгосон Bitrix24 Open Line сувагт холбох.
+   * Welcome bot горимоор тохируулагдах бөгөөд харилцагч чат эхлэх бүрт бот хамгийн түрүүнд
+   * угтан авч, хариулах боломжгүй үед операторын дараалал (queue) руу шилжүүлнэ.
+   */
   async bindToOpenLine(lineId: number, lineName: string): Promise<boolean> {
     if (!this.config.botId) {
       throw new Error('Bot must be registered before binding to an Open Line');
@@ -250,11 +285,14 @@ export class BotWorkerService {
     }
 
     this.updateConfig({ selectedLineId: lineId, selectedLineName: lineName });
-    // Automatically ensure polling is started upon binding
+    // Сувагт амжилттай холбогдмогц ботын polling процессыг автоматаар эхлүүлнэ
     await this.startPolling();
     return true;
   }
 
+  /**
+   * Ботыг Open Line сувгаас салгах (welcome bot идэвхгүй болгож polling-г зогсоох).
+   */
   async unbindFromOpenLine(lineId: number): Promise<boolean> {
     try {
       await vibeRequest('PATCH', `/v1/openline-configs/${lineId}`, {
@@ -273,6 +311,11 @@ export class BotWorkerService {
     return true;
   }
 
+  /**
+   * Bitrix24 Bot Event Polling цикл:
+   * /v1/bots/:botId/events?offset=X хандалтаар шинэ үйл явдлуудыг асууж,
+   * офсетийг автоматаар хадгалан дараагийн ээлжинд давхардалгүй шалгана.
+   */
   private async pollCycle() {
     if (this.isProcessingPoll || !this.config.botId || !this.config.isPollingActive || !this.config.selectedLineId) {
       return;
@@ -305,6 +348,10 @@ export class BotWorkerService {
     }
   }
 
+  /**
+   * Ирсэн үйл явдлыг (event) задлан, харилцагчийн мессеж мөн эсэхийг баталгаажуулж
+   * операторын ажлын талбар (chatManager) болон AI хариулагч руу дамжуулах.
+   */
   private async handleEvent(evt: any) {
     if (!this.config.isPollingActive || !this.config.selectedLineId || !this.config.botId) {
       return;
@@ -351,6 +398,15 @@ export class BotWorkerService {
     await this.processMessage(dialogId, rawText);
   }
 
+  /**
+   * Харилцагчийн ирүүлсэн мессежийг боловсруулах гол логик:
+   * 1. PII (утас, и-мэйл) нууцлалын маск хийх
+   * 2. Оператор хүссэн түлхүүр үг / товчлуурыг шалгах -> тийм бол шууд дамжуулах
+   * 3. Мэдээллийн сангаас (Knowledge Base) семантик хайлт хийх
+   * 4. Тохирох магадлал (score) босгоос бага бол операторт найрсаг шилжүүлэх (хиймэл төөрөгдөлгүй)
+   * 5. VibeCode AI (BitrixGPT) загварт баримтуудыг System Prompt болгон өгч хариулт бэлтгэх
+   * 6. Бэлэн хариултыг 'Оператор дуудах' инлайн товчлуурын хамт илгээх
+   */
   async processMessage(dialogId: string, text: string): Promise<{ answer: string; handedOff: boolean }> {
     const startTime = Date.now();
     const botId = this.config.botId;

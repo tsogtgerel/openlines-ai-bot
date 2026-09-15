@@ -1,3 +1,17 @@
+/**
+ * ============================================================================
+ * 🤖 BSB Bitrix24 Open Lines AI Bot & Omnichannel Workplace - Main Server
+ * ============================================================================
+ * 
+ * Энэхүү сервер нь БСБ-гийн харилцагчийн үйлчилгээний нэгдсэн систем бөгөөд:
+ * 1. Bitrix24 Open Lines (Facebook, WebChat, Telegram, Instagram, WhatsApp) интеграци
+ * 2. Google Gemini & BitrixGPT суурьтай AI ботын автомат хариулт ба операторт шилжүүлэлт (Handoff)
+ * 3. Харилцагчийн асуултыг суваг бүрээр цуглуулж ангилах, AI зөвлөмж & тайлан гаргах (Inquiry Analytics)
+ * 4. Операторын нэгдсэн ажлын байр (Live Workplace), чатын удирдлага, CRM мэдээлэл
+ * 5. Операторуудын ажлын цаг бүртгэл (Clock-in, Clock-out, Break) болон ээлжийн хяналт
+ * 6. Хөгжүүлэлтийн үед Vite middleware, үйлдвэрлэлийн (Production) үед Single-Page App статик серверийг гүйцэтгэнэ.
+ */
+
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
@@ -11,19 +25,31 @@ import { bitrixAgentsService } from './server/bitrixAgentsService';
 import { bitrixOpenlinesSync } from './server/bitrixOpenlinesSync';
 import { inquiryAnalyticsService } from './server/inquiryAnalyticsService';
 
+// .env файлын тохиргоог ачааллах
 dotenv.config();
 
+// Стандарт контейнер болон Nginx-ийн эхлэх порт
 const PORT = 3000;
 
 async function startServer() {
   const app = express();
   app.use(express.json());
 
-  // 1. Health & Portal Info
+  // ==========================================================================
+  // 1. Health Check & Bitrix24 Portal Profile API
+  // ==========================================================================
+  /**
+   * GET /api/health
+   * Серверийн амьд төлөв (liveness/readiness probe)-ийг шалгах зориулалттай.
+   */
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
   });
 
+  /**
+   * GET /api/me
+   * Холбогдсон Bitrix24 порталын нэр, ID болон тарифын мэдээллийг буцаана.
+   */
   app.get('/api/me', async (req, res) => {
     try {
       const resp = await vibeRequest('GET', '/v1/me');
@@ -33,10 +59,16 @@ async function startServer() {
     }
   });
 
-  // 2. Open Lines & Bitrix Assigned Agents
+  // ==========================================================================
+  // 2. Open Lines & Bitrix Assigned Agents API
+  // ==========================================================================
+  /**
+   * GET /api/openlines
+   * Бүх нээлттэй сувгуудын жагсаалт ба суваг бүрт хуваарилагдсан бодит агентуудын мэдээлэл.
+   */
   app.get('/api/openlines', async (req, res) => {
     try {
-      // Fetch or use cached enriched openlines with assigned agents
+      // Кэшлэгдсэн эсвэл шинэчилсэн сувгийн өгөгдлийг татах
       const syncResult = await bitrixAgentsService.syncAgents(false);
       res.json({
         success: true,
@@ -60,10 +92,14 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/openlines/sync-agents
+   * Bitrix24 Openlines-аас хамгийн сүүлийн үеийн агентууд болон сувгуудыг хүчээр (force) татаж синк хийнэ.
+   */
   app.post('/api/openlines/sync-agents', async (req, res) => {
     try {
       const syncResult = await bitrixAgentsService.syncAgents(true); // force fresh sync
-      // Also update team roster in worktime manager
+      // Цаг бүртгэлийн менежер дэх ажилтнуудын бүртгэлийг шинэчлэх
       worktimeManager.syncWithBitrixAgents(syncResult.uniqueAgents);
       res.json({
         success: true,
@@ -75,6 +111,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/openlines/:id/agents
+   * Сонгосон сувгийн ID-аар зөвхөн тухайн сувагт ажиллах эрхтэй операторуудыг буцаана.
+   */
   app.get('/api/openlines/:id/agents', async (req, res) => {
     try {
       const lineId = parseInt(req.params.id, 10);
@@ -85,7 +125,13 @@ async function startServer() {
     }
   });
 
-  // 3. Bot Management & Status
+  // ==========================================================================
+  // 3. Bitrix24 AI Bot Registration, Configuration & Event Polling
+  // ==========================================================================
+  /**
+   * GET /api/bot/status
+   * Ботын одоогийн тохиргоо (сонгогдсон суваг, полинг идэвхтэй эсэх, ботын нэр) болон Bitrix дэх төлөвийг авна.
+   */
   app.get('/api/bot/status', async (req, res) => {
     try {
       const config = botWorker.getConfig();
@@ -106,6 +152,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/bot/register
+   * Bitrix24 порталд шинэ бот бүртгэх эсвэл байгаа ботод холбогдох.
+   */
   app.post('/api/bot/register', async (req, res) => {
     try {
       const { name, code } = req.body;
@@ -116,6 +166,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * PATCH /api/bot/config
+   * Ботын параметрүүдийг (өнгө аяс, хэл, операторт шилжүүлэх босго оноо, систем промпт) шинэчлэх.
+   */
   app.patch('/api/bot/config', (req, res) => {
     try {
       const updated = botWorker.updateConfig(req.body);
@@ -125,6 +179,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/bot/bind-openline
+   * Тодорхой нээлттэй сувгийн Welcome ботоор BSB AI ботыг холбох.
+   */
   app.post('/api/bot/bind-openline', async (req, res) => {
     try {
       const { lineId, lineName } = req.body;
@@ -138,6 +196,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/bot/unbind-openline
+   * Сувгаас ботыг салгаж, зөвхөн амьд операторуудын дараалалд шилжүүлэх.
+   */
   app.post('/api/bot/unbind-openline', async (req, res) => {
     try {
       const { lineId } = req.body;
@@ -154,6 +216,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/bot/resubscribe
+   * Bitrix24 бот ивэнт хүлээж авахгүй гацсан үед вебхүүк/эвэнтийг дахин бүртгэх.
+   */
   app.post('/api/bot/resubscribe', async (req, res) => {
     try {
       const ok = await botWorker.resubscribeBot();
@@ -163,6 +229,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/bot/toggle-polling
+   * Bitrix мессежүүдийг шалгах автомат таймерыг асаах / унтраах.
+   */
   app.post('/api/bot/toggle-polling', async (req, res) => {
     try {
       const { active } = req.body;
@@ -177,11 +247,21 @@ async function startServer() {
     }
   });
 
-  // 4. Knowledge Base CRUD
+  // ==========================================================================
+  // 4. Knowledge Base (Мэдээллийн Сан) CRUD & Search API
+  // ==========================================================================
+  /**
+   * GET /api/kb
+   * Хадгалагдсан бүх зааварчилгаа, мэдээллийн нийтлэлүүдийг жагсаана.
+   */
   app.get('/api/kb', (req, res) => {
     res.json({ success: true, data: knowledgeBase.getAll() });
   });
 
+  /**
+   * POST /api/kb
+   * Мэдээллийн санд шинээр нийтлэл, түгээмэл асуултын хариулт нэмнэ.
+   */
   app.post('/api/kb', (req, res) => {
     try {
       const { title, category, content, keywords } = req.body;
@@ -200,6 +280,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * PUT /api/kb/:id
+   * Тодорхой нийтлэлийн агуулга, түлхүүр үгийг засах.
+   */
   app.put('/api/kb/:id', (req, res) => {
     try {
       const updated = knowledgeBase.update(req.params.id, req.body);
@@ -212,6 +296,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * DELETE /api/kb/:id
+   * Мэдээллийн сангаас нийтлэл устгах.
+   */
   app.delete('/api/kb/:id', (req, res) => {
     try {
       const deleted = knowledgeBase.delete(req.params.id);
@@ -221,18 +309,32 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/kb/search?q=...
+   * Түлхүүр үгийн жин болон текстээр хайлт хийх.
+   */
   app.get('/api/kb/search', (req, res) => {
     const q = (req.query.q as string) || '';
     const results = knowledgeBase.search(q);
     res.json({ success: true, data: results });
   });
 
-  // 5. Logs & Live Testing Simulation
+  // ==========================================================================
+  // 5. Logs & Live Testing Simulator API
+  // ==========================================================================
+  /**
+   * GET /api/logs
+   * Ботын хамгийн сүүлийн харилцан ярианы лог (handoff шалтгаан, үргэлжилсэн хугацаа гэх мэт).
+   */
   app.get('/api/logs', (req, res) => {
     const limit = parseInt(req.query.limit as string) || 50;
     res.json({ success: true, data: botWorker.getLogs(limit) });
   });
 
+  /**
+   * POST /api/test-simulate
+   * Вэбээс ботыг шууд турших симулятор. Бодит харилцагчид мессеж очихгүйгээр AI хэрхэн хариулахыг шалгана.
+   */
   app.post('/api/test-simulate', async (req, res) => {
     try {
       const { message, dialogId } = req.body;
@@ -247,7 +349,13 @@ async function startServer() {
     }
   });
 
-  // 5.1 Customer Inquiries Analytics & AI Report Generation
+  // ==========================================================================
+  // 5.1 Customer Inquiries Analytics & AI Report Generation API
+  // ==========================================================================
+  /**
+   * GET /api/analytics/inquiries?channels=...
+   * Сувгуудаас цуглуулсан бодит асуултуудыг семантик ангилалтайгаар шүүн авна.
+   */
   app.get('/api/analytics/inquiries', (req, res) => {
     try {
       const channelsParam = req.query.channels as string;
@@ -263,6 +371,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/analytics/generate-report
+   * Сонгосон сувгуудаар бүлэглэж, ихэвчлэн асуудаг асуултуудад AI бэлэн хариулт & удирдлагын тайлан гаргана.
+   */
   app.post('/api/analytics/generate-report', async (req, res) => {
     try {
       const { channels } = req.body || {};
@@ -277,6 +389,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/analytics/add-to-kb
+   * AI-аар үүсгэсэн оновчтой хариултыг 1 товшилтоор ботын мэдээллийн санд нэмж сургана.
+   */
   app.post('/api/analytics/add-to-kb', (req, res) => {
     try {
       const { title, category, content, keywords } = req.body || {};
@@ -301,7 +417,13 @@ async function startServer() {
     }
   });
 
+  // ==========================================================================
   // 6. Infrastructure (VibeCode Cloud Servers)
+  // ==========================================================================
+  /**
+   * GET /api/infra/servers
+   * Байршуулах боломжтой серверүүдийн жагсаалт ба статус.
+   */
   app.get('/api/infra/servers', async (req, res) => {
     try {
       const resp = await vibeRequest('GET', '/v1/infra/servers');
@@ -311,6 +433,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/infra/servers/create
+   * Шинэ VPS үүлэн сервер үүсгэх хүсэлт.
+   */
   app.post('/api/infra/servers/create', async (req, res) => {
     try {
       const { name, plan, region, image } = req.body;
@@ -327,6 +453,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/infra/servers/:id/deploy
+   * Сервер рүү ботын шинэ хувилбарыг автоматаар deploy хийх.
+   */
   app.post('/api/infra/servers/:id/deploy', async (req, res) => {
     try {
       const { id } = req.params;
@@ -337,9 +467,13 @@ async function startServer() {
     }
   });
 
-  // ==========================================
-  // 7. Omnichannel Chat & Open Channel Workplace
-  // ==========================================
+  // ==========================================================================
+  // 7. Omnichannel Chat & Open Channel Workplace (Операторын нэгдсэн ажлын байр)
+  // ==========================================================================
+  /**
+   * POST /api/chats/sync
+   * Bitrix24 Open Lines-ийн бодит сесс, чатуудыг татаж дотоод чатын сантай синк хийнэ.
+   */
   app.post('/api/chats/sync', async (req, res) => {
     try {
       const syncResult = await bitrixOpenlinesSync.syncOpenlineSessions(40);
@@ -357,10 +491,18 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/chats/sync-status
+   * Автомат синкийн хамгийн сүүлийн цаг, давтамж, төлөвийн мэдээллийг авна.
+   */
   app.get('/api/chats/sync-status', (req, res) => {
     res.json({ success: true, data: bitrixOpenlinesSync.getStatus() });
   });
 
+  /**
+   * GET /api/chats
+   * Шүүлтүүр (status, channelId, channelType, search, isStarred)-тэйгээр бүх чатыг авах.
+   */
   app.get('/api/chats', (req, res) => {
     try {
       const { status, channelId, channelType, assignedAgentId, search, isStarred, sortBy } = req.query;
@@ -379,6 +521,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/chats/:id
+   * Нэг харилцан ярианы дэлгэрэнгүй, мессежийн түүх, харилцагчийн CRM профайлыг авах.
+   */
   app.get('/api/chats/:id', (req, res) => {
     try {
       const dialog = chatManager.getDialogById(req.params.id);
@@ -391,6 +537,11 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/:id/messages
+   * Чатад оператор хариу бичих, эсвэл дотоод санамж (whisper note) үлдээх.
+   * Хэрэв бодит Bitrix чат бол мессежийг шууд Bitrix24 REST API-аар илгээнэ.
+   */
   app.post('/api/chats/:id/messages', async (req, res) => {
     try {
       const { id } = req.params;
@@ -407,10 +558,10 @@ async function startServer() {
         isInternalNote: Boolean(isInternalNote),
       });
 
-      // If this is an agent message replying to customer, send directly to Bitrix24 Chat
+      // Хэрэв оператор бодит харилцагчид бичиж байгаа бол Bitrix24 чат руу илгээнэ
       if (sender === 'agent' && !isInternalNote) {
         const dialogId = outcome.dialog.dialogId;
-        // Real Bitrix chat has dialogId like "chat75344"
+        // Жишээ: "chat75344" хэлбэрийн ID байвал бодит Bitrix чат мөн
         if (dialogId && dialogId.startsWith('chat') && !dialogId.startsWith('chat-')) {
           try {
             await bitrixOpenlinesSync.sendMessageToBitrixChat(dialogId, text.trim());
@@ -430,6 +581,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/:id/read
+   * Чат дахь уншаагүй мессежийн тоог 0 болгож тэмдэглэх.
+   */
   app.post('/api/chats/:id/read', (req, res) => {
     try {
       const dialog = chatManager.markAsRead(req.params.id);
@@ -439,6 +594,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * PATCH /api/chats/:id
+   * Чатын статусыг (in_progress, closed, bot) эсвэл чухал тэмдэглэгээ (starred)-г шинэчлэх.
+   */
   app.patch('/api/chats/:id', async (req, res) => {
     try {
       const updated = chatManager.updateDialog(req.params.id, req.body);
@@ -454,6 +613,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/:id/transfer
+   * Чатыг өөр мэргэшсэн оператор руу шилжүүлэх (Re-assign).
+   */
   app.post('/api/chats/:id/transfer', (req, res) => {
     try {
       const { targetAgentId, targetAgentName, targetAgentAvatar } = req.body;
@@ -467,6 +630,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/:id/close
+   * Асуудлыг шийдвэрлэж чатыг хаах, шалтгааны хураангуйг тэмдэглэх.
+   */
   app.post('/api/chats/:id/close', async (req, res) => {
     try {
       const { resolutionSummary } = req.body;
@@ -484,6 +651,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/:id/reopen
+   * Хаагдсан чатыг дахин сэргээж нээх.
+   */
   app.post('/api/chats/:id/reopen', (req, res) => {
     try {
       const dialog = chatManager.reopenDialog(req.params.id);
@@ -493,6 +664,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/simulate
+   * Сургалт болон тест хийх зорилгоор гаднаас шинэ харилцагчийн мессеж ирэх үйл явцыг дуурайлгах.
+   */
   app.post('/api/chats/simulate', (req, res) => {
     try {
       const { customerName, message, channelType, channelName, channelId } = req.body;
@@ -512,6 +687,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/chats/ai-suggest
+   * Операторт хариу бичихэд туслах AI бэлэн ноорог (Draft response)-ийг Мэдээллийн сангаас үндэслэн бэлтгэх.
+   */
   app.post('/api/chats/ai-suggest', async (req, res) => {
     try {
       const { query } = req.body;
@@ -525,9 +704,13 @@ async function startServer() {
     }
   });
 
-  // ==========================================
-  // 8. Agent Worktime & Clock-In / Clock-Out
-  // ==========================================
+  // ==========================================================================
+  // 8. Agent Worktime & Clock-In / Clock-Out (Ажлын цагийн бүртгэл & Ээлж)
+  // ==========================================================================
+  /**
+   * GET /api/worktime/status
+   * Одоо нэвтэрсэн операторын ээлжийн статус (ажиллаж байгаа, завсарласан, нийт шийдсэн чат гэх мэт) болон багийн бүх гишүүд.
+   */
   app.get('/api/worktime/status', (req, res) => {
     try {
       const currentAgent = worktimeManager.getCurrentAgent();
@@ -546,6 +729,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/worktime/current
+   * Одоо сонгогдсон операторын дэлгэрэнгүй ээлжийн мэдээлэл.
+   */
   app.get('/api/worktime/current', (req, res) => {
     try {
       const agent = worktimeManager.getCurrentAgent();
@@ -556,6 +743,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/worktime/team
+   * Нийт операторын баг, тэдгээрийн онлайн төлөв, идэвхтэй ээлжүүд.
+   */
   app.get('/api/worktime/team', (req, res) => {
     try {
       const team = worktimeManager.getAllAgents();
@@ -567,6 +758,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/worktime/switch-agent
+   * Операторын нэвтрэх хэрэглэгчийг солих.
+   */
   app.post('/api/worktime/switch-agent', (req, res) => {
     try {
       const { agentId } = req.body;
@@ -579,6 +774,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/worktime/clock-in
+   * Ээлж эхлүүлэх (Clock-In). Тухайн өдрийн ажлын эхлэх цаг болон шинэ ээлжийн ID үүснэ.
+   */
   app.post('/api/worktime/clock-in', (req, res) => {
     try {
       const { agentId } = req.body;
@@ -589,6 +788,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/worktime/clock-out
+   * Ээлж дуусгах (Clock-Out). Нийт ажилласан секунд, завсарлага болон өдрийн товч тайланг хадгална.
+   */
   app.post('/api/worktime/clock-out', (req, res) => {
     try {
       const { dailyReport, agentId } = req.body;
@@ -599,6 +802,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/worktime/break
+   * Ажлын завсарлага эхлүүлэх (Break start). Операторын статус 'break' болж завсарлагын хугацаа тоологдоно.
+   */
   app.post(['/api/worktime/break', '/api/worktime/break/start'], (req, res) => {
     try {
       const { agentId } = req.body;
@@ -609,6 +816,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * POST /api/worktime/resume
+   * Завсарлага дуусгаж ажилдаа эргэн орох (Resume work).
+   */
   app.post(['/api/worktime/resume', '/api/worktime/break/resume'], (req, res) => {
     try {
       const { agentId } = req.body;
@@ -619,6 +830,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * PATCH /api/worktime/status
+   * Операторын онлайн төлөвийг гар аргаар өөрчлөх ('online' | 'busy' | 'break' | 'offline').
+   */
   app.patch('/api/worktime/status', (req, res) => {
     try {
       const { status, agentId } = req.body;
@@ -630,6 +845,10 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/worktime/history
+   * Өмнөх өдрүүдийн ээлжийн түүх, ажилласан цаг, шийдсэн чатын тоог жагсаана.
+   */
   app.get('/api/worktime/history', (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 20;
@@ -640,7 +859,11 @@ async function startServer() {
     }
   });
 
-  // Vite middleware in dev, static files in production
+  // ==========================================================================
+  // 9. Vite Dev Middleware & Production Static SPA Serving
+  // ==========================================================================
+  // Development орчинд Vite HMR болон шууд TSX хөрвүүлэлтийг Express дээр ачааллана.
+  // Production горимд dist/ хавтаснаас урьдчилан build хийгдсэн index.html болон assets-ийг өгнө.
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -655,10 +878,13 @@ async function startServer() {
     });
   }
 
+  // ==========================================================================
+  // 10. Server Listener & Startup Background Services
+  // ==========================================================================
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`AI Bot Server running on http://localhost:${PORT}`);
 
-    // Initial background pull of channel-assigned agents from Bitrix24
+    // Алхам 1: Bitrix24 порталаас бүх нээлттэй суваг ба хуваарилагдсан операторуудыг татах
     bitrixAgentsService
       .syncAgents(false)
       .then((res) => {
@@ -671,7 +897,7 @@ async function startServer() {
         console.warn('[Bitrix Sync] Initial background sync error:', err.message);
       });
 
-    // Auto-start Bitrix event polling ONLY if bot is registered AND a line is bound AND polling was active
+    // Алхам 2: Хэрэв бот тохируулагдсан ба полинг идэвхтэй байсан бол автоматаар асаах
     const cfg = botWorker.getConfig();
     if (cfg.botId && cfg.selectedLineId && cfg.isPollingActive) {
       botWorker.startPolling().catch((err) => {
@@ -681,7 +907,7 @@ async function startServer() {
       botWorker.stopPolling();
     }
 
-    // Auto-start real-time Bitrix24 Open Lines session synchronization
+    // Алхам 3: Bitrix24 Open Lines-ийн бодит сесс, чатуудыг 5 секунд тутамд татах auto-sync-г асаах
     bitrixOpenlinesSync.startAutoSync(5000);
   });
 }
