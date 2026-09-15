@@ -127,6 +127,9 @@ export interface ChatDialog {
   assignedAgentId?: string | null;
   assignedAgentName?: string | null;
   assignedAgentAvatar?: string | null;
+  closedByAgentId?: string | null;
+  closedByAgentName?: string | null;
+  closedByAgentAvatar?: string | null;
   lastMessageText: string;
   lastMessageTime: string;
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
@@ -227,6 +230,27 @@ export interface ChannelStat {
   botHandledRate: number;
 }
 
+export interface AgentPerformanceStat {
+  agentId: string;
+  name: string;
+  avatar: string;
+  role: string;
+  email: string;
+  status: 'online' | 'busy' | 'break' | 'offline';
+  assignedChannels: string[];
+  totalChatsHandled: number;
+  activeChatsCount: number;
+  resolvedChatsCount: number;
+  resolutionRate: number; // percentage (e.g. 92%)
+  avgResponseTimeSeconds: number; // in seconds (e.g. 78)
+  avgResponseTimeFormatted: string; // e.g. "1.3 мин" or "45 сек"
+  aiUsageRate: number; // percentage (e.g. 74%)
+  aiAssistedChatsCount: number;
+  positiveSentimentRate: number; // percentage (e.g. 96%)
+  firstContactResolutionRate: number; // percentage (e.g. 84%)
+  rating: number; // 1-5 (e.g. 4.8)
+}
+
 export interface InquiryAnalyticsReport {
   generatedAt: string;
   period: string;
@@ -235,6 +259,7 @@ export interface InquiryAnalyticsReport {
   totalCustomersCount: number;
   categories: CategoryStat[];
   channelBreakdown: ChannelStat[];
+  agentPerformance: AgentPerformanceStat[];
   executiveSummary: string;
   aiInsights: {
     title: string;

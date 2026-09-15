@@ -390,6 +390,27 @@ async function startServer() {
   });
 
   /**
+   * GET /api/analytics/agent-performance
+   * Оператор тус бүрийн гүйцэтгэлийн үзүүлэлт: хариуцсан нийт чат, дундаж хариулах хугацаа, AI ашиглалт
+   */
+  app.get('/api/analytics/agent-performance', (req, res) => {
+    try {
+      const { channels } = req.query;
+      let channelIds: string[] | undefined;
+      if (typeof channels === 'string') {
+        channelIds = channels.split(',').map((s) => s.trim()).filter(Boolean);
+      }
+      const stats = inquiryAnalyticsService.getAgentPerformanceStats(channelIds);
+      res.json({
+        success: true,
+        data: stats,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
    * POST /api/analytics/add-to-kb
    * AI-аар үүсгэсэн оновчтой хариултыг 1 товшилтоор ботын мэдээллийн санд нэмж сургана.
    */
@@ -505,12 +526,13 @@ async function startServer() {
    */
   app.get('/api/chats', (req, res) => {
     try {
-      const { status, channelId, channelType, assignedAgentId, search, isStarred, sortBy } = req.query;
+      const { status, channelId, channelType, assignedAgentId, closedByAgentId, search, isStarred, sortBy } = req.query;
       const dialogs = chatManager.getAllDialogs({
         status: status as string,
         channelId: channelId as string,
         channelType: channelType as string,
         assignedAgentId: assignedAgentId as string,
+        closedByAgentId: closedByAgentId as string,
         search: search as string,
         isStarred: isStarred !== undefined ? isStarred === 'true' : undefined,
         sortBy: sortBy as any,
@@ -532,6 +554,36 @@ async function startServer() {
         return res.status(404).json({ success: false, error: { message: 'Chat dialog not found' } });
       }
       res.json({ success: true, data: dialog });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/sync
+   * Зөвхөн тухайн нэг чатын шинэ мессежүүдийг Bitrix24-өөс шуурхай (1-2 секундэд) татах.
+   */
+  app.post('/api/chats/:id/sync', async (req, res) => {
+    try {
+      const dialog = await bitrixOpenlinesSync.syncSingleChat(req.params.id);
+      if (!dialog) {
+        return res.status(404).json({ success: false, error: { message: 'Chat dialog not found' } });
+      }
+      res.json({ success: true, data: dialog });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/active
+   * Операторын дэлгэц дээр идэвхтэй нээлттэй байгаа чатыг мэдэгдэх (тэргүүн ээлжинд синк хийхэд ашиглана).
+   */
+  app.post('/api/chats/active', (req, res) => {
+    try {
+      const { chatId } = req.body;
+      bitrixOpenlinesSync.setActiveChatId(chatId || null);
+      res.json({ success: true });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -636,8 +688,8 @@ async function startServer() {
    */
   app.post('/api/chats/:id/close', async (req, res) => {
     try {
-      const { resolutionSummary } = req.body;
-      const dialog = chatManager.closeDialog(req.params.id, resolutionSummary);
+      const { resolutionSummary, closedByAgentId, closedByAgentName, closedByAgentAvatar } = req.body;
+      const dialog = chatManager.closeDialog(req.params.id, resolutionSummary, closedByAgentId, closedByAgentName, closedByAgentAvatar);
       worktimeManager.incrementResolvedChat();
       if (dialog.dialogId?.startsWith('chat')) {
         const numId = parseInt(dialog.dialogId.replace('chat', ''), 10);

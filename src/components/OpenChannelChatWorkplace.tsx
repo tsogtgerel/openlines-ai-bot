@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   Search,
   Filter,
@@ -34,6 +34,8 @@ import {
   Link2,
   ArrowLeft,
   Info,
+  RotateCcw,
+  Calendar,
 } from 'lucide-react';
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
@@ -69,9 +71,14 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'my' | 'bot' | 'closed' | 'starred'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'my' | 'my_closed' | 'bot' | 'closed' | 'starred'>('all');
   const [channelFilter, setChannelFilter] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'newest' | 'waiting' | 'name'>('newest');
+  const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'pending_ai' | 'closed_newest' | 'closed_oldest'>('newest');
+
+  // Dedicated Closed Chats Filters
+  const [dateRangeFilter, setDateRangeFilter] = useState<'all' | 'today' | '7days' | '30days'>('all');
+  const [resolutionFilter, setResolutionFilter] = useState<string>('all');
+  const [closedAgentFilter, setClosedAgentFilter] = useState<string>('all');
 
   // Input & Messaging
   const [inputText, setInputText] = useState('');
@@ -288,12 +295,56 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   useEffect(() => {
     loadDialogs();
-    // Real-time live polling every 3 seconds for channel messages
+    // Real-time live polling every 3 seconds for channel messages list
     const timer = setInterval(() => {
       loadDialogsSilently();
     }, 3000);
     return () => clearInterval(timer);
-  }, [channelFilter, sortBy, selectedDialogId]);
+  }, [channelFilter, sortBy]);
+
+  // Real-time fast sync for currently selected active chat (every 2 seconds)
+  useEffect(() => {
+    if (!selectedDialogId) return;
+
+    // Notify backend about active chat for prioritized sync
+    fetch('/api/chats/active', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chatId: selectedDialogId }),
+    }).catch(() => {});
+
+    // Fast sync for active chat
+    const fastSyncActiveChat = async () => {
+      try {
+        const res = await fetch(`/api/chats/${selectedDialogId}/sync`, { method: 'POST' });
+        const json = await res.json();
+        if (json.success && json.data) {
+          const freshDialog: ChatDialog = json.data;
+          setSelectedDialog((prev) => {
+            if (!prev || prev.id !== freshDialog.id) return prev;
+            // Only update if message count or last message changed to avoid unnecessary re-renders
+            if (
+              freshDialog.messages.length !== prev.messages.length ||
+              freshDialog.lastMessageTime !== prev.lastMessageTime
+            ) {
+              return freshDialog;
+            }
+            return prev;
+          });
+
+          // Also update in dialogs list
+          setDialogs((prev) =>
+            prev.map((d) => (d.id === freshDialog.id ? { ...d, ...freshDialog } : d))
+          );
+        }
+      } catch {
+        // silent fail
+      }
+    };
+
+    const activeTimer = setInterval(fastSyncActiveChat, 2000);
+    return () => clearInterval(activeTimer);
+  }, [selectedDialogId]);
 
   // Handle Search Debounce
   useEffect(() => {
@@ -436,7 +487,12 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       const res = await fetch(`/api/chats/${selectedDialog.id}/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ resolutionSummary: closeReason }),
+        body: JSON.stringify({
+          resolutionSummary: closeReason,
+          closedByAgentId: currentAgent?.id,
+          closedByAgentName: currentAgent?.name,
+          closedByAgentAvatar: currentAgent?.avatar,
+        }),
       }).then((r) => r.json());
 
       if (res.success) {
@@ -537,15 +593,170 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Filtered Dialogs
-  const filteredDialogs = dialogs.filter((d) => {
-    if (statusFilter === 'new') return d.status === 'new';
-    if (statusFilter === 'my') return d.assignedAgentId === currentAgent?.id;
-    if (statusFilter === 'bot') return d.status === 'bot';
-    if (statusFilter === 'closed') return d.status === 'closed';
-    if (statusFilter === 'starred') return Boolean(d.isStarred);
+  // Helper to match agent by id or bitrix ID or name
+  const isAgentMatch = (
+    dialogAgentId?: string | null,
+    dialogAgentName?: string | null,
+    targetAgent?: Agent | null
+  ): boolean => {
+    if (!targetAgent) return false;
+    const tId = String(targetAgent.id);
+    const tBxId = targetAgent.bitrixUserId ? String(targetAgent.bitrixUserId) : null;
+    const tName = targetAgent.name?.toLowerCase().trim();
+
+    if (dialogAgentId) {
+      const dId = String(dialogAgentId);
+      if (dId === tId) return true;
+      if (tBxId && (dId === tBxId || dId === `bx-${tBxId}`)) return true;
+      if (tId.startsWith('bx-') && dId === tId.replace('bx-', '')) return true;
+      if (dId.startsWith('bx-') && dId.replace('bx-', '') === tId) return true;
+    }
+
+    if (dialogAgentName && tName) {
+      const dName = dialogAgentName.toLowerCase().trim();
+      if (dName === tName) return true;
+      const tFirst = tName.split(' ')[0];
+      const dFirst = dName.split(' ')[0];
+      if (tFirst && dFirst && tFirst.length > 2 && dFirst.length > 2 && tFirst === dFirst) {
+        return true;
+      }
+    }
+
+    return false;
+  };
+
+  // Helper to check if a closed or assigned dialog belongs to the current agent
+  const isMyClosedDialog = (dialog: ChatDialog, agent: Agent | null): boolean => {
+    if (!agent) return false;
+    return (
+      isAgentMatch(dialog.closedByAgentId, dialog.closedByAgentName, agent) ||
+      isAgentMatch(dialog.assignedAgentId, dialog.assignedAgentName, agent)
+    );
+  };
+
+  const isDateInRange = (dateStr?: string | null, range?: 'all' | 'today' | '7days' | '30days'): boolean => {
+    if (!range || range === 'all') return true;
+    if (!dateStr) return false;
+    const date = new Date(dateStr).getTime();
+    if (isNaN(date)) return false;
+    const now = Date.now();
+    const diffMs = now - date;
+
+    if (range === 'today') {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      return date >= startOfToday.getTime();
+    }
+    if (range === '7days') {
+      return diffMs <= 7 * 24 * 3600 * 1000;
+    }
+    if (range === '30days') {
+      return diffMs <= 30 * 24 * 3600 * 1000;
+    }
     return true;
-  });
+  };
+
+  const matchesResolution = (summary?: string | null, filter?: string): boolean => {
+    if (!filter || filter === 'all') return true;
+    if (!summary) return false;
+    return summary.toLowerCase().includes(filter.toLowerCase());
+  };
+
+  // Filtered & Sorted Dialogs
+  // Filters active chats by customer name, channel (name/type), or message content
+  // Sorts conversations by 'Newest', 'Oldest', 'Pending AI Action', 'Closed Newest', 'Closed Oldest'
+  const filteredDialogs = useMemo(() => {
+    let result = dialogs.filter((d) => {
+      if (statusFilter === 'new') return d.status === 'new';
+      if (statusFilter === 'my') {
+        return d.status !== 'closed' && (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent));
+      }
+      if (statusFilter === 'my_closed') return d.status === 'closed' && isMyClosedDialog(d, currentAgent);
+      if (statusFilter === 'bot') return d.status === 'bot';
+      if (statusFilter === 'closed') return d.status === 'closed';
+      if (statusFilter === 'starred') return Boolean(d.isStarred);
+      return true;
+    });
+
+    if (channelFilter !== 'all') {
+      result = result.filter((d) => String(d.channelId) === String(channelFilter));
+    }
+
+    // Closed chat specific filters (date range, resolution reason, closed operator)
+    if (statusFilter === 'my_closed' || statusFilter === 'closed') {
+      if (dateRangeFilter !== 'all') {
+        result = result.filter((d) => isDateInRange(d.closedAt || d.lastMessageTime, dateRangeFilter));
+      }
+      if (resolutionFilter !== 'all') {
+        result = result.filter((d) => matchesResolution(d.resolutionSummary, resolutionFilter));
+      }
+      if (statusFilter === 'closed' && closedAgentFilter !== 'all') {
+        const targetTeamAgent = team.find((a) => a.id === closedAgentFilter);
+        result = result.filter((d) =>
+          targetTeamAgent
+            ? isAgentMatch(d.closedByAgentId, d.closedByAgentName, targetTeamAgent) || isAgentMatch(d.assignedAgentId, d.assignedAgentName, targetTeamAgent)
+            : d.closedByAgentId === closedAgentFilter
+        );
+      }
+    }
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      result = result.filter((d) => {
+        // Customer name & phone & lead ID
+        const matchesCustomer =
+          d.customer.name.toLowerCase().includes(q) ||
+          Boolean(d.customer.phone && d.customer.phone.includes(q)) ||
+          Boolean(d.customer.crmLeadId && d.customer.crmLeadId.toLowerCase().includes(q));
+        // Channel name & channel type
+        const matchesChannel =
+          d.channelName.toLowerCase().includes(q) ||
+          d.channelType.toLowerCase().includes(q);
+        // Message content (last message preview or any past message in history)
+        const matchesMessage =
+          d.lastMessageText.toLowerCase().includes(q) ||
+          d.messages.some((m) => m.text.toLowerCase().includes(q));
+        // Resolution summary
+        const matchesResolutionText = Boolean(d.resolutionSummary && d.resolutionSummary.toLowerCase().includes(q));
+        // Closed agent name or assigned agent name
+        const matchesAgentName =
+          Boolean(d.closedByAgentName && d.closedByAgentName.toLowerCase().includes(q)) ||
+          Boolean(d.assignedAgentName && d.assignedAgentName.toLowerCase().includes(q));
+        // Dialog ID
+        const matchesId = d.id.toLowerCase().includes(q);
+
+        return matchesCustomer || matchesChannel || matchesMessage || matchesResolutionText || matchesAgentName || matchesId;
+      });
+    }
+
+    // Sort conversations by 'Newest', 'Oldest', 'Pending AI Action', 'Closed Newest', 'Closed Oldest'
+    result.sort((a, b) => {
+      if (sortBy === 'closed_newest') {
+        const timeA = new Date(a.closedAt || a.lastMessageTime).getTime();
+        const timeB = new Date(b.closedAt || b.lastMessageTime).getTime();
+        return timeB - timeA;
+      }
+      if (sortBy === 'closed_oldest') {
+        const timeA = new Date(a.closedAt || a.lastMessageTime).getTime();
+        const timeB = new Date(b.closedAt || b.lastMessageTime).getTime();
+        return timeA - timeB;
+      }
+      if (sortBy === 'oldest') {
+        return new Date(a.lastMessageTime).getTime() - new Date(b.lastMessageTime).getTime();
+      }
+      if (sortBy === 'pending_ai') {
+        const aPending = a.status === 'bot' || (a.status !== 'closed' && (a.lastMessageSender === 'customer' || a.status === 'new'));
+        const bPending = b.status === 'bot' || (b.status !== 'closed' && (b.lastMessageSender === 'customer' || b.status === 'new'));
+        if (aPending && !bPending) return -1;
+        if (!aPending && bPending) return 1;
+        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+      }
+      // Default: 'newest'
+      return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
+    });
+
+    return result;
+  }, [dialogs, statusFilter, channelFilter, searchQuery, sortBy, dateRangeFilter, resolutionFilter, closedAgentFilter, currentAgent?.id, team]);
 
   // Auto-switch selected dialog when filter changes and current selection is not visible
   useEffect(() => {
@@ -556,7 +767,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         setSelectedDialog(filteredDialogs[0]);
       }
     }
-  }, [statusFilter, channelFilter, filteredDialogs.length]);
+  }, [statusFilter, channelFilter, sortBy, searchQuery, filteredDialogs.length]);
 
   // Channel badge styling helper
   const getChannelBadge = (type: ChatDialog['channelType']) => {
@@ -599,8 +810,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   };
 
   const unassignedCount = dialogs.filter((d) => d.status === 'new').length;
-  const myCount = dialogs.filter((d) => d.assignedAgentId === currentAgent?.id).length;
+  const myActiveCount = dialogs.filter(
+    (d) =>
+      d.status !== 'closed' &&
+      (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
+  ).length;
+  const myClosedCount = dialogs.filter((d) => d.status === 'closed' && isMyClosedDialog(d, currentAgent)).length;
   const botCount = dialogs.filter((d) => d.status === 'bot').length;
+  const allClosedCount = dialogs.filter((d) => d.status === 'closed').length;
+  const starredCount = dialogs.filter((d) => Boolean(d.isStarred)).length;
 
   return (
     <div className="flex-1 flex flex-col min-h-0 h-full bg-white border-0 sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm overflow-hidden m-0 sm:m-3 lg:m-4">
@@ -667,7 +885,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             </div>
           )}
 
-          {/* Search Input */}
+          {/* Search & Filter Bar */}
           <div className="p-3 border-b border-slate-200 bg-white space-y-2">
             <div className="relative">
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -676,48 +894,71 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Хэрэглэгчийн нэр, утас, мессеж хайх..."
+                placeholder="Харилцагчийн нэр, суваг, мессеж хайх..."
                 className="w-full pl-9 pr-7 py-1.5 rounded-lg bg-slate-100 border border-transparent focus:border-blue-500 focus:bg-white text-xs text-slate-900 placeholder-slate-400 focus:outline-none transition"
+                title="Харилцагчийн нэр, суваг, эсвэл мессежийн агуулгаар шүүх"
               />
               {searchQuery && (
                 <button
+                  id="clear-search-btn"
                   onClick={() => setSearchQuery('')}
                   className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600"
+                  title="Хайлт цэвэрлэх"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
+            {/* Active search filter feedback */}
+            {searchQuery.trim() && (
+              <div className="flex items-center justify-between text-[11px] text-slate-600 bg-slate-50 px-2 py-1 rounded border border-slate-200/60">
+                <span className="truncate">
+                  Хайлт: <strong className="text-slate-900 font-semibold truncate">"{searchQuery.trim()}"</strong>
+                </span>
+                <span className="text-blue-700 font-semibold bg-blue-50 px-1.5 py-0.5 rounded text-[10px] shrink-0 border border-blue-100">
+                  {filteredDialogs.length} чат
+                </span>
+              </div>
+            )}
+
             {/* Channel filter & Sorting Dropdowns */}
             <div className="grid grid-cols-2 gap-1.5 pt-1">
-              <select
-                id="filter-channel-select"
-                value={channelFilter}
-                onChange={(e) => setChannelFilter(e.target.value)}
-                className="w-full text-[11px] font-medium py-1 px-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500"
-              >
-                <option value="all">Бүх суваг</option>
-                {openLines.map((line) => {
-                  const opsCount = line.operatorsCount ?? line.assignedAgents?.length ?? 0;
-                  return (
-                    <option key={line.id} value={line.id}>
-                      {line.name} {opsCount > 0 ? `(${opsCount} агент)` : ''}
-                    </option>
-                  );
-                })}
-              </select>
+              <div>
+                <select
+                  id="filter-channel-select"
+                  value={channelFilter}
+                  onChange={(e) => setChannelFilter(e.target.value)}
+                  className="w-full text-[11px] font-medium py-1.5 px-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500 truncate"
+                  title="Сувгаар шүүх"
+                >
+                  <option value="all">Бүх суваг</option>
+                  {openLines.map((line) => {
+                    const opsCount = line.operatorsCount ?? line.assignedAgents?.length ?? 0;
+                    return (
+                      <option key={line.id} value={line.id}>
+                        {line.name} {opsCount > 0 ? `(${opsCount} агент)` : ''}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
 
-              <select
-                id="sort-chats-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as any)}
-                className="w-full text-[11px] font-medium py-1 px-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500"
-              >
-                <option value="newest">Сүүлийн мессеж</option>
-                <option value="waiting">Хүлээгдэж буй</option>
-                <option value="name">Нэрээр (А-Я)</option>
-              </select>
+              <div>
+                <select
+                  id="sort-chats-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="w-full text-[11px] font-medium py-1.5 px-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500 truncate"
+                  title="Чатуудыг эрэмбэлэх: Newest, Oldest, Pending AI Action, Closed Newest, Closed Oldest"
+                >
+                  <option value="newest">Сүүлийн мессеж (Newest)</option>
+                  <option value="closed_newest">Сүүлд хаагдсанаар (Closed Newest)</option>
+                  <option value="closed_oldest">Эхэнд хаагдсанаар (Closed Oldest)</option>
+                  <option value="oldest">Эхний мессеж (Oldest)</option>
+                  <option value="pending_ai">Pending AI Action</option>
+                </select>
+              </div>
             </div>
 
             {/* Quick Channel Chips */}
@@ -755,6 +996,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           {/* Status Filter Tabs */}
           <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-1.5 overflow-x-auto scrollbar-none whitespace-nowrap text-[11px]">
             <button
+              id="tab-all-chats-btn"
               onClick={() => setStatusFilter('all')}
               className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
                 statusFilter === 'all'
@@ -765,10 +1007,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               Бүгд ({dialogs.length})
             </button>
             <button
+              id="tab-queue-chats-btn"
               onClick={() => setStatusFilter('new')}
               className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
                 statusFilter === 'new'
-                  ? 'bg-rose-600 text-white'
+                  ? 'bg-rose-600 text-white font-semibold'
                   : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
               }`}
             >
@@ -776,14 +1019,31 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               <span>Дараалал ({unassignedCount})</span>
             </button>
             <button
+              id="tab-my-chats-btn"
               onClick={() => setStatusFilter('my')}
               className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
                 statusFilter === 'my'
-                  ? 'bg-blue-600 text-white'
+                  ? 'bg-blue-600 text-white font-semibold'
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60'
               }`}
             >
-              <span>Минийх ({myCount})</span>
+              <span>Минийх ({myActiveCount})</span>
+            </button>
+            <button
+              id="tab-my-closed-chats-btn"
+              onClick={() => {
+                setStatusFilter('my_closed');
+                setSortBy('closed_newest');
+              }}
+              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1.5 ${
+                statusFilter === 'my_closed'
+                  ? 'bg-emerald-600 text-white shadow-xs font-semibold'
+                  : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/80'
+              }`}
+              title="Таны хаасан чатууд"
+            >
+              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 fill-emerald-100" />
+              <span>Миний хаасан ({myClosedCount})</span>
             </button>
             <button
               id="tab-bot-chats-btn"
@@ -799,16 +1059,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               <span>AI Бот ({botCount})</span>
             </button>
             <button
-              onClick={() => setStatusFilter('closed')}
+              id="tab-closed-chats-btn"
+              onClick={() => {
+                setStatusFilter('closed');
+                setSortBy('closed_newest');
+              }}
               className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
                 statusFilter === 'closed'
-                  ? 'bg-slate-700 text-white'
+                  ? 'bg-slate-700 text-white font-semibold'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
-              Хаагдсан
+              Бүх хаагдсан ({allClosedCount})
             </button>
             <button
+              id="tab-starred-chats-btn"
               onClick={() => setStatusFilter('starred')}
               className={`p-1.5 rounded-md transition shrink-0 ${
                 statusFilter === 'starred'
@@ -820,6 +1085,107 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               <Star className="w-3.5 h-3.5 fill-current" />
             </button>
           </div>
+
+          {/* Dedicated Closed Chats Filters Bar */}
+          {(statusFilter === 'my_closed' || statusFilter === 'closed') && (
+            <div className="p-2.5 bg-emerald-50/70 border-b border-emerald-200/80 space-y-2">
+              <div className="flex items-center justify-between text-[11px] font-semibold text-emerald-900">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>
+                    {statusFilter === 'my_closed'
+                      ? `Миний хаасан чатууд (${filteredDialogs.length})`
+                      : `Бүх хаагдсан түүх (${filteredDialogs.length})`}
+                  </span>
+                </div>
+                {statusFilter === 'my_closed' && currentAgent && (
+                  <span className="text-[10px] font-normal text-emerald-700 bg-white/80 px-1.5 py-0.5 rounded border border-emerald-200">
+                    Оператор: {currentAgent.name}
+                  </span>
+                )}
+              </div>
+
+              {/* Sub-filters grid: Date range, Resolution reason, Operator */}
+              <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                {/* Date range filter */}
+                <div>
+                  <label className="text-[10px] font-medium text-emerald-800 block mb-0.5">Огноо:</label>
+                  <select
+                    id="filter-closed-date-select"
+                    value={dateRangeFilter}
+                    onChange={(e) => setDateRangeFilter(e.target.value as any)}
+                    className="w-full py-1 px-1.5 rounded-md bg-white border border-emerald-200 text-slate-700 focus:outline-none focus:border-emerald-500 text-[11px]"
+                  >
+                    <option value="all">Бүх хугацаа</option>
+                    <option value="today">Өнөөдөр</option>
+                    <option value="7days">Сүүлийн 7 хоног</option>
+                    <option value="30days">Сүүлийн 30 хоног</option>
+                  </select>
+                </div>
+
+                {/* Resolution reason filter */}
+                <div>
+                  <label className="text-[10px] font-medium text-emerald-800 block mb-0.5">Шийдвэрлэлт:</label>
+                  <select
+                    id="filter-closed-reason-select"
+                    value={resolutionFilter}
+                    onChange={(e) => setResolutionFilter(e.target.value)}
+                    className="w-full py-1 px-1.5 rounded-md bg-white border border-emerald-200 text-slate-700 focus:outline-none focus:border-emerald-500 text-[11px] truncate"
+                  >
+                    <option value="all">Бүх шийдвэрлэлт</option>
+                    <option value="StorePay">StorePay / Лизинг</option>
+                    <option value="Баталгаат">Баталгаа / Сервис</option>
+                    <option value="Хүргэлт">Хүргэлт / Угсралт</option>
+                    <option value="НӨАТ">И-Баримт / НӨАТ</option>
+                    <option value="үлдэгдэл">Барааны үлдэгдэл</option>
+                    <option value="буцаалт">Солих / Буцаалт</option>
+                  </select>
+                </div>
+
+                {/* If statusFilter === 'closed', allow filtering by specific operator */}
+                {statusFilter === 'closed' && (
+                  <div className="col-span-2 pt-0.5">
+                    <label className="text-[10px] font-medium text-emerald-800 block mb-0.5">Хаасан оператор:</label>
+                    <select
+                      id="filter-closed-operator-select"
+                      value={closedAgentFilter}
+                      onChange={(e) => setClosedAgentFilter(e.target.value)}
+                      className="w-full py-1 px-1.5 rounded-md bg-white border border-emerald-200 text-slate-700 focus:outline-none focus:border-emerald-500 text-[11px] truncate"
+                    >
+                      <option value="all">Бүх операторууд</option>
+                      {currentAgent && (
+                        <option value={currentAgent.id}>★ Зөвхөн минийх ({currentAgent.name})</option>
+                      )}
+                      {team.map((ag) => (
+                        <option key={ag.id} value={ag.id}>
+                          {ag.name} ({ag.role})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* Reset button if any active filter */}
+              {(dateRangeFilter !== 'all' || resolutionFilter !== 'all' || (statusFilter === 'closed' && closedAgentFilter !== 'all')) && (
+                <div className="flex justify-end pt-1">
+                  <button
+                    type="button"
+                    id="reset-closed-filters-btn"
+                    onClick={() => {
+                      setDateRangeFilter('all');
+                      setResolutionFilter('all');
+                      setClosedAgentFilter('all');
+                    }}
+                    className="text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold hover:underline flex items-center gap-1"
+                  >
+                    <X className="w-3 h-3" />
+                    <span>Шүүлтүүрүүдийг арилгах</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Dialogs List Items */}
           <div className="flex-1 overflow-y-auto divide-y divide-slate-200">
@@ -932,13 +1298,47 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       )}
                     </div>
 
+                    {/* Resolution snippet if closed */}
+                    {d.status === 'closed' && d.resolutionSummary && (
+                      <div className="mt-1.5 text-[11px] bg-emerald-50 text-emerald-800 border border-emerald-200/70 rounded-md px-2 py-1 flex items-start gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 shrink-0 mt-0.5" />
+                        <span className="truncate font-medium">{d.resolutionSummary}</span>
+                      </div>
+                    )}
+
                     {/* Status & Assignment pills */}
                     <div className="mt-2 flex items-center justify-between text-[10px]">
-                      <span className={`px-2 py-0.5 rounded-md border font-medium ${statusBadge.color}`}>
-                        {statusBadge.label}
-                      </span>
+                      <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
+                        <span className={`px-2 py-0.5 rounded-md border font-medium ${statusBadge.color}`}>
+                          {statusBadge.label}
+                        </span>
+                        {d.status === 'closed' && isMyClosedDialog(d, currentAgent) && (
+                          <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Миний хаасан
+                          </span>
+                        )}
+                        {(d.status === 'bot' || (d.status !== 'closed' && (d.lastMessageSender === 'customer' || d.status === 'new'))) && (
+                          <span
+                            className="px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-medium flex items-center gap-1 shrink-0"
+                            title="AI хариулах эсвэл үйлдэл хүлээгдэж буй"
+                          >
+                            <Bot className="w-2.5 h-2.5 text-purple-600" />
+                            <span>AI Pending</span>
+                          </span>
+                        )}
+                      </div>
 
-                      {d.assignedAgentName ? (
+                      {d.status === 'closed' ? (
+                        <span
+                          className="text-emerald-700 font-medium flex items-center gap-1 truncate max-w-[130px]"
+                          title={`Хаасан оператор: ${d.closedByAgentName || d.assignedAgentName || 'Оператор'}`}
+                        >
+                          <CheckCircle2 className="w-2.5 h-2.5 text-emerald-600 shrink-0" />
+                          <span className="truncate">
+                            {d.closedByAgentName ? d.closedByAgentName.split(' ')[0] : (d.assignedAgentName ? d.assignedAgentName.split(' ')[0] : 'Хаагдсан')}
+                          </span>
+                        </span>
+                      ) : d.assignedAgentName ? (
                         <span className="text-slate-500 flex items-center gap-1 truncate max-w-[120px]">
                           <User className="w-2.5 h-2.5 text-slate-400" />
                           <span className="truncate">{d.assignedAgentName.split(' ')[0]}</span>
@@ -1201,6 +1601,54 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 </div>
               );
             })()}
+
+            {/* Closed Dialog Banner */}
+            {selectedDialog.status === 'closed' && (
+              <div className="bg-emerald-50/95 border-b border-emerald-200 px-4 py-3 flex items-center justify-between gap-3 text-xs text-emerald-950 shrink-0 shadow-2xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                    <CheckCircle2 className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="font-semibold flex items-center gap-2 text-emerald-900 flex-wrap">
+                      <span>Хаагдсан харилцан яриа</span>
+                      {isMyClosedDialog(selectedDialog, currentAgent) && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-800 bg-emerald-200/90 px-2 py-0.5 rounded-full border border-emerald-300">
+                          Таны хаасан
+                        </span>
+                      )}
+                      <span className="text-emerald-400">•</span>
+                      <span className="text-emerald-700 font-normal">
+                        Оператор: <strong className="font-semibold">{selectedDialog.closedByAgentName || selectedDialog.assignedAgentName || 'БСБ Оператор'}</strong>
+                      </span>
+                      {selectedDialog.closedAt && (
+                        <>
+                          <span className="text-emerald-400">•</span>
+                          <span className="text-emerald-700 font-normal">
+                            {new Date(selectedDialog.closedAt).toLocaleString('mn-MN')}
+                          </span>
+                        </>
+                      )}
+                    </div>
+                    {selectedDialog.resolutionSummary && (
+                      <p className="text-[11px] text-emerald-800 truncate mt-0.5">
+                        Шийдвэрлэлтийн тэмдэглэл: <span className="font-medium">{selectedDialog.resolutionSummary}</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  id="banner-reopen-dialog-btn"
+                  onClick={handleReopenDialog}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition shadow-2xs shrink-0"
+                  title="Харилцан яриаг дахин нээж үргэлжлүүлэх"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Дахин нээх</span>
+                </button>
+              </div>
+            )}
 
             {/* Message Thread */}
             <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3.5 min-h-0">

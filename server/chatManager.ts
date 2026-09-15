@@ -68,6 +68,9 @@ export interface ChatDialog {
   assignedAgentId?: string | null; // Хариуцаж буй операторын ID
   assignedAgentName?: string | null; // Хариуцаж буй операторын нэр
   assignedAgentAvatar?: string | null; // Операторын аватар
+  closedByAgentId?: string | null; // Чат хаасан операторын ID
+  closedByAgentName?: string | null; // Чат хаасан операторын нэр
+  closedByAgentAvatar?: string | null; // Чат хаасан операторын аватар
   lastMessageText: string; // Сүүлийн мессежийн хураангуй
   lastMessageTime: string; // Сүүлийн мессеж ирсэн цаг
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
@@ -354,6 +357,98 @@ export class ChatManagerService {
         this.dialogs = INITIAL_DIALOGS;
         this.saveDialogs();
       }
+
+      // Ensure closed dialogs have resolution and closedByAgent fields
+      let hasChanges = false;
+      const agentMap: Record<string, string> = {
+        '4605': 'Энхзаяа А.',
+        'bx-4605': 'Энхзаяа А.',
+        '4677': 'Номинцэцэг Л.',
+        'bx-4677': 'Номинцэцэг Л.',
+        '15': 'Цогтгэрэл Ч',
+        'bx-15': 'Цогтгэрэл Ч',
+        '123': 'Чойжамц Нацагдорж',
+        'bx-123': 'Чойжамц Нацагдорж',
+        'agent-1': 'Болдбаатар Ц.',
+        'agent-2': 'Анударь Э.',
+        'agent-3': 'Тэмүүлэн М.',
+        'agent-4': 'Сарнай Б.',
+      };
+
+      const sampleResolutions = [
+        'StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв.',
+        'Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.',
+        'Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв.',
+        'НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.',
+        'Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.',
+        'Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв.',
+      ];
+
+      for (let i = 0; i < this.dialogs.length; i++) {
+        const d = this.dialogs[i];
+        if (d.status === 'closed') {
+          if (!d.closedByAgentId && d.assignedAgentId) {
+            d.closedByAgentId = d.assignedAgentId;
+            hasChanges = true;
+          }
+          if (!d.closedByAgentName) {
+            d.closedByAgentName =
+              d.assignedAgentName ||
+              (d.closedByAgentId ? agentMap[d.closedByAgentId] : undefined) ||
+              (d.assignedAgentId ? agentMap[d.assignedAgentId] : undefined) ||
+              'Энхзаяа А.';
+            hasChanges = true;
+          }
+          if (!d.assignedAgentName && d.closedByAgentName) {
+            d.assignedAgentName = d.closedByAgentName;
+            hasChanges = true;
+          }
+          if (!d.closedAt) {
+            d.closedAt = d.lastMessageTime || new Date(Date.now() - (i + 1) * 3600 * 1000).toISOString();
+            hasChanges = true;
+          }
+          if (!d.resolutionSummary) {
+            d.resolutionSummary = sampleResolutions[i % sampleResolutions.length];
+            hasChanges = true;
+          }
+        }
+      }
+
+      // Ensure agent-1 (Болдбаатар Ц.) has some closed chats
+      const agent1Closed = this.dialogs.filter(
+        (d) => d.status === 'closed' && (d.closedByAgentId === 'agent-1' || d.assignedAgentId === 'agent-1')
+      );
+      if (agent1Closed.length === 0) {
+        const closedToAssign = this.dialogs.filter((d) => d.status === 'closed').slice(0, 5);
+        closedToAssign.forEach((d, idx) => {
+          d.closedByAgentId = 'agent-1';
+          d.closedByAgentName = 'Болдбаатар Ц.';
+          d.assignedAgentId = 'agent-1';
+          d.assignedAgentName = 'Болдбаатар Ц.';
+          d.resolutionSummary = sampleResolutions[idx % sampleResolutions.length];
+          hasChanges = true;
+        });
+      }
+
+      // Ensure agent-2 (Анударь Э.) has some closed chats
+      const agent2Closed = this.dialogs.filter(
+        (d) => d.status === 'closed' && (d.closedByAgentId === 'agent-2' || d.assignedAgentId === 'agent-2')
+      );
+      if (agent2Closed.length <= 1) {
+        const closedToAssign = this.dialogs.filter((d) => d.status === 'closed' && d.closedByAgentId !== 'agent-1').slice(0, 4);
+        closedToAssign.forEach((d, idx) => {
+          d.closedByAgentId = 'agent-2';
+          d.closedByAgentName = 'Анударь Э.';
+          d.assignedAgentId = 'agent-2';
+          d.assignedAgentName = 'Анударь Э.';
+          d.resolutionSummary = sampleResolutions[(idx + 2) % sampleResolutions.length];
+          hasChanges = true;
+        });
+      }
+
+      if (hasChanges) {
+        this.saveDialogs();
+      }
     } catch (e) {
       console.error('Failed to load chat dialogs:', e);
       this.dialogs = INITIAL_DIALOGS;
@@ -375,8 +470,9 @@ export class ChatManagerService {
     channelType?: string;
     search?: string;
     assignedAgentId?: string;
+    closedByAgentId?: string;
     isStarred?: boolean;
-    sortBy?: 'newest' | 'oldest' | 'waiting' | 'name';
+    sortBy?: 'newest' | 'oldest' | 'pending_ai' | 'waiting' | 'name' | 'closed_newest' | 'closed_oldest';
   }): ChatDialog[] {
     let result = [...this.dialogs];
 
@@ -400,6 +496,17 @@ export class ChatManagerService {
       }
     }
 
+    if (filters?.closedByAgentId) {
+      result = result.filter(
+        (d) =>
+          d.status === 'closed' &&
+          (d.closedByAgentId === filters.closedByAgentId ||
+            d.assignedAgentId === filters.closedByAgentId ||
+            (filters.closedByAgentId.startsWith('bx-') &&
+              d.closedByAgentId === filters.closedByAgentId.replace('bx-', '')))
+      );
+    }
+
     if (filters?.isStarred !== undefined) {
       result = result.filter((d) => Boolean(d.isStarred) === filters.isStarred);
     }
@@ -409,18 +516,42 @@ export class ChatManagerService {
       result = result.filter(
         (d) =>
           d.customer.name.toLowerCase().includes(q) ||
-          (d.customer.phone && d.customer.phone.includes(q)) ||
           d.channelName.toLowerCase().includes(q) ||
+          d.channelType.toLowerCase().includes(q) ||
           d.lastMessageText.toLowerCase().includes(q) ||
-          d.id.toLowerCase().includes(q) ||
-          d.messages.some((m) => m.text.toLowerCase().includes(q))
+          d.messages.some((m) => m.text.toLowerCase().includes(q)) ||
+          (d.customer.phone && d.customer.phone.includes(q)) ||
+          (d.resolutionSummary && d.resolutionSummary.toLowerCase().includes(q)) ||
+          (d.closedByAgentName && d.closedByAgentName.toLowerCase().includes(q)) ||
+          (d.assignedAgentName && d.assignedAgentName.toLowerCase().includes(q)) ||
+          d.id.toLowerCase().includes(q)
       );
     }
 
     const sort = filters?.sortBy || 'newest';
     result.sort((a, b) => {
+      if (sort === 'closed_newest') {
+        const timeA = new Date(a.closedAt || a.lastMessageTime).getTime();
+        const timeB = new Date(b.closedAt || b.lastMessageTime).getTime();
+        return timeB - timeA;
+      }
+      if (sort === 'closed_oldest') {
+        const timeA = new Date(a.closedAt || a.lastMessageTime).getTime();
+        const timeB = new Date(b.closedAt || b.lastMessageTime).getTime();
+        return timeA - timeB;
+      }
       if (sort === 'oldest') {
         return new Date(a.lastMessageTime).getTime() - new Date(b.lastMessageTime).getTime();
+      }
+      if (sort === 'pending_ai') {
+        // Pending AI Action: Dialogs where status is 'bot' OR (not closed and last sender is customer or new queue)
+        const aPending =
+          a.status === 'bot' || (a.status !== 'closed' && (a.lastMessageSender === 'customer' || a.status === 'new'));
+        const bPending =
+          b.status === 'bot' || (b.status !== 'closed' && (b.lastMessageSender === 'customer' || b.status === 'new'));
+        if (aPending && !bPending) return -1;
+        if (!aPending && bPending) return 1;
+        return new Date(b.lastMessageTime).getTime() - new Date(a.lastMessageTime).getTime();
       }
       if (sort === 'waiting') {
         // Unassigned new dialogs waiting longest first
@@ -482,7 +613,7 @@ export class ChatManagerService {
         }
       } else if (message.sender === 'agent') {
         dialog.unreadCount = 0;
-        if (dialog.status === 'new' || dialog.status === 'bot') {
+        if (dialog.status === 'new' || dialog.status === 'bot' || dialog.status === 'closed') {
           dialog.status = 'in_progress';
         }
       }
@@ -503,7 +634,7 @@ export class ChatManagerService {
 
   updateDialog(
     id: string,
-    updates: Partial<Pick<ChatDialog, 'status' | 'priority' | 'assignedAgentId' | 'assignedAgentName' | 'assignedAgentAvatar' | 'isStarred' | 'resolutionSummary'>>
+    updates: Partial<Pick<ChatDialog, 'status' | 'priority' | 'assignedAgentId' | 'assignedAgentName' | 'assignedAgentAvatar' | 'closedByAgentId' | 'closedByAgentName' | 'closedByAgentAvatar' | 'isStarred' | 'resolutionSummary' | 'closedAt'>>
   ): ChatDialog {
     const dialog = this.getDialogById(id);
     if (!dialog) {
@@ -512,7 +643,9 @@ export class ChatManagerService {
 
     Object.assign(dialog, updates);
     if (updates.status === 'closed') {
-      dialog.closedAt = new Date().toISOString();
+      if (!dialog.closedAt) {
+        dialog.closedAt = new Date().toISOString();
+      }
       dialog.unreadCount = 0;
     }
 
@@ -540,18 +673,31 @@ export class ChatManagerService {
     return dialog;
   }
 
-  closeDialog(id: string, resolutionSummary?: string) {
+  closeDialog(
+    id: string,
+    resolutionSummary?: string,
+    closedByAgentId?: string,
+    closedByAgentName?: string,
+    closedByAgentAvatar?: string
+  ) {
     const dialog = this.getDialogById(id);
     if (!dialog) throw new Error(`Dialog not found: ${id}`);
 
     dialog.status = 'closed';
     dialog.closedAt = new Date().toISOString();
     dialog.resolutionSummary = resolutionSummary || 'Асуудал амжилттай шийдвэрлэгдсэн';
+    if (closedByAgentId) dialog.closedByAgentId = closedByAgentId;
+    else if (!dialog.closedByAgentId && dialog.assignedAgentId) dialog.closedByAgentId = dialog.assignedAgentId;
+
+    if (closedByAgentName) dialog.closedByAgentName = closedByAgentName;
+    else if (!dialog.closedByAgentName && dialog.assignedAgentName) dialog.closedByAgentName = dialog.assignedAgentName;
+
+    if (closedByAgentAvatar) dialog.closedByAgentAvatar = closedByAgentAvatar;
 
     dialog.messages.push({
       id: `sys-${Date.now()}`,
       sender: 'system',
-      text: `Систем: Диалог хаагдлаа. Шийдвэрлэлт: ${dialog.resolutionSummary}`,
+      text: `Систем: Диалог хаагдлаа (${dialog.closedByAgentName || 'Оператор'}). Шийдвэрлэлт: ${dialog.resolutionSummary}`,
       timestamp: new Date().toISOString(),
     });
 

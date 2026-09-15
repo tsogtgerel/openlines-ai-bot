@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   BarChart3,
@@ -23,6 +23,18 @@ import {
   Share2,
   Globe,
   Radio,
+  Users,
+  Clock,
+  Bot,
+  Star,
+  Award,
+  Activity,
+  CheckCircle,
+  ChevronDown,
+  Table as TableIcon,
+  LayoutGrid,
+  ShieldCheck,
+  ExternalLink,
 } from 'lucide-react';
 import {
   CustomerInquiryItem,
@@ -30,6 +42,7 @@ import {
   CategoryStat,
   ChannelStat,
   OpenLineItem,
+  AgentPerformanceStat,
 } from '../types';
 
 interface InquiryAnalyticsTabProps {
@@ -51,7 +64,13 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
   // Filter state
   const [selectedChannels, setSelectedChannels] = useState<string[]>(['all']);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'channels' | 'report'>('categories');
+  const [activeSubTab, setActiveSubTab] = useState<'categories' | 'channels' | 'agents' | 'report'>('categories');
+
+  // Agent performance section states
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [agentStatusFilter, setAgentStatusFilter] = useState<'all' | 'online' | 'busy' | 'break' | 'offline'>('all');
+  const [agentSortBy, setAgentSortBy] = useState<'chats_desc' | 'response_asc' | 'ai_desc' | 'name_asc'>('chats_desc');
+  const [agentViewMode, setAgentViewMode] = useState<'cards' | 'table'>('cards');
 
   // UI feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -206,6 +225,15 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
       md += `Санал болгож буй нийтлэлийн эх ноорог:\n"${gap.recommendedDraft}"\n\n`;
     });
 
+    if (report.agentPerformance && report.agentPerformance.length > 0) {
+      md += `\n## 5. Операторуудын Гүйцэтгэл & AI Ашиглалтын Үзүүлэлт (Agent Performance Metrics)\n\n`;
+      md += `| Операторын Нэр | Албан тушаал | Нийт Чат | Дундаж Хариулах Хугацаа | AI Ашиглалт % | Үнэлгээ | Статус |\n`;
+      md += `|---|---|---|---|---|---|---|\n`;
+      report.agentPerformance.forEach((a) => {
+        md += `| ${a.name} | ${a.role} | ${a.totalChatsHandled} | ${a.avgResponseTimeFormatted} | ${a.aiUsageRate}% | ⭐ ${a.rating} | ${a.status} |\n`;
+      });
+    }
+
     const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -228,6 +256,76 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
         );
       })
     : [];
+
+  // Filter and sort agents for Agent Performance Section
+  const filteredAgents = useMemo(() => {
+    if (!report?.agentPerformance) return [];
+    let list = [...report.agentPerformance];
+
+    if (agentSearchQuery.trim()) {
+      const q = agentSearchQuery.toLowerCase().trim();
+      list = list.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          a.role.toLowerCase().includes(q) ||
+          a.email.toLowerCase().includes(q) ||
+          a.assignedChannels.some((ch) => ch.toLowerCase().includes(q))
+      );
+    }
+
+    if (agentStatusFilter !== 'all') {
+      list = list.filter((a) => a.status === agentStatusFilter);
+    }
+
+    list.sort((a, b) => {
+      if (agentSortBy === 'chats_desc') {
+        return b.totalChatsHandled - a.totalChatsHandled;
+      }
+      if (agentSortBy === 'response_asc') {
+        return a.avgResponseTimeSeconds - b.avgResponseTimeSeconds;
+      }
+      if (agentSortBy === 'ai_desc') {
+        return b.aiUsageRate - a.aiUsageRate;
+      }
+      if (agentSortBy === 'name_asc') {
+        return a.name.localeCompare(b.name, 'mn');
+      }
+      return 0;
+    });
+
+    return list;
+  }, [report?.agentPerformance, agentSearchQuery, agentStatusFilter, agentSortBy]);
+
+  // Overall agent performance metrics summary
+  const agentTeamSummary = useMemo(() => {
+    if (!report?.agentPerformance || report.agentPerformance.length === 0) {
+      return {
+        totalAgents: 0,
+        totalChats: 0,
+        avgResponseSeconds: 0,
+        avgResponseFormatted: '0 сек',
+        avgAiUsage: 0,
+        topAgent: null as AgentPerformanceStat | null,
+      };
+    }
+    const agents = report.agentPerformance;
+    const totalAgents = agents.length;
+    const totalChats = agents.reduce((acc, a) => acc + a.totalChatsHandled, 0);
+    const avgResponseSeconds = Math.round(agents.reduce((acc, a) => acc + a.avgResponseTimeSeconds, 0) / totalAgents);
+    const avgResponseFormatted =
+      avgResponseSeconds < 60 ? `${avgResponseSeconds} сек` : `${(avgResponseSeconds / 60).toFixed(1)} мин`;
+    const avgAiUsage = Math.round(agents.reduce((acc, a) => acc + a.aiUsageRate, 0) / totalAgents);
+    const topAgent = [...agents].sort((a, b) => b.totalChatsHandled - a.totalChatsHandled)[0] || null;
+
+    return {
+      totalAgents,
+      totalChats,
+      avgResponseSeconds,
+      avgResponseFormatted,
+      avgAiUsage,
+      topAgent,
+    };
+  }, [report?.agentPerformance]);
 
   return (
     <div className="space-y-6 pb-12 print:space-y-4 print:pb-0" id="inquiry-analytics-container">
@@ -427,6 +525,20 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
           >
             <BarChart3 className="w-3.5 h-3.5" />
             <span>Суваг Бүрээр Харьцуулах ({report?.channelBreakdown.length || 0})</span>
+          </button>
+
+          <button
+            type="button"
+            id="subtab-agents"
+            onClick={() => setActiveSubTab('agents')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition ${
+              activeSubTab === 'agents'
+                ? 'bg-blue-600 text-white shadow-2xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Users className="w-3.5 h-3.5" />
+            <span>Операторуудын Гүйцэтгэл ({report?.agentPerformance?.length || 0})</span>
           </button>
 
           <button
@@ -721,7 +833,512 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
         </div>
       )}
 
-      {/* SUBTAB 3: Executive Report & Export View */}
+      {/* SUBTAB 3: Agent Performance Metrics (Операторуудын Гүйцэтгэл) */}
+      {report && activeSubTab === 'agents' && (
+        <div className="space-y-6" id="agent-performance-section">
+          {/* Top KPI Summary Banner */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                <span>Нийт Оператор</span>
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
+              <div className="text-2xl font-bold text-slate-900">
+                {agentTeamSummary.totalAgents}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Бүх сувгийн тохируулсан ажилтнууд
+              </p>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                <span>Нийт Хариуцсан Чат</span>
+                <MessageSquare className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="text-2xl font-bold text-emerald-600">
+                {agentTeamSummary.totalChats.toLocaleString()}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Сонгогдсон хугацаанд хариулсан чатууд
+              </p>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                <span>Дундаж Хариулах Хугацаа</span>
+                <Clock className="w-4 h-4 text-amber-500" />
+              </div>
+              <div className="text-2xl font-bold text-amber-600">
+                {agentTeamSummary.avgResponseFormatted}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Харилцагчийн мессежид хариу өгөх хугацаа
+              </p>
+            </div>
+
+            <div className="bg-white p-4 rounded-xl border border-slate-200/80 shadow-2xs space-y-1">
+              <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+                <span>Дундаж AI Ашиглалт</span>
+                <Bot className="w-4 h-4 text-purple-600" />
+              </div>
+              <div className="text-2xl font-bold text-purple-600">
+                {agentTeamSummary.avgAiUsage}%
+              </div>
+              <p className="text-[11px] text-slate-500">
+                AI зөвлөмж & автомат бэлэн хариултын хувь
+              </p>
+            </div>
+          </div>
+
+          {/* Search, Status & Sorting Filter Controls */}
+          <div className="bg-white rounded-xl border border-slate-200/80 p-4 shadow-2xs space-y-3">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+              {/* Search bar */}
+              <div className="relative flex-1 max-w-md">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  id="agent-search-input"
+                  value={agentSearchQuery}
+                  onChange={(e) => setAgentSearchQuery(e.target.value)}
+                  placeholder="Операторын нэр, албан тушаал, сувгаар хайх..."
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-slate-50/50"
+                />
+                {agentSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setAgentSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600"
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+
+              {/* Filters and View mode */}
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                {/* Status filter */}
+                <select
+                  id="agent-status-filter"
+                  value={agentStatusFilter}
+                  onChange={(e) => setAgentStatusFilter(e.target.value as any)}
+                  className="text-xs py-2 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">Бүх төлөв</option>
+                  <option value="online">🟢 Онлайн (Ажиллаж буй)</option>
+                  <option value="busy">🔴 Завгүй</option>
+                  <option value="break">🟡 Завсарлага</option>
+                  <option value="offline">⚪ Оффлайн</option>
+                </select>
+
+                {/* Sort selector */}
+                <select
+                  id="agent-sort-select"
+                  value={agentSortBy}
+                  onChange={(e) => setAgentSortBy(e.target.value as any)}
+                  className="text-xs py-2 px-2.5 rounded-lg border border-slate-200 bg-white font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="chats_desc">Нийт чатаар (Ихээс бага)</option>
+                  <option value="response_asc">Хариулах хурдаар (Хурднаас удаан)</option>
+                  <option value="ai_desc">AI ашиглалтын хувиар (Өндрөөс бага)</option>
+                  <option value="name_asc">Нэрээр (А-Я)</option>
+                </select>
+
+                {/* View Mode Toggle: Cards / Table */}
+                <div className="inline-flex rounded-lg border border-slate-200 p-0.5 bg-slate-50">
+                  <button
+                    type="button"
+                    id="view-cards-btn"
+                    onClick={() => setAgentViewMode('cards')}
+                    title="Картаар харах"
+                    className={`p-1.5 rounded-md transition ${
+                      agentViewMode === 'cards'
+                        ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <LayoutGrid className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    id="view-table-btn"
+                    onClick={() => setAgentViewMode('table')}
+                    title="Хүснэгтээр харах"
+                    className={`p-1.5 rounded-md transition ${
+                      agentViewMode === 'table'
+                        ? 'bg-white text-blue-600 shadow-2xs font-bold'
+                        : 'text-slate-500 hover:text-slate-800'
+                    }`}
+                  >
+                    <TableIcon className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Filter Info */}
+            <div className="flex items-center justify-between text-xs text-slate-500 pt-1 border-t border-slate-100">
+              <span>
+                Нийт <strong className="text-slate-800">{filteredAgents.length}</strong> оператор харуулж байна
+              </span>
+              {agentTeamSummary.topAgent && (
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-amber-700 font-medium">
+                  <Award className="w-3.5 h-3.5 text-amber-500" />
+                  Шилдэг оператор: <strong>{agentTeamSummary.topAgent.name}</strong> ({agentTeamSummary.topAgent.totalChatsHandled} чат)
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Empty state */}
+          {filteredAgents.length === 0 && (
+            <div className="bg-white rounded-2xl p-12 text-center border border-slate-200/80 shadow-2xs space-y-3">
+              <Users className="w-10 h-10 text-slate-300 mx-auto" />
+              <h4 className="text-sm font-bold text-slate-800">
+                Шүүлтэд тохирох оператор олдсонгүй
+              </h4>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                Хайх үг эсвэл төлөвийн шүүлтүүрийг өөрчлөөд дахин оролдоно уу.
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setAgentSearchQuery('');
+                  setAgentStatusFilter('all');
+                }}
+                className="px-3 py-1.5 text-xs rounded-lg bg-blue-50 text-blue-700 font-semibold hover:bg-blue-100 transition"
+              >
+                Шүүлтийг цэвэрлэх
+              </button>
+            </div>
+          )}
+
+          {/* CARDS VIEW MODE */}
+          {agentViewMode === 'cards' && filteredAgents.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredAgents.map((agent, index) => {
+                const isFast = agent.avgResponseTimeSeconds <= 60;
+                const isModerate = agent.avgResponseTimeSeconds > 60 && agent.avgResponseTimeSeconds <= 180;
+
+                return (
+                  <div
+                    key={agent.agentId}
+                    id={`agent-card-${agent.agentId}`}
+                    className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs transition p-5 space-y-4 flex flex-col justify-between"
+                  >
+                    {/* Header: Avatar, Name, Status */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          <img
+                            src={agent.avatar}
+                            alt={agent.name}
+                            className="w-11 h-11 rounded-xl object-cover bg-slate-100 border border-slate-200"
+                            referrerPolicy="no-referrer"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLElement).style.display = 'none';
+                            }}
+                          />
+                          <span
+                            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white ${
+                              agent.status === 'online'
+                                ? 'bg-emerald-500'
+                                : agent.status === 'busy'
+                                ? 'bg-rose-500'
+                                : agent.status === 'break'
+                                ? 'bg-amber-500'
+                                : 'bg-slate-300'
+                            }`}
+                            title={`Төлөв: ${agent.status}`}
+                          />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <h4 className="text-sm font-bold text-slate-900 truncate">
+                              {agent.name}
+                            </h4>
+                            {index === 0 && (
+                              <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">
+                                #1 Тэргүүлэгч
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 truncate">
+                            {agent.role}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {agent.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider shrink-0 ${
+                          agent.status === 'online'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : agent.status === 'busy'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : agent.status === 'break'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                            : 'bg-slate-100 text-slate-600'
+                        }`}
+                      >
+                        {agent.status === 'online'
+                          ? 'Онлайн'
+                          : agent.status === 'busy'
+                          ? 'Завгүй'
+                          : agent.status === 'break'
+                          ? 'Завсарлага'
+                          : 'Оффлайн'}
+                      </span>
+                    </div>
+
+                    {/* 3 Core Metrics Grid */}
+                    <div className="grid grid-cols-3 gap-2 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                      {/* Metric 1: Total Chats */}
+                      <div className="space-y-0.5 text-center">
+                        <span className="text-[10px] font-medium text-slate-500 block">
+                          Нийт Чат
+                        </span>
+                        <div className="text-base sm:text-lg font-bold text-slate-900">
+                          {agent.totalChatsHandled}
+                        </div>
+                        <span className="text-[10px] text-emerald-700 font-semibold block">
+                          {agent.closedChatsCount} хаасан ({agent.resolutionRate}%)
+                        </span>
+                      </div>
+
+                      {/* Metric 2: Average Response Time */}
+                      <div className="space-y-0.5 text-center border-x border-slate-200/60 px-1">
+                        <span className="text-[10px] font-medium text-slate-500 block">
+                          Хариулах Хурд
+                        </span>
+                        <div className="text-base sm:text-lg font-bold text-blue-600 truncate">
+                          {agent.avgResponseTimeFormatted}
+                        </div>
+                        <span
+                          className={`text-[10px] font-semibold block ${
+                            isFast
+                              ? 'text-emerald-700'
+                              : isModerate
+                              ? 'text-amber-700'
+                              : 'text-slate-600'
+                          }`}
+                        >
+                          {isFast ? '⚡ Хурдан' : isModerate ? '👍 Хэвийн' : '⏱️ Хүлээгдэлтэй'}
+                        </span>
+                      </div>
+
+                      {/* Metric 3: AI Usage Rate */}
+                      <div className="space-y-0.5 text-center">
+                        <span className="text-[10px] font-medium text-slate-500 block">
+                          AI Ашиглалт
+                        </span>
+                        <div className="text-base sm:text-lg font-bold text-purple-600">
+                          {agent.aiUsageRate}%
+                        </div>
+                        <span className="text-[10px] text-purple-700 font-semibold block truncate">
+                          {agent.aiAssistedChatsCount} AI хариулт
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* AI Usage Progress Bar */}
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="text-slate-600 font-medium flex items-center gap-1">
+                          <Bot className="w-3.5 h-3.5 text-purple-600" />
+                          AI Туслахын Интеграци:
+                        </span>
+                        <span className="font-bold text-purple-700">
+                          {agent.aiUsageRate}%
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-purple-500 to-blue-500 rounded-full transition-all duration-500"
+                          style={{ width: `${agent.aiUsageRate}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Quality, Rating & Assigned Channels */}
+                    <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
+                      <div className="flex items-center justify-between text-[11px] text-slate-600">
+                        <div className="flex items-center gap-1 font-semibold text-slate-800">
+                          <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                          <span>{agent.rating} / 5.0</span>
+                          <span className="text-slate-400 font-normal">
+                            ({agent.positiveSentimentRate}% эерэг)
+                          </span>
+                        </div>
+                        <span className="text-slate-500">
+                          FCR: <strong>{agent.firstContactResolutionRate}%</strong>
+                        </span>
+                      </div>
+
+                      {/* Assigned channels */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-slate-400">Суваг:</span>
+                        {agent.assignedChannels.slice(0, 2).map((ch, i) => (
+                          <span
+                            key={i}
+                            className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium truncate max-w-[140px]"
+                            title={ch}
+                          >
+                            {ch}
+                          </span>
+                        ))}
+                        {agent.assignedChannels.length > 2 && (
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            +{agent.assignedChannels.length - 2}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* TABLE VIEW MODE */}
+          {agentViewMode === 'table' && filteredAgents.length > 0 && (
+            <div className="bg-white rounded-2xl border border-slate-200/80 shadow-2xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200/80 text-slate-600 font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="py-3 px-4">Оператор</th>
+                      <th className="py-3 px-3">Албан тушаал</th>
+                      <th className="py-3 px-3 text-center">Нийт Чат</th>
+                      <th className="py-3 px-3 text-center">Дундаж Хариулах Хугацаа</th>
+                      <th className="py-3 px-3 text-center">AI Ашиглалт</th>
+                      <th className="py-3 px-3 text-center">Үнэлгээ</th>
+                      <th className="py-3 px-4">Сувгууд</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredAgents.map((agent) => (
+                      <tr
+                        key={agent.agentId}
+                        id={`agent-row-${agent.agentId}`}
+                        className="hover:bg-slate-50/70 transition"
+                      >
+                        {/* Operator */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative shrink-0">
+                              <img
+                                src={agent.avatar}
+                                alt={agent.name}
+                                className="w-8 h-8 rounded-lg object-cover bg-slate-100"
+                                referrerPolicy="no-referrer"
+                              />
+                              <span
+                                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border border-white ${
+                                  agent.status === 'online'
+                                    ? 'bg-emerald-500'
+                                    : agent.status === 'busy'
+                                    ? 'bg-rose-500'
+                                    : agent.status === 'break'
+                                    ? 'bg-amber-500'
+                                    : 'bg-slate-300'
+                                }`}
+                              />
+                            </div>
+                            <div>
+                              <div className="font-bold text-slate-900">{agent.name}</div>
+                              <div className="text-[11px] text-slate-400">{agent.email}</div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* Role */}
+                        <td className="py-3 px-3 text-slate-600 font-medium max-w-[160px] truncate">
+                          {agent.role}
+                        </td>
+
+                        {/* Total Chats */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="font-bold text-slate-900 text-sm">
+                            {agent.totalChatsHandled}
+                          </span>
+                          <span className="block text-[10px] text-emerald-700 font-semibold">
+                            {agent.closedChatsCount} хаасан ({agent.resolutionRate}%)
+                          </span>
+                        </td>
+
+                        {/* Average Response Time */}
+                        <td className="py-3 px-3 text-center">
+                          <span className="font-bold text-blue-600 text-sm">
+                            {agent.avgResponseTimeFormatted}
+                          </span>
+                          <span className="block text-[10px] text-slate-500">
+                            {agent.avgResponseTimeSeconds <= 60 ? '⚡ <1 мин' : '⏱️ хэвийн'}
+                          </span>
+                        </td>
+
+                        {/* AI Usage */}
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center gap-1.5">
+                            <div className="w-14 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                              <div
+                                className="h-full bg-purple-600 rounded-full"
+                                style={{ width: `${agent.aiUsageRate}%` }}
+                              />
+                            </div>
+                            <span className="font-bold text-purple-700 text-xs">
+                              {agent.aiUsageRate}%
+                            </span>
+                          </div>
+                          <span className="block text-[10px] text-slate-400">
+                            {agent.aiAssistedChatsCount} тусламжтай
+                          </span>
+                        </td>
+
+                        {/* Rating */}
+                        <td className="py-3 px-3 text-center">
+                          <div className="inline-flex items-center gap-1 font-bold text-slate-800">
+                            <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-400" />
+                            <span>{agent.rating}</span>
+                          </div>
+                          <span className="block text-[10px] text-slate-400">
+                            {agent.positiveSentimentRate}% эерэг
+                          </span>
+                        </td>
+
+                        {/* Channels */}
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-1 flex-wrap max-w-xs">
+                            {agent.assignedChannels.slice(0, 2).map((ch, idx) => (
+                              <span
+                                key={idx}
+                                className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-medium truncate max-w-[120px]"
+                                title={ch}
+                              >
+                                {ch}
+                              </span>
+                            ))}
+                            {agent.assignedChannels.length > 2 && (
+                              <span className="text-[10px] text-slate-400 font-medium">
+                                +{agent.assignedChannels.length - 2}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SUBTAB 4: Executive Report & Export View */}
       {report && activeSubTab === 'report' && (
         <div className="space-y-6" id="printable-executive-report">
           {/* Executive Summary Card */}
@@ -831,6 +1448,76 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
                 ))}
               </div>
             </div>
+
+            {/* Agent Performance Summary in Executive Report */}
+            {report.agentPerformance && report.agentPerformance.length > 0 && (
+              <div className="space-y-3 pt-4 border-t border-slate-100">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <h4 className="text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      Оператор Тус Бүрийн Гүйцэтгэлийн Товчоо (Agent Performance & AI Adoption):
+                    </h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setActiveSubTab('agents')}
+                    className="text-xs text-blue-600 font-semibold hover:underline inline-flex items-center gap-1 print:hidden"
+                  >
+                    <span>Бүх операторын дэлгэрэнгүйг харах</span>
+                    <ArrowRight className="w-3 h-3" />
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto rounded-xl border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase text-[10px]">
+                      <tr>
+                        <th className="py-2.5 px-3">Операторын нэр</th>
+                        <th className="py-2.5 px-3">Албан тушаал</th>
+                        <th className="py-2.5 px-3 text-center">Нийт Чат</th>
+                        <th className="py-2.5 px-3 text-center">Дундаж Хугацаа</th>
+                        <th className="py-2.5 px-3 text-center">AI Ашиглалт</th>
+                        <th className="py-2.5 px-3 text-center">Сэтгэл Ханамж</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {report.agentPerformance.slice(0, 8).map((agent) => (
+                        <tr key={agent.agentId} className="hover:bg-slate-50/50">
+                          <td className="py-2 px-3 font-semibold text-slate-900 flex items-center gap-2">
+                            <span
+                              className={`w-2 h-2 rounded-full ${
+                                agent.status === 'online'
+                                  ? 'bg-emerald-500'
+                                  : agent.status === 'busy'
+                                  ? 'bg-rose-500'
+                                  : 'bg-slate-300'
+                              }`}
+                            />
+                            <span>{agent.name}</span>
+                          </td>
+                          <td className="py-2 px-3 text-slate-500">{agent.role}</td>
+                          <td className="py-2 px-3 text-center font-bold text-slate-800">
+                            {agent.totalChatsHandled}
+                          </td>
+                          <td className="py-2 px-3 text-center font-semibold text-blue-600">
+                            {agent.avgResponseTimeFormatted}
+                          </td>
+                          <td className="py-2 px-3 text-center">
+                            <span className="px-2 py-0.5 rounded-full bg-purple-50 text-purple-700 font-bold text-[11px]">
+                              {agent.aiUsageRate}%
+                            </span>
+                          </td>
+                          <td className="py-2 px-3 text-center text-amber-700 font-bold">
+                            ⭐ {agent.rating}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
