@@ -167,6 +167,82 @@ export const DeployTab: React.FC<DeployTabProps> = ({
           </div>
         )}
       </div>
+
+      {/* Deployment Manual / Instructions Card */}
+      <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div>
+            <h3 className="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <Terminal className="w-4 h-4 text-blue-600" />
+              <span>Өөр сервер дээр Deploy хийх заавар (Production Deployment)</span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Та энэхүү төслийг өөрийн дурын Linux VPS (Ubuntu/Debian), Docker эсвэл Cloud Run дээр байршуулах боломжтой.
+            </p>
+          </div>
+          <span className="text-[11px] font-mono bg-slate-100 text-slate-600 px-2.5 py-1 rounded-md">
+            Node.js 20+ • Port 3000
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+          {/* Method 1: PM2 + Nginx */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold">1</span>
+              <span>Linux VPS (PM2 + Nginx)</span>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              24/7 тасралтгүй ажиллах стандартын арга. Сервер унтарвал автоматаар асна.
+            </p>
+            <pre className="bg-slate-900 text-slate-100 text-[10px] p-2.5 rounded-lg overflow-x-auto font-mono">
+{`npm install
+npm run build
+pm2 start dist/server.cjs --name "bsb-bot"
+pm2 startup && pm2 save`}
+            </pre>
+          </div>
+
+          {/* Method 2: Docker Compose */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold">2</span>
+              <span>Docker & Compose</span>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Контейнер орчинд 1 коммандаар бүрэн ажиллуулах (Dockerfile & compose бэлэн).
+            </p>
+            <pre className="bg-slate-900 text-slate-100 text-[10px] p-2.5 rounded-lg overflow-x-auto font-mono">
+{`# 1 товшилтоор асаах:
+docker compose up -d --build
+# Лог шалгах:
+docker compose logs -f`}
+            </pre>
+          </div>
+
+          {/* Method 3: Reverse Proxy & SSL */}
+          <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/50 space-y-2">
+            <div className="flex items-center gap-2 text-slate-900 font-semibold text-xs">
+              <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[11px] font-bold">3</span>
+              <span>Nginx + Let's Encrypt SSL</span>
+            </div>
+            <p className="text-[11px] text-slate-600 leading-relaxed">
+              Bitrix24 Open Lines нь заавал HTTPS шаарддаг тул үнэгүй SSL суулгах.
+            </p>
+            <pre className="bg-slate-900 text-slate-100 text-[10px] p-2.5 rounded-lg overflow-x-auto font-mono">
+{`sudo apt install certbot python3-certbot-nginx
+sudo certbot --nginx -d your-domain.com`}
+            </pre>
+          </div>
+        </div>
+
+        <div className="p-3 bg-blue-50/70 border border-blue-200/80 rounded-xl text-xs text-blue-900 flex items-start gap-2">
+          <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+          <span>
+            Бүх нарийвчилсан зааварчилгаа, Nginx-ийн бэлэн <code>.conf</code> тохиргоо болон Bitrix24 Open Lines холболтын дэлгэрэнгүй тайлбарыг төслийн үндсэн хавтас дахь <strong>README.md</strong> файлаас харна уу.
+          </span>
+        </div>
+      </div>
     </div>
   );
 };

@@ -1,0 +1,18 @@
+services:
+  bsb-ai-bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bsb-ai-bot-app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+      - VIBE_API_KEY=${VIBE_API_KEY}
+      - APP_URL=${APP_URL}
+    volumes:
+      # Persistent local storage for dialogs, shifts, and knowledge base
+      - ./data:/app/data
