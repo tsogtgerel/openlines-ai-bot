@@ -460,11 +460,11 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
               <span>Ихэвчлэн Асуудаг Сэдэв</span>
               <TrendingUp className="w-4 h-4 text-emerald-500" />
             </div>
-            <div className="text-base sm:text-lg font-bold text-emerald-700 truncate" title={report.categories[0]?.title}>
-              {report.categories[0]?.title || 'Хүргэлт & Тээвэр'}
+            <div className="text-base sm:text-lg font-bold text-emerald-700 truncate" title={report?.categories?.[0]?.title}>
+              {report?.categories?.[0]?.title || 'Хүргэлт & Тээвэр'}
             </div>
             <p className="text-[11px] text-emerald-600 font-medium">
-              Нийт асуултын {report.categories[0]?.percentage || 0}%-ийг эзэлж байна
+              Нийт асуултын {report?.categories?.[0]?.percentage || 0}%-ийг эзэлж байна
             </p>
           </div>
 
@@ -474,7 +474,7 @@ export const InquiryAnalyticsTab: React.FC<InquiryAnalyticsTabProps> = ({
               <Layers className="w-4 h-4 text-indigo-500" />
             </div>
             <div className="text-2xl font-bold text-indigo-900">
-              {report.categories.length} Сэдэв
+              {report?.categories?.length || 0} Сэдэв
             </div>
             <p className="text-[11px] text-slate-500">
               Бүгд AI бэлэн хариулттай

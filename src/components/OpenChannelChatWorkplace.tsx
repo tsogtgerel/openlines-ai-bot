@@ -191,6 +191,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (channelFilter !== 'all') params.append('channelId', channelFilter);
       if (sortBy) params.append('sortBy', sortBy);
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
 
       const res = await fetch(`/api/chats?${params.toString()}`).then((r) => r.json());
       if (res.success && Array.isArray(res.data)) {
@@ -219,6 +220,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (channelFilter !== 'all') params.append('channelId', channelFilter);
       if (sortBy) params.append('sortBy', sortBy);
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
+      if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
 
       const res = await fetch(`/api/chats?${params.toString()}`).then((r) => r.json());
       if (res.success && Array.isArray(res.data)) {
@@ -569,7 +571,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const handleSimulateIncoming = async () => {
     if (!simCustomerName || !simMessage) return;
     try {
-      const lineObj = openLines.find((l) => l.name.toLowerCase().includes(simChannelType)) || openLines[0];
+      const lineObj = openLines?.find((l) => l.name.toLowerCase().includes(simChannelType)) || openLines?.[0];
       const res = await fetch('/api/chats/simulate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -662,6 +664,16 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     return summary.toLowerCase().includes(filter.toLowerCase());
   };
 
+  // Filter accessible openlines based on currentAgent permissions
+  const accessibleOpenLines = useMemo(() => {
+    if (!currentAgent) return openLines;
+    if (currentAgent.accessRole !== 'agent' || currentAgent.canAccessAllChannels) {
+      return openLines;
+    }
+    const assigned = currentAgent.assignedChannelIds || [];
+    return openLines.filter((l) => assigned.some((id) => String(id) === String(l.id)));
+  }, [openLines, currentAgent]);
+
   // Filtered & Sorted Dialogs
   // Filters active chats by customer name, channel (name/type), or message content
   // Sorts conversations by 'Newest', 'Oldest', 'Pending AI Action', 'Closed Newest', 'Closed Oldest'
@@ -677,6 +689,25 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (statusFilter === 'starred') return Boolean(d.isStarred);
       return true;
     });
+
+    // Strict Role-Based Security: Agent can ONLY see assigned channels, unassigned chats, and their own chats
+    if (currentAgent?.accessRole === 'agent') {
+      // 1. Channel isolation: Agent only sees chats from assigned channels
+      if (!currentAgent.canAccessAllChannels && Array.isArray(currentAgent.assignedChannelIds)) {
+        const allowedChannelIds = currentAgent.assignedChannelIds.map(String);
+        result = result.filter((d) => allowedChannelIds.includes(String(d.channelId)));
+      }
+
+      // 2. Chat isolation: Only unassigned (new queue) or assigned to this agent
+      result = result.filter((d) => {
+        const isUnassigned = !d.assignedAgentId || d.status === 'new' || d.assignedAgentId === 'unassigned';
+        const isMine =
+          d.assignedAgentId === currentAgent.id ||
+          isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent) ||
+          isMyClosedDialog(d, currentAgent);
+        return isUnassigned || isMine;
+      });
+    }
 
     if (channelFilter !== 'all') {
       result = result.filter((d) => String(d.channelId) === String(channelFilter));
@@ -932,8 +963,12 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   className="w-full text-[11px] font-medium py-1.5 px-2 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 focus:outline-none focus:border-blue-500 truncate"
                   title="Сувгаар шүүх"
                 >
-                  <option value="all">Бүх суваг</option>
-                  {openLines.map((line) => {
+                  <option value="all">
+                    {currentAgent?.accessRole === 'agent' && !currentAgent.canAccessAllChannels
+                      ? `Оноогдсон бүх суваг (${accessibleOpenLines.length})`
+                      : 'Бүх суваг'}
+                  </option>
+                  {accessibleOpenLines.map((line) => {
                     const opsCount = line.operatorsCount ?? line.assignedAgents?.length ?? 0;
                     return (
                       <option key={line.id} value={line.id}>
@@ -1058,20 +1093,22 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               <Bot className="w-3 h-3" />
               <span>AI Бот ({botCount})</span>
             </button>
-            <button
-              id="tab-closed-chats-btn"
-              onClick={() => {
-                setStatusFilter('closed');
-                setSortBy('closed_newest');
-              }}
-              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
-                statusFilter === 'closed'
-                  ? 'bg-slate-700 text-white font-semibold'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Бүх хаагдсан ({allClosedCount})
-            </button>
+            {currentAgent?.accessRole !== 'agent' && (
+              <button
+                id="tab-closed-chats-btn"
+                onClick={() => {
+                  setStatusFilter('closed');
+                  setSortBy('closed_newest');
+                }}
+                className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
+                  statusFilter === 'closed'
+                    ? 'bg-slate-700 text-white font-semibold'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Бүх хаагдсан ({allClosedCount})
+              </button>
+            )}
             <button
               id="tab-starred-chats-btn"
               onClick={() => setStatusFilter('starred')}

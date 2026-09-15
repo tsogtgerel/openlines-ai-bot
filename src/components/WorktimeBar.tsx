@@ -11,8 +11,9 @@ import {
   AlertCircle,
   TrendingUp,
   RotateCcw,
+  Shield,
 } from 'lucide-react';
-import { Agent, WorkShift } from '../types';
+import { Agent, WorkShift, AccessRole } from '../types';
 
 interface WorktimeBarProps {
   currentAgent: Agent | null;
@@ -25,6 +26,7 @@ interface WorktimeBarProps {
   onSetStatus: (status: Agent['status']) => Promise<void>;
   onSwitchAgent: (agentId: string) => Promise<void>;
   onOpenTeamModal: () => void;
+  onOpenPermissionsModal?: () => void;
 }
 
 export const WorktimeBar: React.FC<WorktimeBarProps> = ({
@@ -38,6 +40,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
   onSetStatus,
   onSwitchAgent,
   onOpenTeamModal,
+  onOpenPermissionsModal,
 }) => {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [showStatusDropdown, setShowStatusDropdown] = useState(false);
@@ -126,8 +129,23 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                   />
                 </div>
                 <div className="text-left min-w-0">
-                  <div className="font-semibold text-white leading-tight flex items-center gap-1">
+                  <div className="font-semibold text-white leading-tight flex items-center gap-1.5">
                     <span className="truncate max-w-[100px] sm:max-w-none">{currentAgent.name}</span>
+                    <span
+                      className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md ${
+                        currentAgent.accessRole === 'admin'
+                          ? 'bg-purple-900/80 text-purple-300 border border-purple-700/60'
+                          : currentAgent.accessRole === 'supervisor'
+                          ? 'bg-blue-900/80 text-blue-300 border border-blue-700/60'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                      }`}
+                    >
+                      {currentAgent.accessRole === 'admin'
+                        ? 'Админ'
+                        : currentAgent.accessRole === 'supervisor'
+                        ? 'Ахлах'
+                        : 'Оператор'}
+                    </span>
                     <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                   </div>
                   <div className="text-[10px] text-slate-400 leading-tight truncate">{currentAgent.role}</div>
@@ -163,7 +181,24 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                         />
                       </div>
                       <div className="flex-1 truncate">
-                        <div className="font-medium text-white text-xs truncate">{a.name}</div>
+                        <div className="font-medium text-white text-xs truncate flex items-center gap-1.5">
+                          <span>{a.name}</span>
+                          <span
+                            className={`text-[8px] font-semibold px-1 py-0.2 rounded ${
+                              a.accessRole === 'admin'
+                                ? 'bg-purple-900/60 text-purple-300'
+                                : a.accessRole === 'supervisor'
+                                ? 'bg-blue-900/60 text-blue-300'
+                                : 'bg-emerald-950/60 text-emerald-300'
+                            }`}
+                          >
+                            {a.accessRole === 'admin'
+                              ? 'Админ'
+                              : a.accessRole === 'supervisor'
+                              ? 'Ахлах'
+                              : 'Оператор'}
+                          </span>
+                        </div>
                         <div className="text-[10px] text-slate-400 truncate">{a.role}</div>
                       </div>
                       {a.id === currentAgent.id && (
@@ -182,9 +217,9 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                 onClick={() => setShowStatusDropdown(!showStatusDropdown)}
                 className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 rounded-lg bg-slate-900/60 hover:bg-slate-900 border border-slate-700 font-medium transition"
               >
-                <span className={`w-2 h-2 rounded-full ${statusConfig[currentAgent.status]?.color}`} />
+                <span className={`w-2 h-2 rounded-full ${statusConfig[currentAgent.status]?.color || 'bg-emerald-500'}`} />
                 <span className="text-slate-200 truncate max-w-[80px] sm:max-w-none">
-                  {statusConfig[currentAgent.status]?.label.split(' ')[0]}
+                  {(statusConfig[currentAgent.status]?.label || 'Ажиллаж буй').split(' ')[0]}
                 </span>
                 <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5 shrink-0" />
               </button>
@@ -304,6 +339,19 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                   {team.filter((t) => t.status === 'online').length}/{team.length}
                 </span>
               </button>
+
+              {/* Permissions modal toggle for Admin / Supervisor */}
+              {onOpenPermissionsModal && (
+                <button
+                  id="agent-permissions-modal-btn"
+                  onClick={onOpenPermissionsModal}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-indigo-900/40 hover:bg-indigo-900/70 text-indigo-200 border border-indigo-700/50 transition text-xs shrink-0"
+                  title="Операторуудын эрх, сувгийн тохиргоог удирдах"
+                >
+                  <Shield className="w-3.5 h-3.5 text-indigo-400" />
+                  <span className="hidden sm:inline">Эрхийн тохиргоо</span>
+                </button>
+              )}
             </div>
           </div>
         </div>

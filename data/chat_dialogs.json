@@ -1,5 +1,309 @@
 [
   {
+    "id": "chat-76134",
+    "dialogId": "chat76134",
+    "customer": {
+      "name": "Guest",
+      "tags": [
+        "LIVECHAT",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 1,
+    "channelName": "Бидэнтэй чатлаарай! BSB.mn",
+    "channelType": "webchat",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "лавлах утас",
+    "lastMessageTime": "2026-09-15T10:23:40+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-15T10:23:40+03:00",
+    "messages": [
+      {
+        "id": "bx-1110238",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20774 started",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110240",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Data received:",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110242",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110244",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "лавлах утас",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110246",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110250",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-15T10:23:40+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110270",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-15T10:34:10+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-76120",
+    "dialogId": "chat76120",
+    "customer": {
+      "name": "Guest",
+      "crmLeadId": "LEAD-58520",
+      "tags": [
+        "LIVECHAT",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 1,
+    "channelName": "Бидэнтэй чатлаарай! BSB.mn",
+    "channelType": "webchat",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Tanai Macbook neo sonirhoj bgn",
+    "lastMessageTime": "2026-09-15T10:14:54+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-15T10:14:16+03:00",
+    "messages": [
+      {
+        "id": "bx-1110182",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20772 started",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110184",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Data received:",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110186",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110188",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Hi",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110190",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110194",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-15T10:14:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110202",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form completed: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-15T10:14:32+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110204",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "New contact created",
+        "timestamp": "2026-09-15T10:14:32+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110206",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-15T10:14:32+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110210",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Tanai Macbook neo sonirhoj bgn",
+        "timestamp": "2026-09-15T10:14:54+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110256",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-15T10:25:09+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-76088",
+    "dialogId": "chat76088",
+    "customer": {
+      "name": "Tuvshinjargal Davaatseren",
+      "crmLeadId": "LEAD-58500",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 21,
+    "channelName": "БСБ Оффис Мебель - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "4681",
+    "assignedAgentName": "Оюун-Эрдэнэ Г.",
+    "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/19803/ff58db95aecdfa09ae61b51b5fd8f63f/main/f93/f93fab2cf59da2a31e1cb03dab4728bb/Image _24_.jpg.png",
+    "lastMessageText": "☎️98101032",
+    "lastMessageTime": "2026-09-15T09:30:50+03:00",
+    "lastMessageSender": "agent",
+    "unreadCount": 0,
+    "createdAt": "2026-09-15T09:30:05+03:00",
+    "messages": [
+      {
+        "id": "bx-1110016",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20770 started",
+        "timestamp": "2026-09-15T09:30:05+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110018",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-15T09:30:05+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110020",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-15T09:30:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110022",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T09:30:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110024",
+        "sender": "customer",
+        "senderName": "Tuvshinjargal Davaatseren",
+        "text": "Багшийн шүүгээ хэд вэ",
+        "timestamp": "2026-09-15T09:30:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110026",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу? Та Монголын хамгийн том тавилгын их дэлгүүр БСБ Мебель-тэй холбогдлоо.",
+        "timestamp": "2026-09-15T09:30:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110030",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Оюун-Эрдэнэ Г. picked conversation",
+        "timestamp": "2026-09-15T09:30:26+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110032",
+        "sender": "agent",
+        "senderName": "Оюун-Эрдэнэ Г.",
+        "text": "байгаа",
+        "timestamp": "2026-09-15T09:30:34+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110034",
+        "sender": "agent",
+        "senderName": "Оюун-Эрдэнэ Г.",
+        "text": "хэмжээ хэд байвал болох уу",
+        "timestamp": "2026-09-15T09:30:45+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110036",
+        "sender": "agent",
+        "senderName": "Оюун-Эрдэнэ Г.",
+        "text": "☎️98101032",
+        "timestamp": "2026-09-15T09:30:50+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
     "id": "chat-76054",
     "dialogId": "chat76054",
     "customer": {
@@ -103,6 +407,22 @@
         "text": "Гар утас",
         "timestamp": "2026-09-15T09:06:47+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1109928",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-15T09:16:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110172",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:11:36+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -161,6 +481,14 @@
         "text": ":like:",
         "timestamp": "2026-09-15T08:41:53+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1110170",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:11:36+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -181,7 +509,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentName": "Болдбаатар Ц.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
     "lastMessageText": "Lawlah dugaar bnu",
     "lastMessageTime": "2026-09-15T08:34:07+03:00",
@@ -522,6 +850,14 @@
         "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
         "timestamp": "2026-09-15T08:16:03+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1110168",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:11:36+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -539,15 +875,15 @@
     "channelId": 11,
     "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
     "channelType": "facebook",
-    "status": "new",
-    "priority": "high",
-    "assignedAgentId": null,
-    "assignedAgentName": null,
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "6751",
+    "assignedAgentName": "Zultsetseg Erdene",
     "assignedAgentAvatar": null,
-    "lastMessageText": "Tanaid iim tsai handlagch bnuu",
-    "lastMessageTime": "2026-09-15T07:49:10+03:00",
-    "lastMessageSender": "customer",
-    "unreadCount": 1,
+    "lastMessageText": "манайд байхгүй  байна",
+    "lastMessageTime": "2026-09-15T10:06:42+03:00",
+    "lastMessageSender": "agent",
+    "unreadCount": 0,
     "createdAt": "2026-09-15T07:49:06+03:00",
     "messages": [
       {
@@ -620,6 +956,30 @@
         "senderName": "Ganaa Ganerdene",
         "text": "",
         "timestamp": "2026-09-15T07:49:14+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110142",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Zultsetseg Erdene picked conversation",
+        "timestamp": "2026-09-15T10:06:17+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110144",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "Сайн байна уу",
+        "timestamp": "2026-09-15T10:06:30+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110146",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "манайд байхгүй  байна",
+        "timestamp": "2026-09-15T10:06:42+03:00",
         "status": "delivered"
       }
     ]
@@ -728,15 +1088,15 @@
     "channelId": 1,
     "channelName": "Бидэнтэй чатлаарай! BSB.mn",
     "channelType": "webchat",
-    "status": "in_progress",
-    "priority": "normal",
+    "status": "new",
+    "priority": "high",
     "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
     "lastMessageText": "120 02",
     "lastMessageTime": "2026-09-15T07:01:59+03:00",
     "lastMessageSender": "customer",
-    "unreadCount": 0,
+    "unreadCount": 1,
     "createdAt": "2026-09-15T06:51:46+03:00",
     "messages": [
       {
@@ -881,6 +1241,22 @@
         "senderName": "Guest",
         "text": "120 02",
         "timestamp": "2026-09-15T07:01:59+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110164",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation was removed from the agent because the agent has clocked out or not clocked in yet.",
+        "timestamp": "2026-09-15T10:11:36+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110166",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:11:36+03:00",
         "status": "delivered"
       }
     ]
@@ -1054,6 +1430,14 @@
         "senderName": "Систем",
         "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
         "timestamp": "2026-09-15T06:22:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1110162",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-15T10:11:36+03:00",
         "status": "delivered"
       }
     ]
@@ -1408,7 +1792,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentName": "Болдбаатар Ц.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
     "lastMessageText": "Сайн байна уу? \nХотын төвд хамгийн өргөн сонголттой ТБД Андуудын замын эсрэг талд \"БСБ ЛАЙФСТАЙЛ\" салбар 99035283 дэлгэрэнгүй мэдээлэл аваарай \nСонголт их төв зам дагуу түгжрэл байхгүй том зогсоолтой урьдчилгаагүй хүүгүй лизингийн нөхцөлтэй. Манай салбарыг сонгон үйлчлүүлээрэй баярлалаа ☺️",
     "lastMessageTime": "2026-09-15T03:50:42+03:00",
@@ -2143,20 +2527,20 @@
         "Битрикс24 Live"
       ]
     },
-    "channelId": 39,
-    "channelName": "БСБ Мебель - Facebook - Comments",
+    "channelId": 31,
+    "channelName": "БСБ Мебель - Facebook - Messenger",
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Болдбаатар Ц.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Үнэ хэд үү",
     "lastMessageTime": "2026-09-14T18:43:09+03:00",
     "lastMessageSender": "customer",
     "unreadCount": 0,
-    "createdAt": "2026-09-14T18:43:08+03:00",
-    "closedAt": "2026-09-15T02:53:12+03:00",
+    "createdAt": "2026-09-15T02:54:35+03:00",
+    "closedAt": "2026-09-15T03:09:03+03:00",
     "messages": [
       {
         "id": "bx-1108004",
@@ -2716,8 +3100,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "123",
-    "assignedAgentName": "Чойжамц Нацагдорж",
+    "assignedAgentId": "agent-1",
+    "assignedAgentName": "Болдбаатар Ц.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/1805/ff58db95aecdfa09ae61b51b5fd8f63f/main/c75/c7505a622eecddb52e76b95170368386/567977721_24908208622164748_4936827512471618772_n.jpg.png",
     "lastMessageText": "Okok",
     "lastMessageTime": "2026-09-15T04:23:47+03:00",
@@ -2846,7 +3230,10 @@
         "timestamp": "2026-09-15T04:25:09+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-1",
+    "closedByAgentName": "Болдбаатар Ц.",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-75748",
@@ -2971,8 +3358,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "4605",
-    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentId": "agent-1",
+    "assignedAgentName": "Болдбаатар Ц.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
     "lastMessageText": "Urgun urtiin hemjee",
     "lastMessageTime": "2026-09-14T16:18:06+03:00",
@@ -3165,7 +3552,10 @@
         "timestamp": "2026-09-15T03:08:03+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-1",
+    "closedByAgentName": "Болдбаатар Ц.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-75744",
@@ -3527,8 +3917,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentId": "agent-2",
+    "assignedAgentName": "Анударь Э.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Erdenemanlai Enkhbilegt",
     "lastMessageTime": "2026-09-14T15:26:23+03:00",
@@ -3593,7 +3983,10 @@
         "timestamp": "2026-09-14T15:46:06+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-2",
+    "closedByAgentName": "Анударь Э.",
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
   },
   {
     "id": "chat-75734",
@@ -3610,8 +4003,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "4605",
-    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentId": "agent-2",
+    "assignedAgentName": "Анударь Э.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
     "lastMessageText": "Сайн байна уу? \nХотын төвд хамгийн өргөн сонголттой ТБД Андуудын замын эсрэг талд \"БСБ ЛАЙФСТАЙЛ\" салбар 99035283 дэлгэрэнгүй мэдээлэл аваарай \nСонголт их төв зам дагуу түгжрэл байхгүй том зогсоолтой урьдчилгаагүй хүүгүй лизингийн нөхцөлтэй. Манай салбарыг сонгон үйлчлүүлээрэй баярлалаа ☺️",
     "lastMessageTime": "2026-09-14T15:10:12+03:00",
@@ -3676,7 +4069,10 @@
         "timestamp": "2026-09-14T19:10:42+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-2",
+    "closedByAgentName": "Анударь Э.",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-75732",
@@ -4185,8 +4581,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "4605",
-    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentId": "agent-2",
+    "assignedAgentName": "Анударь Э.",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
     "lastMessageText": "Сайн байна уу? \nХотын төвд хамгийн өргөн сонголттой ТБД Андуудын замын эсрэг талд \"БСБ ЛАЙФСТАЙЛ\" салбар 99035283 дэлгэрэнгүй мэдээлэл аваарай \nСонголт их төв зам дагуу түгжрэл байхгүй том зогсоолтой урьдчилгаагүй хүүгүй лизингийн нөхцөлтэй. Манай салбарыг сонгон үйлчлүүлээрэй баярлалаа ☺️",
     "lastMessageTime": "2026-09-14T14:35:02+03:00",
@@ -4251,7 +4647,10 @@
         "timestamp": "2026-09-14T18:35:27+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-2",
+    "closedByAgentName": "Анударь Э.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-75712",
@@ -5969,8 +6368,8 @@
     "channelType": "facebook",
     "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentId": "agent-2",
+    "assignedAgentName": "Анударь Э.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Үнэ хэд вэ",
     "lastMessageTime": "2026-09-14T12:11:32+03:00",
@@ -6035,7 +6434,10 @@
         "timestamp": "2026-09-14T12:46:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-2",
+    "closedByAgentName": "Анударь Э.",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-75592",
@@ -7090,7 +7492,10 @@
         "timestamp": "2026-09-14T12:55:26+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4677",
+    "closedByAgentName": "Номинцэцэг Л.",
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв."
   },
   {
     "id": "chat-75530",
@@ -7659,7 +8064,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Энхзаяа А.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Vne hedees hediin hoorond we",
     "lastMessageTime": "2026-09-14T09:17:59+03:00",
@@ -7724,7 +8129,10 @@
         "timestamp": "2026-09-14T11:31:50+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв."
   },
   {
     "id": "chat-75448",
@@ -7742,7 +8150,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Энхзаяа А.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Хэмжээ хамгийн бага",
     "lastMessageTime": "2026-09-14T09:16:30+03:00",
@@ -7807,7 +8215,10 @@
         "timestamp": "2026-09-14T11:32:50+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
   },
   {
     "id": "chat-75444",
@@ -7914,16 +8325,16 @@
     "customer": {
       "name": "Guest",
       "tags": [
-        "WEBCHAT",
+        "LIVECHAT",
         "Битрикс24 Live"
       ]
     },
     "channelId": 1,
     "channelName": "Бидэнтэй чатлаарай! BSB.mn",
     "channelType": "webchat",
-    "status": "in_progress",
+    "status": "closed",
     "priority": "normal",
-    "assignedAgentId": "bx-15",
+    "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
     "lastMessageText": "Биднийг сонгон үйлчлүүлсэн танд баярлалаа. Өдрийг сайхан өнгөрүүлээрэй! Дахин холбогдохдоо сэтгэл хангалуун байх болно.",
@@ -7931,15 +8342,8 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-15T09:07:01+03:00",
+    "closedAt": "2026-09-15T10:09:09+03:00",
     "messages": [
-      {
-        "id": "bx-1106482",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-14T10:43:46+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1106484",
         "sender": "bot",
@@ -8101,6 +8505,14 @@
         "timestamp": "2026-09-15T06:08:31.696Z",
         "isInternalNote": true,
         "status": "sent"
+      },
+      {
+        "id": "bx-1110154",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Session closed automatically",
+        "timestamp": "2026-09-15T10:09:09+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -8109,7 +8521,6 @@
     "dialogId": "chat10917",
     "customer": {
       "name": "Зочин харилцагч",
-      "crmLeadId": "LEAD-1719",
       "tags": [
         "FACEBOOK",
         "Битрикс24 Live"
@@ -8121,15 +8532,94 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "15",
-    "assignedAgentName": null,
+    "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": null,
     "lastMessageText": "Conversation closed.",
     "lastMessageTime": "2026-09-14T08:39:42+03:00",
     "lastMessageSender": "system",
     "unreadCount": 0,
     "createdAt": "2026-09-14T08:29:32+03:00",
-    "closedAt": "2026-09-14T08:39:42+03:00",
     "messages": [
+      {
+        "id": "bx-901953",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #15105 started",
+        "timestamp": "2026-07-29T04:46:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901955",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч picked conversation",
+        "timestamp": "2026-07-29T04:46:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901957",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-07-29T04:46:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901959",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Deal attached to conversation",
+        "timestamp": "2026-07-29T04:46:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901961",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Order attached to chat",
+        "timestamp": "2026-07-29T04:46:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901963",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the contact",
+        "timestamp": "2026-07-29T04:46:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901965",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "БСБ Мебель-тэй холбогдсонд баярлалаа. Өдрийг сайхан өнгөрүүлээрэй.",
+        "timestamp": "2026-07-29T04:46:34+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901967",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Message was not delivered because the customer didn't respond within the allowed time frame. Details",
+        "timestamp": "2026-07-29T04:46:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901969",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Error sending message",
+        "timestamp": "2026-07-29T04:46:37+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-901971",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation closed.",
+        "timestamp": "2026-07-29T04:46:45+03:00",
+        "status": "delivered"
+      },
       {
         "id": "bx-1105726",
         "sender": "system",
@@ -8210,7 +8700,11 @@
         "timestamp": "2026-09-14T08:39:42+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "15",
+    "closedByAgentName": "Цогтгэрэл Ч",
+    "closedAt": "2026-09-14T08:39:42+03:00",
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
   },
   {
     "id": "chat-75374",
@@ -8843,7 +9337,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4677",
-    "assignedAgentName": null,
+    "assignedAgentName": "Номинцэцэг Л.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Сурагч ширээ бнауу",
     "lastMessageTime": "2026-09-13T12:33:06+03:00",
@@ -8940,7 +9434,10 @@
         "timestamp": "2026-09-14T07:24:19+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4677",
+    "closedByAgentName": "Номинцэцэг Л.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-74970",
@@ -8958,7 +9455,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Энхзаяа А.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Ор болдог буйдан хэдүү",
     "lastMessageTime": "2026-09-13T12:20:13+03:00",
@@ -9055,7 +9552,10 @@
         "timestamp": "2026-09-14T02:24:55+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-74950",
@@ -9798,7 +10298,10 @@
         "timestamp": "2026-09-14T06:11:12+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-75006",
@@ -9881,7 +10384,10 @@
         "timestamp": "2026-09-13T17:59:54+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-75018",
@@ -10170,7 +10676,10 @@
         "timestamp": "2026-09-13T19:51:06+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
   },
   {
     "id": "chat-71783",
@@ -10958,7 +11467,10 @@
         "timestamp": "2026-09-14T02:19:48+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-75056",
@@ -11255,7 +11767,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Энхзаяа А.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Хөлдөөгч хэд бэ",
     "lastMessageTime": "2026-09-14T05:15:13+03:00",
@@ -11344,7 +11856,10 @@
         "timestamp": "2026-09-14T06:09:11+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв."
   },
   {
     "id": "chat-75190",
@@ -12434,7 +12949,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4677",
-    "assignedAgentName": null,
+    "assignedAgentName": "Номинцэцэг Л.",
     "assignedAgentAvatar": null,
     "lastMessageText": "hvrgelt ugsralt vnengvi yu",
     "lastMessageTime": "2026-09-14T07:22:08+03:00",
@@ -12547,7 +13062,10 @@
         "timestamp": "2026-09-14T07:24:25+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4677",
+    "closedByAgentName": "Номинцэцэг Л.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-75294",
@@ -12910,7 +13428,7 @@
     "status": "closed",
     "priority": "normal",
     "assignedAgentId": "4605",
-    "assignedAgentName": null,
+    "assignedAgentName": "Энхзаяа А.",
     "assignedAgentAvatar": null,
     "lastMessageText": "Or boldog buidan he'd we",
     "lastMessageTime": "2026-09-14T07:37:51+03:00",
@@ -12983,7 +13501,10 @@
         "timestamp": "2026-09-14T08:09:40+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
   },
   {
     "id": "chat-75332",
@@ -13660,6 +14181,8 @@
         "text": "Баярлалаа, Дархан хотын сервис төвөөс очиж авлаа!",
         "timestamp": "2026-09-14T02:30:06.742Z"
       }
-    ]
+    ],
+    "closedByAgentId": "agent-2",
+    "closedByAgentName": "Ану (Борлуулалтын зөвлөх)"
   }
 ]

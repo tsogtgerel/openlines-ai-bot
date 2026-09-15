@@ -1,11 +1,14 @@
 import fs from 'fs';
 import path from 'path';
 
+export type AccessRole = 'admin' | 'supervisor' | 'agent';
+
 export interface Agent {
   id: string;
   bitrixUserId?: number;
   name: string;
   role: string;
+  accessRole?: AccessRole;
   avatar: string;
   status: 'online' | 'busy' | 'break' | 'offline';
   email: string;
@@ -16,6 +19,7 @@ export interface Agent {
   assignedChannelIds?: number[];
   assignedChannelNames?: string[];
   activeSessions?: number;
+  canAccessAllChannels?: boolean;
 }
 
 export interface WorkShift {
@@ -42,6 +46,8 @@ const INITIAL_AGENTS: Agent[] = [
     id: 'agent-1',
     name: 'Болдбаатар Ц.',
     role: 'Ахлах онлайн оператор',
+    accessRole: 'admin',
+    canAccessAllChannels: true,
     avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
     status: 'online',
     email: 'boldbaatar@bsb.mn',
@@ -49,11 +55,15 @@ const INITIAL_AGENTS: Agent[] = [
     isClockedIn: true,
     isOnBreak: false,
     activeShiftId: 'shift-1',
+    assignedChannelIds: [1, 3, 9, 11, 13, 15, 21, 27, 31, 37, 39, 41],
+    assignedChannelNames: ['Бидэнтэй чатлаарай! BSB.mn', 'Интернэт дэлгүүр - Facebook - comments only', 'Интернэт дэлгүүр - Instagram', 'Интернэт дэлгүүр - Facebook - Messenger', 'Интернэт дэлгүүр - Telegram', 'Интернэт дэлгүүр - WhatsApp - Instant', 'БСБ Мебель - Facebook - Comments'],
   },
   {
     id: 'agent-2',
     name: 'Анударь Э.',
     role: 'Борлуулалтын зөвлөх',
+    accessRole: 'agent',
+    canAccessAllChannels: false,
     avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
     status: 'busy',
     email: 'anudari@bsb.mn',
@@ -61,11 +71,15 @@ const INITIAL_AGENTS: Agent[] = [
     isClockedIn: true,
     isOnBreak: false,
     activeShiftId: 'shift-2',
+    assignedChannelIds: [1, 3, 11, 39],
+    assignedChannelNames: ['Бидэнтэй чатлаарай! BSB.mn', 'Интернэт дэлгүүр - Facebook - comments only', 'Интернэт дэлгүүр - Facebook - Messenger', 'БСБ Мебель - Facebook - Comments'],
   },
   {
     id: 'agent-3',
     name: 'Тэмүүлэн М.',
     role: 'Хүргэлт & Сервис туслах',
+    accessRole: 'agent',
+    canAccessAllChannels: false,
     avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
     status: 'break',
     email: 'temuulen@bsb.mn',
@@ -73,11 +87,15 @@ const INITIAL_AGENTS: Agent[] = [
     isClockedIn: true,
     isOnBreak: true,
     activeShiftId: 'shift-3',
+    assignedChannelIds: [1, 13, 15],
+    assignedChannelNames: ['Бидэнтэй чатлаарай! BSB.mn', 'Интернэт дэлгүүр - Telegram', 'Интернэт дэлгүүр - WhatsApp - Instant'],
   },
   {
     id: 'agent-4',
     name: 'Сарнай Б.',
     role: 'Харилцагчийн үйлчилгээний менежер',
+    accessRole: 'supervisor',
+    canAccessAllChannels: true,
     avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
     status: 'offline',
     email: 'sarnai@bsb.mn',
@@ -85,6 +103,8 @@ const INITIAL_AGENTS: Agent[] = [
     isClockedIn: false,
     isOnBreak: false,
     activeShiftId: null,
+    assignedChannelIds: [1, 3, 9, 11, 13, 15, 31, 39],
+    assignedChannelNames: ['Бидэнтэй чатлаарай! BSB.mn', 'Интернэт дэлгүүр - Facebook - comments only', 'Интернэт дэлгүүр - Instagram', 'Интернэт дэлгүүр - Facebook - Messenger'],
   },
 ];
 
@@ -104,13 +124,48 @@ export class WorktimeManagerService {
     }
   }
 
+  private normalizeAgent(agent: Agent): Agent {
+    const roleLower = (agent.role || '').toLowerCase();
+    const isDirectorOrAdmin =
+      agent.bitrixUserId === 15 ||
+      agent.id === 'agent-1' ||
+      roleLower.includes('захирал') ||
+      roleLower.includes('админ');
+    const isSupervisor =
+      agent.id === 'bx-121' ||
+      agent.id === 'agent-4' ||
+      roleLower.includes('менежер') ||
+      roleLower.includes('ахлах');
+
+    const accessRole: AccessRole =
+      agent.accessRole ||
+      (isDirectorOrAdmin ? 'admin' : isSupervisor ? 'supervisor' : 'agent');
+
+    const canAccessAllChannels =
+      agent.canAccessAllChannels !== undefined
+        ? agent.canAccessAllChannels
+        : (accessRole === 'admin' || accessRole === 'supervisor');
+
+    const assignedChannelIds = Array.isArray(agent.assignedChannelIds) && agent.assignedChannelIds.length > 0
+      ? agent.assignedChannelIds
+      : [1, 3, 11, 39]; // Default baseline channels if none set
+
+    return {
+      ...agent,
+      accessRole,
+      canAccessAllChannels,
+      assignedChannelIds,
+    };
+  }
+
   private loadData() {
     try {
       if (fs.existsSync(WORKTIME_FILE)) {
         const raw = fs.readFileSync(WORKTIME_FILE, 'utf-8');
         const parsed = JSON.parse(raw);
         this.currentAgentId = parsed.currentAgentId || 'agent-1';
-        this.agents = parsed.agents || INITIAL_AGENTS;
+        const rawAgents: Agent[] = parsed.agents || INITIAL_AGENTS;
+        this.agents = rawAgents.map((a) => this.normalizeAgent(a));
         this.shifts = parsed.shifts || [];
       } else {
         this.seedInitialData();
@@ -122,7 +177,7 @@ export class WorktimeManagerService {
   }
 
   private seedInitialData() {
-    this.agents = INITIAL_AGENTS;
+    this.agents = INITIAL_AGENTS.map((a) => this.normalizeAgent(a));
     this.currentAgentId = 'agent-1';
 
     const todayStr = new Date().toISOString().split('T')[0];
@@ -202,12 +257,53 @@ export class WorktimeManagerService {
     return agent;
   }
 
-  setCurrentAgent(agentId: string): Agent {
-    const found = this.agents.find((a) => a.id === agentId);
+  setCurrentAgent(agentId: string, bitrixUserId?: number): Agent {
+    let found = this.agents.find((a) => a.id === agentId);
+    if (!found && bitrixUserId) {
+      found = this.agents.find((a) => a.bitrixUserId === bitrixUserId);
+    }
+    if (!found && (agentId.startsWith('bx-') || !isNaN(Number(agentId)))) {
+      const num = Number(agentId.replace('bx-', ''));
+      found = this.agents.find((a) => a.bitrixUserId === num);
+    }
     if (!found) throw new Error(`Agent not found: ${agentId}`);
-    this.currentAgentId = agentId;
+    this.currentAgentId = found.id;
     this.saveData();
     return found;
+  }
+
+  getAgentById(agentId: string): Agent | null {
+    let found = this.agents.find((a) => a.id === agentId);
+    if (!found && (agentId.startsWith('bx-') || !isNaN(Number(agentId)))) {
+      const num = Number(agentId.replace('bx-', ''));
+      found = this.agents.find((a) => a.bitrixUserId === num);
+    }
+    return found || null;
+  }
+
+  updateAgentPermissions(
+    agentId: string,
+    updates: {
+      accessRole?: AccessRole;
+      assignedChannelIds?: number[];
+      assignedChannelNames?: string[];
+      canAccessAllChannels?: boolean;
+    }
+  ): Agent {
+    let agent = this.agents.find((a) => a.id === agentId);
+    if (!agent && (agentId.startsWith('bx-') || !isNaN(Number(agentId)))) {
+      const num = Number(agentId.replace('bx-', ''));
+      agent = this.agents.find((a) => a.bitrixUserId === num);
+    }
+    if (!agent) throw new Error(`Agent not found: ${agentId}`);
+
+    if (updates.accessRole !== undefined) agent.accessRole = updates.accessRole;
+    if (updates.assignedChannelIds !== undefined) agent.assignedChannelIds = updates.assignedChannelIds;
+    if (updates.assignedChannelNames !== undefined) agent.assignedChannelNames = updates.assignedChannelNames;
+    if (updates.canAccessAllChannels !== undefined) agent.canAccessAllChannels = updates.canAccessAllChannels;
+
+    this.saveData();
+    return agent;
   }
 
   getAllAgents(): Agent[] {
@@ -226,6 +322,19 @@ export class WorktimeManagerService {
         const current = this.agents[existingIdx];
         this.agents[existingIdx] = {
           ...bAgent,
+          accessRole: current.accessRole || bAgent.accessRole || (bAgent.bitrixUserId === 15 ? 'admin' : 'agent'),
+          canAccessAllChannels:
+            current.canAccessAllChannels !== undefined
+              ? current.canAccessAllChannels
+              : (bAgent.canAccessAllChannels || bAgent.bitrixUserId === 15),
+          assignedChannelIds:
+            current.assignedChannelIds && current.assignedChannelIds.length > 0
+              ? current.assignedChannelIds
+              : bAgent.assignedChannelIds,
+          assignedChannelNames:
+            current.assignedChannelNames && current.assignedChannelNames.length > 0
+              ? current.assignedChannelNames
+              : bAgent.assignedChannelNames,
           // Preserve local worktime shift states if clocked in
           isClockedIn: current.isClockedIn || bAgent.isClockedIn,
           isOnBreak: current.isOnBreak,
@@ -233,7 +342,7 @@ export class WorktimeManagerService {
           activeShiftId: current.activeShiftId || bAgent.activeShiftId,
         };
       } else {
-        this.agents.push(bAgent);
+        this.agents.push(this.normalizeAgent(bAgent));
       }
     }
 

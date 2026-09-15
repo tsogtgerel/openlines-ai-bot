@@ -141,11 +141,14 @@ export interface ChatDialog {
   messages: ChatMessage[];
 }
 
+export type AccessRole = 'admin' | 'supervisor' | 'agent';
+
 export interface Agent {
   id: string;
   bitrixUserId?: number;
   name: string;
   role: string;
+  accessRole?: AccessRole;
   avatar: string;
   status: 'online' | 'busy' | 'break' | 'offline';
   email: string;
@@ -156,6 +159,7 @@ export interface Agent {
   assignedChannelIds?: number[];
   assignedChannelNames?: string[];
   activeSessions?: number;
+  canAccessAllChannels?: boolean;
 }
 
 export interface WorkShift {

@@ -15,7 +15,6 @@
 import express from 'express';
 import path from 'path';
 import dotenv from 'dotenv';
-import { createServer as createViteServer } from 'vite';
 import { vibeRequest } from './server/vibeApi';
 import { knowledgeBase } from './server/knowledgeBase';
 import { botWorker } from './server/botWorker';
@@ -34,6 +33,13 @@ const PORT = 3000;
 async function startServer() {
   const app = express();
   app.use(express.json());
+
+  // Allow embedding in Bitrix24 iframe
+  app.use((req, res, next) => {
+    res.removeHeader('X-Frame-Options');
+    res.setHeader('Content-Security-Policy', "frame-ancestors *");
+    next();
+  });
 
   // ==========================================================================
   // 1. Health Check & Bitrix24 Portal Profile API
@@ -526,7 +532,11 @@ async function startServer() {
    */
   app.get('/api/chats', (req, res) => {
     try {
-      const { status, channelId, channelType, assignedAgentId, closedByAgentId, search, isStarred, sortBy } = req.query;
+      const { status, channelId, channelType, assignedAgentId, closedByAgentId, search, isStarred, sortBy, requestingAgentId } = req.query;
+      const targetAgent = requestingAgentId
+        ? worktimeManager.getAgentById(requestingAgentId as string)
+        : worktimeManager.getCurrentAgent();
+
       const dialogs = chatManager.getAllDialogs({
         status: status as string,
         channelId: channelId as string,
@@ -536,6 +546,10 @@ async function startServer() {
         search: search as string,
         isStarred: isStarred !== undefined ? isStarred === 'true' : undefined,
         sortBy: sortBy as any,
+        agentAccessRole: targetAgent?.accessRole,
+        agentAssignedChannelIds: targetAgent?.assignedChannelIds,
+        requestingAgentId: targetAgent?.id,
+        canAccessAllChannels: targetAgent?.canAccessAllChannels,
       });
       res.json({ success: true, data: dialogs });
     } catch (e: any) {
@@ -812,15 +826,41 @@ async function startServer() {
 
   /**
    * POST /api/worktime/switch-agent
-   * Операторын нэвтрэх хэрэглэгчийг солих.
+   * Операторын нэвтрэх хэрэглэгчийг солих (эсвэл Bitrix24 хэрэглэгчийн ID-аар таних).
    */
   app.post('/api/worktime/switch-agent', (req, res) => {
     try {
-      const { agentId } = req.body;
-      if (!agentId) return res.status(400).json({ success: false, error: { message: 'agentId required' } });
-      const agent = worktimeManager.setCurrentAgent(agentId);
+      const { agentId, bitrixUserId } = req.body;
+      if (!agentId && !bitrixUserId) {
+        return res.status(400).json({ success: false, error: { message: 'agentId or bitrixUserId required' } });
+      }
+      const agent = worktimeManager.setCurrentAgent(agentId || `bx-${bitrixUserId}`, bitrixUserId ? Number(bitrixUserId) : undefined);
       const shift = worktimeManager.getCurrentShift(agent.id);
       res.json({ success: true, data: { agent, shift } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * PATCH /api/worktime/agents/:id/permissions
+   * Операторын эрхийн тохиргоо (admin / supervisor / agent) болон хариуцах сувгуудыг шинэчлэх.
+   */
+  app.patch('/api/worktime/agents/:id/permissions', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { accessRole, assignedChannelIds, assignedChannelNames, canAccessAllChannels } = req.body;
+      const updated = worktimeManager.updateAgentPermissions(id, {
+        accessRole,
+        assignedChannelIds,
+        assignedChannelNames,
+        canAccessAllChannels,
+      });
+      res.json({
+        success: true,
+        data: updated,
+        message: `${updated.name} операторын эрх, сувгийн тохиргоо амжилттай хадгалагдлаа.`,
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -917,6 +957,7 @@ async function startServer() {
   // Development орчинд Vite HMR болон шууд TSX хөрвүүлэлтийг Express дээр ачааллана.
   // Production горимд dist/ хавтаснаас урьдчилан build хийгдсэн index.html болон assets-ийг өгнө.
   if (process.env.NODE_ENV !== 'production') {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

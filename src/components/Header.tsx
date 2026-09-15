@@ -9,6 +9,7 @@ interface HeaderProps {
   isToggling: boolean;
   onUnbindLine?: (lineId: number) => Promise<void>;
   onNavigateToChannels?: () => void;
+  isAgentRole?: boolean;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,6 +19,7 @@ export const Header: React.FC<HeaderProps> = ({
   isToggling,
   onUnbindLine,
   onNavigateToChannels,
+  isAgentRole = false,
 }) => {
   const isPolling = botConfig?.isPollingActive ?? false;
 
@@ -63,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
             <span className="font-medium text-emerald-400 truncate max-w-[150px] lg:max-w-[200px]">
               {botConfig?.selectedLineName || 'Сонгоогүй'}
             </span>
-            {botConfig?.selectedLineId && onUnbindLine ? (
+            {botConfig?.selectedLineId && onUnbindLine && !isAgentRole ? (
               <button
                 id="header-unbind-bot-btn"
                 onClick={() => onUnbindLine(botConfig.selectedLineId!)}
@@ -74,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({
                 <Unlink className="w-3 h-3 text-rose-400" />
                 <span>Салгах</span>
               </button>
-            ) : onNavigateToChannels && !botConfig?.selectedLineId ? (
+            ) : onNavigateToChannels && !botConfig?.selectedLineId && !isAgentRole ? (
               <button
                 onClick={onNavigateToChannels}
                 className="ml-1 inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-blue-300 hover:text-white bg-blue-950/70 hover:bg-blue-900 border border-blue-800 rounded transition"

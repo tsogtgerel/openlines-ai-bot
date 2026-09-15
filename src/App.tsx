@@ -14,6 +14,7 @@ import {
   Headphones,
   Clock,
   BarChart3,
+  Shield,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { ChannelSelector } from './components/ChannelSelector';
@@ -26,6 +27,7 @@ import { OpenChannelChatWorkplace } from './components/OpenChannelChatWorkplace'
 import { WorktimeBar } from './components/WorktimeBar';
 import { WorktimeModal } from './components/WorktimeModal';
 import { InquiryAnalyticsTab } from './components/InquiryAnalyticsTab';
+import { AgentPermissionsModal } from './components/AgentPermissionsModal';
 import {
   KnowledgeArticle,
   BotConfig,
@@ -36,6 +38,7 @@ import {
   Agent,
   WorkShift,
   ChatDialog,
+  AccessRole,
 } from './types';
 
 type ActiveTab = 'chat' | 'inquiries' | 'channels' | 'kb' | 'prompts' | 'logs' | 'sandbox' | 'deploy';
@@ -58,6 +61,7 @@ export default function App() {
   const [chatsCount, setChatsCount] = useState<number>(0);
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [showTeamModal, setShowTeamModal] = useState<boolean>(false);
+  const [showPermissionsModal, setShowPermissionsModal] = useState<boolean>(false);
 
   // Loading States
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -156,19 +160,25 @@ export default function App() {
     }
   };
 
-  // Load Worktime & Chats status
-  const loadWorktimeAndChats = async () => {
+  // Load Worktime & Chats status (with requestingAgentId context for channel isolation)
+  const loadWorktimeAndChats = async (agentOverrideId?: string) => {
     try {
-      const [worktimeRes, chatsRes] = await Promise.all([
-        fetch('/api/worktime/status').then((r) => r.json()),
-        fetch('/api/chats').then((r) => r.json()),
-      ]);
+      const worktimeRes = await fetch('/api/worktime/status').then((r) => r.json());
+      let activeAgentId = agentOverrideId || currentAgent?.id;
 
       if (worktimeRes.success && worktimeRes.data) {
         setCurrentAgent(worktimeRes.data.currentAgent);
         setCurrentShift(worktimeRes.data.currentShift);
         setTeam(worktimeRes.data.team || []);
+        if (!activeAgentId && worktimeRes.data.currentAgent?.id) {
+          activeAgentId = worktimeRes.data.currentAgent.id;
+        }
       }
+
+      const chatsUrl = activeAgentId
+        ? `/api/chats?requestingAgentId=${encodeURIComponent(activeAgentId)}`
+        : '/api/chats';
+      const chatsRes = await fetch(chatsUrl).then((r) => r.json());
 
       if (chatsRes.success && Array.isArray(chatsRes.data)) {
         setChatsCount(chatsRes.data.length);
@@ -186,7 +196,32 @@ export default function App() {
     loadKnowledgeBase();
     loadLogs();
     loadServers();
-    loadWorktimeAndChats();
+
+    // Check for Bitrix24 iframe embedded parameters (USER_ID or agent_id)
+    const urlParams = new URLSearchParams(window.location.search);
+    const bitrixUserId = urlParams.get('USER_ID') || urlParams.get('user_id') || urlParams.get('userId');
+    const agentId = urlParams.get('agent_id') || urlParams.get('agentId');
+
+    if (bitrixUserId || agentId) {
+      fetch('/api/worktime/switch-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId, bitrixUserId }),
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.success && data.data) {
+            setCurrentAgent(data.data.agent);
+            setCurrentShift(data.data.shift);
+            loadWorktimeAndChats(data.data.agent.id);
+          } else {
+            loadWorktimeAndChats();
+          }
+        })
+        .catch(() => loadWorktimeAndChats());
+    } else {
+      loadWorktimeAndChats();
+    }
 
     // Poll chats and shifts periodically
     const pollInterval = setInterval(() => {
@@ -194,6 +229,13 @@ export default function App() {
     }, 12000);
     return () => clearInterval(pollInterval);
   }, []);
+
+  // Enforce tab access: Agents can ONLY access the Live Chat tab
+  useEffect(() => {
+    if (currentAgent?.accessRole === 'agent' && activeTab !== 'chat') {
+      setActiveTab('chat');
+    }
+  }, [currentAgent?.accessRole, activeTab]);
 
   // Worktime Handlers
   const handleClockIn = async () => {
@@ -273,11 +315,39 @@ export default function App() {
         body: JSON.stringify({ agentId }),
       }).then((r) => r.json());
 
-      if (res.success) {
-        await loadWorktimeAndChats();
+      if (res.success && res.data) {
+        setCurrentAgent(res.data.agent);
+        setCurrentShift(res.data.shift);
+        await loadWorktimeAndChats(res.data.agent.id);
       }
     } catch (err) {
       console.error('Failed to switch agent:', err);
+    }
+  };
+
+  const handleUpdatePermissions = async (
+    agentId: string,
+    updates: {
+      accessRole: AccessRole;
+      assignedChannelIds: number[];
+      assignedChannelNames: string[];
+      canAccessAllChannels: boolean;
+    }
+  ) => {
+    const res = await fetch(`/api/worktime/agents/${agentId}/permissions`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updates),
+    }).then((r) => r.json());
+
+    if (res.success && res.data) {
+      setTeam((prev) => prev.map((a) => (a.id === agentId ? res.data : a)));
+      if (currentAgent?.id === agentId) {
+        setCurrentAgent(res.data);
+      }
+      await loadWorktimeAndChats(currentAgent?.id);
+    } else {
+      throw new Error(res.error?.message || 'Эрхийн тохиргоо шинэчлэхэд алдаа гарлаа');
     }
   };
 
@@ -439,7 +509,9 @@ export default function App() {
     }
   };
 
-  const navItems = [
+  const isAgentRole = currentAgent?.accessRole === 'agent';
+
+  const allNavItems = [
     {
       id: 'chat',
       label: 'Сувгийн чат (Live)',
@@ -460,6 +532,11 @@ export default function App() {
     { id: 'deploy', label: 'Үүлэн сервер (Deploy)', icon: Cloud, count: servers.length },
   ];
 
+  // User requirement: "Agent-ууд Live chat-с бусад цэсийг харах шаардлагагүй"
+  const navItems = isAgentRole
+    ? allNavItems.filter((item) => item.id === 'chat')
+    : allNavItems;
+
   return (
     <div
       className={`${
@@ -476,6 +553,7 @@ export default function App() {
         isToggling={isTogglingPolling}
         onUnbindLine={handleUnbindLine}
         onNavigateToChannels={() => setActiveTab('channels')}
+        isAgentRole={isAgentRole}
       />
 
       {/* Operator Worktime & Shift Control Bar */}
@@ -490,11 +568,12 @@ export default function App() {
         onSetStatus={handleSetStatus}
         onSwitchAgent={handleSwitchAgent}
         onOpenTeamModal={() => setShowTeamModal(true)}
+        onOpenPermissionsModal={!isAgentRole ? () => setShowPermissionsModal(true) : undefined}
       />
 
       {/* Main Subheader Navigation */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs shrink-0">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between">
           <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-1.5 sm:py-2 scrollbar-none" aria-label="Tabs" style={{ WebkitOverflowScrolling: 'touch' }}>
             {navItems.map((item) => {
               const Icon = item.icon;
@@ -530,6 +609,26 @@ export default function App() {
               );
             })}
           </nav>
+
+          {/* Right quick actions: Permissions modal button for Admin/Supervisor or role chip for Agent */}
+          <div className="flex items-center gap-2 shrink-0 py-1 pl-2">
+            {!isAgentRole ? (
+              <button
+                id="subnav-permissions-btn"
+                onClick={() => setShowPermissionsModal(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
+              >
+                <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Эрхийн тохиргоо</span>
+              </button>
+            ) : (
+              <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                <span>Операторын горим (Live чат)</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -619,6 +718,19 @@ export default function App() {
         onRefresh={loadWorktimeAndChats}
         onSyncAgents={handleSyncBitrixAgents}
         isSyncingAgents={isSyncingBitrixAgents}
+        onOpenPermissions={!isAgentRole ? () => setShowPermissionsModal(true) : undefined}
+      />
+
+      {/* Agent Permissions & Channel Assignment Modal */}
+      <AgentPermissionsModal
+        isOpen={showPermissionsModal}
+        onClose={() => setShowPermissionsModal(false)}
+        team={team}
+        agents={team}
+        openLines={openLines}
+        currentAgent={currentAgent}
+        onUpdatePermissions={handleUpdatePermissions}
+        onSwitchAgent={handleSwitchAgent}
       />
     </div>
   );

@@ -11,6 +11,7 @@ import {
   UserCheck,
   RefreshCw,
   Radio,
+  Shield,
 } from 'lucide-react';
 import { Agent, WorkShift } from '../types';
 
@@ -23,6 +24,7 @@ interface WorktimeModalProps {
   onRefresh: () => void;
   onSyncAgents?: () => Promise<void>;
   isSyncingAgents?: boolean;
+  onOpenPermissions?: () => void;
 }
 
 export const WorktimeModal: React.FC<WorktimeModalProps> = ({
@@ -34,6 +36,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({
   onRefresh,
   onSyncAgents,
   isSyncingAgents = false,
+  onOpenPermissions,
 }) => {
   const [activeTab, setActiveTab] = useState<'team' | 'history'>('team');
   const [shiftsHistory, setShiftsHistory] = useState<WorkShift[]>([]);
@@ -137,17 +140,32 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({
                   <strong className="text-blue-600 font-mono">{team.length}</strong> оператор бүртгэлтэй
                   байна.
                 </div>
-                {onSyncAgents && (
-                  <button
-                    type="button"
-                    onClick={onSyncAgents}
-                    disabled={isSyncingAgents}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition disabled:opacity-50"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAgents ? 'animate-spin' : ''}`} />
-                    <span>{isSyncingAgents ? 'Түр хүлээнэ үү...' : 'Битриксээс татах'}</span>
-                  </button>
-                )}
+                <div className="flex items-center gap-2">
+                  {onSyncAgents && (
+                    <button
+                      type="button"
+                      onClick={onSyncAgents}
+                      disabled={isSyncingAgents}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition disabled:opacity-50"
+                    >
+                      <RefreshCw className={`w-3.5 h-3.5 ${isSyncingAgents ? 'animate-spin' : ''}`} />
+                      <span>{isSyncingAgents ? 'Түр хүлээнэ үү...' : 'Битриксээс татах'}</span>
+                    </button>
+                  )}
+                  {onOpenPermissions && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onClose();
+                        onOpenPermissions();
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-lg transition"
+                    >
+                      <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                      <span>Эрхийн тохиргоо</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -174,6 +192,21 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({
                           <div>
                             <div className="text-sm font-semibold text-slate-900 flex items-center gap-1.5">
                               <span>{agent.name}</span>
+                              <span
+                                className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md ${
+                                  agent.accessRole === 'admin'
+                                    ? 'bg-purple-100 text-purple-700 border border-purple-200'
+                                    : agent.accessRole === 'supervisor'
+                                    ? 'bg-blue-100 text-blue-700 border border-blue-200'
+                                    : 'bg-emerald-100 text-emerald-700 border border-emerald-200'
+                                }`}
+                              >
+                                {agent.accessRole === 'admin'
+                                  ? 'Админ'
+                                  : agent.accessRole === 'supervisor'
+                                  ? 'Ахлах'
+                                  : 'Оператор'}
+                              </span>
                               {agent.bitrixUserId && (
                                 <span className="text-[10px] font-mono text-slate-400">
                                   #{agent.bitrixUserId}

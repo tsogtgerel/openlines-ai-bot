@@ -473,8 +473,42 @@ export class ChatManagerService {
     closedByAgentId?: string;
     isStarred?: boolean;
     sortBy?: 'newest' | 'oldest' | 'pending_ai' | 'waiting' | 'name' | 'closed_newest' | 'closed_oldest';
+    agentAccessRole?: 'admin' | 'supervisor' | 'agent';
+    agentAssignedChannelIds?: number[];
+    requestingAgentId?: string;
+    canAccessAllChannels?: boolean;
   }): ChatDialog[] {
     let result = [...this.dialogs];
+
+    // Enforce role-based security: Agents can ONLY see assigned channels, unassigned chats, and their own chats
+    if (filters?.agentAccessRole === 'agent') {
+      // 1. Channel constraint
+      if (!filters.canAccessAllChannels && Array.isArray(filters.agentAssignedChannelIds)) {
+        const allowedIds = filters.agentAssignedChannelIds.map((id) => String(id));
+        result = result.filter((d) => allowedIds.includes(String(d.channelId)));
+      }
+
+      // 2. Chat assignment constraint: Unassigned chats OR chats assigned to/closed by the requesting agent
+      const reqAgentId = filters.requestingAgentId ? String(filters.requestingAgentId) : null;
+      const reqBxId = reqAgentId?.startsWith('bx-') ? reqAgentId.replace('bx-', '') : reqAgentId;
+
+      result = result.filter((d) => {
+        const isUnassigned = !d.assignedAgentId || d.status === 'new';
+        if (isUnassigned) return true;
+        if (!reqAgentId) return false;
+
+        const dAgentId = String(d.assignedAgentId || '');
+        const dClosedId = String(d.closedByAgentId || '');
+
+        const isMine =
+          dAgentId === reqAgentId ||
+          (reqBxId && (dAgentId === reqBxId || dAgentId === `bx-${reqBxId}`)) ||
+          dClosedId === reqAgentId ||
+          (reqBxId && (dClosedId === reqBxId || dClosedId === `bx-${reqBxId}`));
+
+        return isMine;
+      });
+    }
 
     if (filters?.status && filters.status !== 'all') {
       result = result.filter((d) => d.status === filters.status);
