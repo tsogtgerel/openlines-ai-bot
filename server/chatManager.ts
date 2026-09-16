@@ -544,7 +544,8 @@ export class ChatManagerService extends EventEmitter {
   }): ChatDialog[] {
     let result = [...this.dialogs];
 
-    // Enforce role-based security: Agents can ONLY see assigned channels, unassigned chats, and their own chats
+    // Enforce role-based security:
+    // When a chat is assigned to a specific agent, it must NOT be visible to other agents (only visible to the assignee, or supervisors/admins)
     if (filters?.agentAccessRole === 'agent') {
       // 1. Channel constraint
       if (!filters.canAccessAllChannels && Array.isArray(filters.agentAssignedChannelIds)) {
@@ -552,12 +553,15 @@ export class ChatManagerService extends EventEmitter {
         result = result.filter((d) => allowedIds.includes(String(d.channelId)));
       }
 
-      // 2. Chat assignment constraint: Unassigned chats OR chats assigned to/closed by the requesting agent
+      // 2. Chat assignment constraint:
+      // - Unassigned chats (status === 'new' or assignedAgentId is empty) are visible in the queue
+      // - If a chat is assigned to an agent, it is ONLY visible to that assigned agent.
+      // - If closed, only visible if closed by or assigned to this agent.
       const reqAgentId = filters.requestingAgentId ? String(filters.requestingAgentId) : null;
       const reqBxId = reqAgentId?.startsWith('bx-') ? reqAgentId.replace('bx-', '') : reqAgentId;
 
       result = result.filter((d) => {
-        const isUnassigned = !d.assignedAgentId || d.status === 'new';
+        const isUnassigned = (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
         if (isUnassigned) return true;
         if (!reqAgentId) return false;
 
@@ -678,12 +682,28 @@ export class ChatManagerService extends EventEmitter {
       sender: 'customer' | 'bot' | 'agent' | 'system';
       senderName?: string;
       senderAvatar?: string;
+      senderAgentId?: string;
       isInternalNote?: boolean;
     }
   ): { dialog: ChatDialog; message: ChatMessage } {
     const dialog = this.getDialogById(dialogId);
     if (!dialog) {
       throw new Error(`Dialog not found: ${dialogId}`);
+    }
+
+    // Чатыг заавал өөртөө оноож байж бичдэг болгох шаардлага:
+    // Хэрэв оператор хариу бичих эсвэл дотоод тэмдэглэл оруулах гэж байгаа бол уг чат эхлээд өөрт нь оноогдсон байх ёстой
+    if (message.sender === 'agent' && message.senderAgentId) {
+      const sId = String(message.senderAgentId);
+      const sBxId = sId.startsWith('bx-') ? sId.replace('bx-', '') : sId;
+      const dAssigned = String(dialog.assignedAgentId || '');
+      const isAssignedToSender =
+        dAssigned === sId ||
+        (sBxId && (dAssigned === sBxId || dAssigned === `bx-${sBxId}`));
+
+      if (!isAssignedToSender) {
+        throw new Error('Та энэ чатыг эхлээд "Өөртөө авах" товчоор өөртөө оноож байж хариу бичнэ үү.');
+      }
     }
 
     const newMessage: ChatMessage = {

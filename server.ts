@@ -713,7 +713,7 @@ async function startServer() {
   app.post('/api/chats/:id/messages', async (req, res) => {
     try {
       const { id } = req.params;
-      const { text, sender, senderName, senderAvatar, isInternalNote } = req.body;
+      const { text, sender, senderName, senderAvatar, senderAgentId, isInternalNote } = req.body;
       if (!text || !text.trim()) {
         return res.status(400).json({ success: false, error: { message: 'Message text is required' } });
       }
@@ -723,6 +723,7 @@ async function startServer() {
         sender: sender || 'agent',
         senderName,
         senderAvatar,
+        senderAgentId,
         isInternalNote: Boolean(isInternalNote),
       });
 
