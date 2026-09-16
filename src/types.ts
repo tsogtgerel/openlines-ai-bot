@@ -145,6 +145,7 @@ export interface ChatDialog {
   lastMessageTime: string;
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
   unreadCount: number;
+  botActive?: boolean;
   isStarred?: boolean;
   resolutionSummary?: string;
   closedAt?: string;

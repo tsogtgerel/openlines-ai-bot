@@ -395,6 +395,19 @@ export class BotWorkerService {
       channelType: 'webchat',
     });
 
+    // Check if dialog is currently in progress, assigned to an operator, or bot has detached
+    const currentDialog = chatManager.getDialogById(dialogId);
+    if (
+      currentDialog &&
+      (currentDialog.status === 'in_progress' ||
+        currentDialog.status === 'assigned' ||
+        (currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') ||
+        currentDialog.botActive === false)
+    ) {
+      console.log(`[BotWorker] Skipping bot auto-reply for ${dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId} (bot detached)`);
+      return;
+    }
+
     await this.processMessage(dialogId, rawText);
   }
 
@@ -413,6 +426,19 @@ export class BotWorkerService {
 
     if (!botId) {
       throw new Error('Bot is not registered');
+    }
+
+    // Check if dialog is assigned to an operator, in progress, or bot has detached
+    const existingDialog = chatManager.getDialogById(dialogId);
+    if (
+      existingDialog &&
+      (existingDialog.status === 'in_progress' ||
+        existingDialog.status === 'assigned' ||
+        (existingDialog.assignedAgentId && existingDialog.assignedAgentId !== 'unassigned') ||
+        existingDialog.botActive === false)
+    ) {
+      console.log(`[BotWorker] Aborting bot reply for ${dialogId}: Assigned to operator ${existingDialog.assignedAgentName || existingDialog.assignedAgentId} (bot detached)`);
+      return { answer: '', handedOff: false };
     }
 
     // Strip basic PII for model privacy
@@ -590,6 +616,19 @@ ${kbContext}
     }
     this.processedOpenlineMessageIds.add(msgKey);
 
+    // Check if dialog is currently in progress, assigned to an operator, or bot has detached
+    const currentDialog = chatManager.getDialogById(params.dialogId);
+    if (
+      currentDialog &&
+      (currentDialog.status === 'in_progress' ||
+        currentDialog.status === 'assigned' ||
+        (currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') ||
+        currentDialog.botActive === false)
+    ) {
+      console.log(`[BotWorker] Skipping openline message processing for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId} (bot detached)`);
+      return null;
+    }
+
     // Keep set bounded to prevent memory growth
     if (this.processedOpenlineMessageIds.size > 2000) {
       const arr = Array.from(this.processedOpenlineMessageIds);
@@ -657,16 +696,43 @@ ${kbContext}
     }
   }
 
-  private async handoffToOperator(dialogId: string) {
-    if (!this.config.botId || dialogId.startsWith('sim-')) return;
+  /**
+   * Оператор чатыг өөртөө авах эсвэл шилжүүлэх үед ботыг харилцан ярианаас гаргах (салгах)
+   */
+  public async leaveChat(dialogId: string) {
+    if (!this.config.botId || !dialogId || dialogId.startsWith('sim-')) return;
 
     try {
       // In Bitrix24 Openlines, when welcome bot leaves the chat, the dialog transfers to the operator queue!
       await vibeRequest('POST', `/v1/bots/${this.config.botId}/chats/${dialogId}/leave`);
-      console.log(`[BotWorker] Handed off dialog ${dialogId} to operator queue`);
-    } catch (e) {
-      console.error('[BotWorker] Failed to leave chat for handoff:', e);
+      console.log(`[BotWorker] Bot ${this.config.botId} left chat ${dialogId} (operator takeover / handoff)`);
+    } catch (e: any) {
+      console.warn(`[BotWorker] Note on leaving chat ${dialogId}:`, e.message || e);
     }
+  }
+
+  /**
+   * Оператор чатыг эргүүлэн бот руу шилжүүлэх үед ботыг чатад буцаан нэмэх
+   */
+  public async rejoinChat(dialogId: string) {
+    if (!this.config.botId || !dialogId || dialogId.startsWith('sim-')) return;
+
+    const match = dialogId.match(/\d+/);
+    if (match) {
+      const numericChatId = parseInt(match[0], 10);
+      try {
+        await vibeRequest('POST', `/v1/chats/${numericChatId}/users`, {
+          users: [this.config.botId],
+        });
+        console.log(`[BotWorker] Bot ${this.config.botId} rejoined chat ${dialogId}`);
+      } catch (e: any) {
+        console.warn(`[BotWorker] Note on rejoining chat ${dialogId}:`, e.message || e);
+      }
+    }
+  }
+
+  private async handoffToOperator(dialogId: string) {
+    return this.leaveChat(dialogId);
   }
 
   async suggestDraftResponse(query: string): Promise<{ suggestion: string; matchedArticles: { id: string; title: string; score: number }[] }> {

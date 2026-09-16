@@ -76,6 +76,7 @@ export interface ChatDialog {
   lastMessageTime: string; // Сүүлийн мессеж ирсэн цаг
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
   unreadCount: number; // Уншаагүй мессежийн тоо
+  botActive?: boolean; // Бот тухайн чатад идэвхтэй хариулж байгаа эсэх (Оператор өөртөө авсан үед false болж сална)
   isStarred?: boolean; // Онцолсон/од тавьсан эсэх
   resolutionSummary?: string; // Чат хаах үеийн шийдвэрлэлтийн дүгнэлт
   closedAt?: string; // Чат хаагдсан цаг
@@ -732,8 +733,19 @@ export class ChatManagerService extends EventEmitter {
         }
       } else if (message.sender === 'agent') {
         dialog.unreadCount = 0;
+        const wasBot = dialog.status === 'bot' || dialog.botActive === true;
+        dialog.botActive = false;
         if (dialog.status === 'new' || dialog.status === 'bot' || dialog.status === 'closed') {
           dialog.status = 'in_progress';
+        }
+        if (wasBot) {
+          const sysNotice: ChatMessage = {
+            id: `sys-${Date.now()}-detach`,
+            sender: 'system',
+            text: `🤖 Оператор хариу илгээсэн тул бот харилцан ярианаас гарлаа.`,
+            timestamp: new Date().toISOString(),
+          };
+          dialog.messages.push(sysNotice);
         }
       }
     }
@@ -753,11 +765,37 @@ export class ChatManagerService extends EventEmitter {
 
   updateDialog(
     id: string,
-    updates: Partial<Pick<ChatDialog, 'status' | 'priority' | 'assignedAgentId' | 'assignedAgentName' | 'assignedAgentAvatar' | 'closedByAgentId' | 'closedByAgentName' | 'closedByAgentAvatar' | 'isStarred' | 'resolutionSummary' | 'closedAt'>>
+    updates: Partial<Pick<ChatDialog, 'status' | 'priority' | 'assignedAgentId' | 'assignedAgentName' | 'assignedAgentAvatar' | 'closedByAgentId' | 'closedByAgentName' | 'closedByAgentAvatar' | 'isStarred' | 'resolutionSummary' | 'closedAt' | 'botActive'>>
   ): ChatDialog {
     const dialog = this.getDialogById(id);
     if (!dialog) {
       throw new Error(`Dialog not found: ${id}`);
+    }
+
+    const previousStatus = dialog.status;
+    const previousAgentId = dialog.assignedAgentId;
+    const wasBot = previousStatus === 'bot' || dialog.botActive === true;
+
+    // Check if operator is taking over or assigning the chat
+    const isAssigningAgent = Boolean(updates.assignedAgentId && updates.assignedAgentId !== previousAgentId);
+    const isTakingToInProgress = updates.status === 'in_progress' && (previousStatus === 'bot' || previousStatus === 'new' || !previousAgentId);
+
+    if (isAssigningAgent || isTakingToInProgress) {
+      // Operator takes over the chat: Bot detached!
+      dialog.botActive = false;
+      if (wasBot) {
+        const agentName = updates.assignedAgentName || dialog.assignedAgentName || 'Оператор';
+        const sysMsg: ChatMessage = {
+          id: `sys-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+          sender: 'system',
+          text: `🤖 Бот харилцан ярианаас гарч, оператор ${agentName} чатыг хариуцаж эхэллээ.`,
+          timestamp: new Date().toISOString(),
+        };
+        dialog.messages.push(sysMsg);
+        dialog.lastMessageText = sysMsg.text;
+        dialog.lastMessageTime = sysMsg.timestamp;
+        dialog.lastMessageSender = 'system';
+      }
     }
 
     Object.assign(dialog, updates);
@@ -766,7 +804,37 @@ export class ChatManagerService extends EventEmitter {
         dialog.closedAt = new Date().toISOString();
       }
       dialog.unreadCount = 0;
+      dialog.botActive = false;
     }
+
+    this.saveDialogs(id, 'dialog:update');
+    return dialog;
+  }
+
+  /**
+   * Оператор чатыг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate bot)
+   */
+  handBackToBot(id: string, botName = 'BSB AI Туслах'): ChatDialog {
+    const dialog = this.getDialogById(id);
+    if (!dialog) throw new Error(`Dialog not found: ${id}`);
+
+    const prevAgentName = dialog.assignedAgentName || 'Оператор';
+    dialog.assignedAgentId = null;
+    dialog.assignedAgentName = null;
+    dialog.assignedAgentAvatar = null;
+    dialog.status = 'bot';
+    dialog.botActive = true;
+
+    const sysMsg: ChatMessage = {
+      id: `sys-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      sender: 'system',
+      text: `🔄 Оператор ${prevAgentName} чатыг эргүүлэн ${botName}-д шилжүүллээ. Бот автоматаар хариулж эхэлнэ.`,
+      timestamp: new Date().toISOString(),
+    };
+    dialog.messages.push(sysMsg);
+    dialog.lastMessageText = sysMsg.text;
+    dialog.lastMessageTime = sysMsg.timestamp;
+    dialog.lastMessageSender = 'system';
 
     this.saveDialogs(id, 'dialog:update');
     return dialog;
@@ -780,6 +848,7 @@ export class ChatManagerService extends EventEmitter {
     dialog.assignedAgentName = targetAgentName;
     if (targetAgentAvatar) dialog.assignedAgentAvatar = targetAgentAvatar;
     dialog.status = 'assigned';
+    dialog.botActive = false;
 
     dialog.messages.push({
       id: `sys-${Date.now()}`,

@@ -1045,6 +1045,7 @@ async function startServer() {
   /**
    * PATCH /api/chats/:id
    * Чатын статусыг (in_progress, closed, bot) эсвэл чухал тэмдэглэгээ (starred)-г шинэчлэх.
+   * Хэрэв оператор чатыг өөртөө авсан бол (assignedAgentId эсвэл in_progress) ботыг салгана.
    */
   app.patch('/api/chats/:id', async (req, res) => {
     try {
@@ -1055,7 +1056,33 @@ async function startServer() {
           await bitrixOpenlinesSync.answerOperatorChat(numId);
         }
       }
+
+      // Хэрэв оператор өөртөө авсан эсвэл in_progress болсон бол ботыг чатнаас салгах (leave)
+      if (req.body.assignedAgentId || req.body.status === 'in_progress') {
+        if (updated.dialogId) {
+          await botWorker.leaveChat(updated.dialogId);
+        }
+      }
+
       res.json({ success: true, data: updated });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/return-to-bot
+   * Оператор харилцан яриаг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate bot)
+   */
+  app.post('/api/chats/:id/return-to-bot', async (req, res) => {
+    try {
+      const config = botWorker.getConfig();
+      const botName = config.botName || 'BSB AI Туслах';
+      const dialog = chatManager.handBackToBot(req.params.id, botName);
+      if (dialog.dialogId) {
+        await botWorker.rejoinChat(dialog.dialogId);
+      }
+      res.json({ success: true, data: dialog });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1065,13 +1092,16 @@ async function startServer() {
    * POST /api/chats/:id/transfer
    * Чатыг өөр мэргэшсэн оператор руу шилжүүлэх (Re-assign).
    */
-  app.post('/api/chats/:id/transfer', (req, res) => {
+  app.post('/api/chats/:id/transfer', async (req, res) => {
     try {
       const { targetAgentId, targetAgentName, targetAgentAvatar } = req.body;
       if (!targetAgentId || !targetAgentName) {
         return res.status(400).json({ success: false, error: { message: 'Target agent details required' } });
       }
       const dialog = chatManager.transferDialog(req.params.id, targetAgentId, targetAgentName, targetAgentAvatar);
+      if (dialog.dialogId) {
+        await botWorker.leaveChat(dialog.dialogId);
+      }
       res.json({ success: true, data: dialog });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });

@@ -1060,6 +1060,26 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
+  // Return dialog back to AI Bot (Re-activate bot)
+  const handleReturnToBot = async () => {
+    if (!selectedDialog) return;
+    setIsBotActionLoading(true);
+    try {
+      const res = await fetch(`/api/chats/${selectedDialog.id}/return-to-bot`, {
+        method: 'POST',
+      }).then((r) => r.json());
+
+      if (res.success) {
+        setSelectedDialog(res.data);
+        setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+      }
+    } catch (e) {
+      console.error('Failed to return dialog to bot:', e);
+    } finally {
+      setIsBotActionLoading(false);
+    }
+  };
+
   // Transfer to another agent
   const handleTransfer = async (targetAgent: Agent) => {
     if (!selectedDialog) return;
@@ -2199,6 +2219,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     <span className={`px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-full border shrink-0 ${getStatusBadge(selectedDialog.status).color}`}>
                       {getStatusBadge(selectedDialog.status).label}
                     </span>
+                    {selectedDialog.status === 'in_progress' && (
+                      <span
+                        className="hidden md:inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200"
+                        title="Оператор чатыг өөртөө авсан тул бот салсан"
+                      >
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        <span>Бот салсан (Оператор хариуцаж буй)</span>
+                      </span>
+                    )}
                   </div>
                   <div className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1.5 sm:gap-2 flex-wrap truncate">
                     <span className="truncate">{selectedDialog.channelName}</span>
@@ -2309,9 +2338,25 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     id="take-dialog-btn"
                     onClick={handleTakeDialog}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-sm"
+                    title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>Өөртөө авах</span>
+                    <span>{selectedDialog.status === 'bot' || selectedDialog.botActive ? 'Өөртөө авах (Бот салгах)' : 'Өөртөө авах'}</span>
+                  </button>
+                )}
+
+                {/* Return to Bot button (When chat is active with agent) */}
+                {selectedDialog.status !== 'closed' && isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
+                  <button
+                    id="return-to-bot-btn"
+                    type="button"
+                    onClick={handleReturnToBot}
+                    disabled={isBotActionLoading}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
+                    title="Харилцан яриаг эргүүлэн AI Туслах Бот руу шилжүүлэх (Бот автоматаар хариулж эхэлнэ)"
+                  >
+                    <Bot className="w-3.5 h-3.5 text-purple-600" />
+                    <span className="hidden sm:inline">{isBotActionLoading ? 'Шилжүүлж байна...' : 'Бот руу шилжүүлэх'}</span>
                   </button>
                 )}
 
@@ -2499,10 +2544,23 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               >
                 {selectedDialog.messages.map((msg) => {
                 if (msg.sender === 'system') {
+                  const isBotEvent =
+                    msg.text.includes('🤖') ||
+                    msg.text.includes('Бот') ||
+                    msg.text.includes('ботыг') ||
+                    msg.text.includes('шилжүүллээ') ||
+                    msg.text.includes('гарч');
                   return (
                     <div key={msg.id} className="flex justify-center my-2">
-                      <div className="px-3 py-1 rounded-full bg-slate-200/80 text-slate-600 text-[11px] font-medium max-w-md text-center">
-                        {msg.text}
+                      <div
+                        className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium max-w-lg text-center shadow-2xs flex items-center gap-1.5 ${
+                          isBotEvent
+                            ? 'bg-purple-50 text-purple-900 border border-purple-200 font-semibold'
+                            : 'bg-slate-200/80 text-slate-600'
+                        }`}
+                      >
+                        {isBotEvent && <Bot className="w-3.5 h-3.5 text-purple-600 shrink-0" />}
+                        <span>{msg.text}</span>
                       </div>
                     </div>
                   );
