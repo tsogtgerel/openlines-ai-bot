@@ -104,14 +104,29 @@ export class BitrixOpenlinesSyncService {
 
       const configId = existing?.channelId ? Number(existing.channelId) : 39;
       const channelName = this.getLineName(configId);
+
+      // Parse existing lead id if available so syncSingleChat does not wipe it out
+      let crmEntityId: number | undefined = undefined;
+      let crmEntityType: string | undefined = undefined;
+      if (existing?.customer?.crmLeadId) {
+        const parts = existing.customer.crmLeadId.split('-');
+        if (parts.length === 2 && !isNaN(Number(parts[1]))) {
+          crmEntityType = parts[0];
+          crmEntityId = Number(parts[1]);
+        }
+      }
+
       const fakeSession = {
         chatId: numChatId,
         configId,
         source: existing?.channelType || 'webchat',
         status: existing?.status || 'in_progress',
         userId: 0,
+        operatorId: existing?.assignedAgentId ? Number(existing.assignedAgentId) : 0,
         dateCreate: existing?.createdAt || new Date().toISOString(),
         messageCount: rawData.messages.length,
+        crmEntityId,
+        crmEntityType,
       };
 
       const updatedDialog = this.mapRawToChatDialog(fakeSession, rawData, channelName);
@@ -135,6 +150,11 @@ export class BitrixOpenlinesSyncService {
       const channelType = resolveChannelType(s.source, channelName);
       const botCfg = botWorker.getConfig();
 
+      const existingDialog =
+        chatManager.getDialogById(`chat-${s.chatId}`) ||
+        chatManager.getDialogById(`chat${s.chatId}`);
+      const existingCustomer = existingDialog?.customer;
+
       const customerUser =
         rawData.users?.find((u: any) => u.connector || u.type === 'extranet' || u.id === s.userId) ||
         rawData.users?.[0];
@@ -143,13 +163,48 @@ export class BitrixOpenlinesSyncService {
         (u: any) => !u.connector && u.type === 'user' && u.id !== 19170 && u.id !== botCfg.botId
       );
 
+      // Clean and normalize avatar URL (resolving relative paths and Bitrix CDN)
+      let cleanAvatar: string | undefined = undefined;
+      const rawAvatar = customerUser?.avatar;
+      if (rawAvatar && rawAvatar !== '/bitrix/js/im/images/blank.gif' && !rawAvatar.includes('blank.gif')) {
+        if (rawAvatar.startsWith('//')) {
+          cleanAvatar = `https:${rawAvatar}`;
+        } else if (rawAvatar.startsWith('/')) {
+          cleanAvatar = `https://vibecode.bitrix24.com${rawAvatar}`;
+        } else {
+          cleanAvatar = rawAvatar;
+        }
+      }
+
+      // Preserve existing avatar if new rawAvatar is missing
+      const finalAvatar = cleanAvatar || existingCustomer?.avatar;
+
+      // Stable CRM Lead ID resolution:
+      // Priority 1: session s.crmEntityId (and s.crmEntityType if available)
+      // Priority 2: session s.crm or s.leadId if present
+      // Priority 3: existingCustomer.crmLeadId (DO NOT WIPE OUT!)
+      let finalCrmLeadId: string | undefined = undefined;
+      if (s.crmEntityId) {
+        const entityPrefix = s.crmEntityType ? s.crmEntityType.toUpperCase() : 'LEAD';
+        finalCrmLeadId = `${entityPrefix}-${s.crmEntityId}`;
+      } else if (s.crm && typeof s.crm === 'string' && s.crm.includes('_')) {
+        const parts = s.crm.split('_');
+        finalCrmLeadId = `${parts[0].toUpperCase()}-${parts[1]}`;
+      } else if (existingCustomer?.crmLeadId) {
+        finalCrmLeadId = existingCustomer.crmLeadId;
+      }
+
       const customer: CustomerProfile = {
-        name: customerUser?.name || 'Зочин харилцагч',
-        avatar: customerUser?.avatar && customerUser.avatar !== '/bitrix/js/im/images/blank.gif'
-          ? customerUser.avatar
-          : undefined,
-        crmLeadId: s.crmEntityId ? `LEAD-${s.crmEntityId}` : undefined,
+        name: customerUser?.name || existingCustomer?.name || 'Зочин харилцагч',
+        avatar: finalAvatar,
+        crmLeadId: finalCrmLeadId,
         tags: [s.source ? s.source.toUpperCase() : 'OPENLINE', 'Битрикс24 Live'],
+        phone: existingCustomer?.phone,
+        email: existingCustomer?.email,
+        address: existingCustomer?.address,
+        city: existingCustomer?.city,
+        totalOrders: existingCustomer?.totalOrders,
+        lastOrderDate: existingCustomer?.lastOrderDate,
       };
 
       const rawMessages = rawData.messages || [];
@@ -209,15 +264,27 @@ export class BitrixOpenlinesSyncService {
         Boolean(botCfg.selectedLineId) &&
         Number(botCfg.selectedLineId) === Number(s.configId);
 
+      // Bitrix24 session operator assignment:
+      // A chat has an assigned operator ONLY IF s.operatorId is valid (> 0 and !== 19170 and !== botCfg.botId)
+      // If s.operatorId is null/undefined/0, or s.status === 'new', the conversation is in the queue/unassigned.
+      // Prior chat participants in rawData.users do NOT mean the chat is currently assigned to them!
+      const hasActiveOperator = Boolean(
+        s.operatorId &&
+        Number(s.operatorId) > 0 &&
+        Number(s.operatorId) !== 19170 &&
+        Number(s.operatorId) !== botCfg.botId
+      );
+
+      const assignedOperatorUser = hasActiveOperator
+        ? (rawData.users?.find((u: any) => u.id === Number(s.operatorId)) || operatorUser)
+        : null;
+
       let status: ChatDialog['status'] = 'new';
       if (s.status === 'closed') {
         status = 'closed';
       } else if (isThisLineBotBound && lastMsg && lastMsg.sender === 'bot') {
         status = 'bot';
-      } else if (
-        operatorUser &&
-        (s.status === 'answered' || (s.operatorId && s.operatorId > 0 && s.operatorId !== 19170 && s.operatorId !== botCfg.botId))
-      ) {
+      } else if (hasActiveOperator || (s.status === 'answered' && operatorUser)) {
         status = 'in_progress';
       } else if (s.status === 'new') {
         status = 'new';
@@ -234,11 +301,15 @@ export class BitrixOpenlinesSyncService {
         channelType,
         status,
         priority: status === 'new' ? 'high' : 'normal',
-        assignedAgentId: operatorUser ? String(operatorUser.id) : (s.operatorId && s.operatorId !== 19170 ? String(s.operatorId) : null),
-        assignedAgentName: operatorUser ? operatorUser.name : null,
-        assignedAgentAvatar: operatorUser?.avatar && operatorUser.avatar !== '/bitrix/js/im/images/blank.gif'
-          ? operatorUser.avatar
-          : null,
+        assignedAgentId: hasActiveOperator
+          ? String(s.operatorId)
+          : (status === 'in_progress' && operatorUser ? String(operatorUser.id) : null),
+        assignedAgentName: hasActiveOperator
+          ? (assignedOperatorUser?.name || (s.operatorId === 15 ? 'Цогтгэрэл Ч' : `Оператор #${s.operatorId}`))
+          : (status === 'in_progress' && operatorUser ? operatorUser.name : null),
+        assignedAgentAvatar: hasActiveOperator
+          ? (assignedOperatorUser?.avatar && assignedOperatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? assignedOperatorUser.avatar : null)
+          : (status === 'in_progress' && operatorUser?.avatar && operatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? operatorUser.avatar : null),
         lastMessageText: lastMsg ? lastMsg.text : 'Харилцан яриа эхэлсэн',
         lastMessageTime: lastMsg ? lastMsg.timestamp : s.dateCreate,
         lastMessageSender: lastMsg ? lastMsg.sender : 'system',
@@ -271,6 +342,7 @@ export class BitrixOpenlinesSyncService {
     }
 
     this.isSyncing = true;
+    const botCfg = botWorker.getConfig();
 
     try {
       if (this.lineMap.size === 0) {
@@ -306,9 +378,21 @@ export class BitrixOpenlinesSyncService {
         if (countChanged || statusChanged || hasNoCachedMessages || isActiveChat) {
           sessionsToFetch.push(s);
         } else {
-          // Чатад шинэ мессеж байхгүй - серверт хандалт хийлгүй зөвхөн орон нутгийн оператор тохиргоог шинэчлэнэ
-          if (existing && s.operatorId && String(s.operatorId) !== existing.assignedAgentId && s.operatorId !== 19170) {
-            existing.assignedAgentId = String(s.operatorId);
+          // Чатад шинэ мессеж байхгүй - орон нутгийн оператор тохиргоо болон төлөвийг синк хийнэ
+          if (existing) {
+            if (s.operatorId && Number(s.operatorId) > 0 && Number(s.operatorId) !== 19170 && Number(s.operatorId) !== botCfg.botId) {
+              if (String(s.operatorId) !== existing.assignedAgentId) {
+                existing.assignedAgentId = String(s.operatorId);
+                existing.status = 'in_progress';
+              }
+            } else if (!s.operatorId && s.status === 'new') {
+              // Bitrix operator unassigned/returned to queue
+              if (existing.assignedAgentId && existing.status !== 'closed') {
+                existing.assignedAgentId = null;
+                existing.assignedAgentName = null;
+                existing.status = 'new';
+              }
+            }
           }
         }
       }

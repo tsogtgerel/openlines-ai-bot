@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bot, Radio, Server, CheckCircle2, AlertTriangle, Unlink, Link2, Rocket } from 'lucide-react';
+import { Bot, Radio, Server, CheckCircle2, AlertTriangle, Unlink, Link2, Rocket, Smartphone } from 'lucide-react';
 import { BotConfig, PortalInfo } from '../types';
 
 interface HeaderProps {
@@ -11,6 +11,7 @@ interface HeaderProps {
   onNavigateToChannels?: () => void;
   isAgentRole?: boolean;
   onOpenRedeploy?: () => void;
+  onOpenMobileGuide?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -22,6 +23,7 @@ export const Header: React.FC<HeaderProps> = ({
   onNavigateToChannels,
   isAgentRole = false,
   onOpenRedeploy,
+  onOpenMobileGuide,
 }) => {
   const isPolling = botConfig?.isPollingActive ?? false;
 
@@ -89,6 +91,19 @@ export const Header: React.FC<HeaderProps> = ({
               </button>
             ) : null}
           </div>
+
+          {/* Mobile Guide & QR Button */}
+          {onOpenMobileGuide && (
+            <button
+              id="header-mobile-guide-btn"
+              onClick={onOpenMobileGuide}
+              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700/60 hover:border-indigo-600 transition shrink-0"
+              title="Битрикс24 гар утасны апп-д нээх, QR код болон заавар"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
+              <span className="hidden sm:inline">Гар утас</span>
+            </button>
+          )}
 
           {/* Redeploy Button for Admin/Supervisor */}
           {onOpenRedeploy && !isAgentRole && (

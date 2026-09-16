@@ -20,6 +20,7 @@ export interface Agent {
   assignedChannelNames?: string[];
   activeSessions?: number;
   canAccessAllChannels?: boolean;
+  bitrixWorkdayStatus?: 'OPENED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
 }
 
 export interface WorkShift {
@@ -36,6 +37,9 @@ export interface WorkShift {
   workedSeconds: number;
   chatsResolved: number;
   dailyReport?: string;
+  bitrixWorkdayStatus?: 'OPENED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
+  bitrixWorkdayId?: number;
+  bitrixDuration?: string;
 }
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -166,6 +170,16 @@ export class WorktimeManagerService {
         this.currentAgentId = parsed.currentAgentId || 'agent-1';
         const rawAgents: Agent[] = parsed.agents || INITIAL_AGENTS;
         this.agents = rawAgents.map((a) => this.normalizeAgent(a));
+        
+        // Хэрэв бодит Bitrix24 ажилтнууд татагдсан бол хуурамч test agent-уудыг цэвэрлэх
+        const hasBitrix = this.agents.some((a) => !!a.bitrixUserId);
+        if (hasBitrix) {
+          this.agents = this.agents.filter((a) => !a.id.startsWith('agent-'));
+          if (this.currentAgentId.startsWith('agent-')) {
+            this.currentAgentId = 'bx-15'; // Default to admin Цогтгэрэл Ч
+          }
+        }
+        
         this.shifts = parsed.shifts || [];
       } else {
         this.seedInitialData();
@@ -365,6 +379,125 @@ export class WorktimeManagerService {
 
   getShiftsHistory(limit = 20): WorkShift[] {
     return [...this.shifts].sort((a, b) => new Date(b.clockInTime).getTime() - new Date(a.clockInTime).getTime()).slice(0, limit);
+  }
+
+  /**
+   * Bitrix24 portal-аас ирсэн timeman бодит статусыг дотоод ээлж, операторын төлөвтэй синхрончлох
+   */
+  syncAgentWorkdayFromBitrix(agentId: string, bitrixData: any): { agent: Agent; shift: WorkShift | null } {
+    const agent = this.getAgentById(agentId);
+    if (!agent) throw new Error(`Agent not found: ${agentId}`);
+    if (!bitrixData) return { agent, shift: this.getCurrentShift(agent.id) };
+
+    const bStatus: string = (bitrixData.status || '').toUpperCase();
+    agent.bitrixWorkdayStatus = bStatus;
+
+    const todayStr = new Date().toISOString().split('T')[0];
+    let shift = this.shifts.find((s) => s.agentId === agent.id && (s.isClockedIn || s.date === todayStr));
+
+    if (bStatus === 'OPENED') {
+      agent.isClockedIn = true;
+      agent.isOnBreak = false;
+      if (agent.status === 'offline' || agent.status === 'break') {
+        agent.status = 'online';
+      }
+
+      const clockInTime = bitrixData.timeStart || shift?.clockInTime || new Date().toISOString();
+      const shiftDate = clockInTime.split('T')[0] || todayStr;
+
+      if (!shift) {
+        shift = {
+          id: `shift-bx-${bitrixData.id || Date.now()}`,
+          agentId: agent.id,
+          agentName: agent.name,
+          date: shiftDate,
+          clockInTime,
+          clockOutTime: null,
+          isClockedIn: true,
+          isOnBreak: false,
+          totalBreakSeconds: 0,
+          workedSeconds: 0,
+          chatsResolved: 0,
+          bitrixWorkdayStatus: 'OPENED',
+          bitrixWorkdayId: bitrixData.id,
+          bitrixDuration: bitrixData.duration,
+        };
+        this.shifts.unshift(shift);
+      } else {
+        shift.isClockedIn = true;
+        shift.isOnBreak = false;
+        shift.clockOutTime = null;
+        if (bitrixData.timeStart) {
+          shift.clockInTime = bitrixData.timeStart;
+        }
+        shift.bitrixWorkdayStatus = 'OPENED';
+        shift.bitrixWorkdayId = bitrixData.id || shift.bitrixWorkdayId;
+        shift.bitrixDuration = bitrixData.duration || shift.bitrixDuration;
+      }
+
+      if (bitrixData.timeLeaks) {
+        const leakParts = bitrixData.timeLeaks.split(':').map(Number);
+        if (leakParts.length === 3 && !leakParts.some(isNaN)) {
+          shift.totalBreakSeconds = leakParts[0] * 3600 + leakParts[1] * 60 + leakParts[2];
+        }
+      }
+
+      agent.activeShiftId = shift.id;
+    } else if (bStatus === 'PAUSED') {
+      agent.isClockedIn = true;
+      agent.isOnBreak = true;
+      agent.status = 'break';
+
+      if (!shift) {
+        const clockInTime = bitrixData.timeStart || new Date().toISOString();
+        shift = {
+          id: `shift-bx-${bitrixData.id || Date.now()}`,
+          agentId: agent.id,
+          agentName: agent.name,
+          date: clockInTime.split('T')[0] || todayStr,
+          clockInTime,
+          clockOutTime: null,
+          isClockedIn: true,
+          isOnBreak: true,
+          breakStartTime: new Date().toISOString(),
+          totalBreakSeconds: 0,
+          workedSeconds: 0,
+          chatsResolved: 0,
+          bitrixWorkdayStatus: 'PAUSED',
+          bitrixWorkdayId: bitrixData.id,
+        };
+        this.shifts.unshift(shift);
+      } else {
+        shift.isClockedIn = true;
+        shift.isOnBreak = true;
+        shift.bitrixWorkdayStatus = 'PAUSED';
+        if (!shift.breakStartTime) {
+          shift.breakStartTime = new Date().toISOString();
+        }
+      }
+      agent.activeShiftId = shift.id;
+    } else if (bStatus === 'CLOSED' || bStatus === 'EXPIRED') {
+      agent.isClockedIn = false;
+      agent.isOnBreak = false;
+      agent.status = 'offline';
+      agent.activeShiftId = null;
+
+      if (shift && shift.isClockedIn) {
+        shift.isClockedIn = false;
+        shift.isOnBreak = false;
+        shift.clockOutTime = bitrixData.timeFinish || new Date().toISOString();
+        shift.bitrixWorkdayStatus = bStatus;
+        if (bitrixData.duration) {
+          const parts = bitrixData.duration.split(':').map(Number);
+          if (parts.length === 3 && !parts.some(isNaN)) {
+            shift.workedSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+          }
+        }
+      }
+    }
+
+    this.saveData();
+    return { agent, shift: this.getCurrentShift(agent.id) || shift || null };
   }
 
   clockIn(agentId?: string): { agent: Agent; shift: WorkShift } {

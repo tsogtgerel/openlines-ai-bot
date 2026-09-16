@@ -16,6 +16,7 @@ import {
   BarChart3,
   Shield,
   Rocket,
+  Smartphone,
 } from 'lucide-react';
 import { Header } from './components/Header';
 import { ChannelSelector } from './components/ChannelSelector';
@@ -30,6 +31,8 @@ import { WorktimeModal } from './components/WorktimeModal';
 import { InquiryAnalyticsTab } from './components/InquiryAnalyticsTab';
 import { AgentPermissionsModal } from './components/AgentPermissionsModal';
 import { RedeployModal } from './components/RedeployModal';
+import { BitrixMobileModal } from './components/BitrixMobileModal';
+import { initBitrix24SDK } from './utils/bitrixMobile';
 import {
   KnowledgeArticle,
   BotConfig,
@@ -65,6 +68,7 @@ export default function App() {
   const [showTeamModal, setShowTeamModal] = useState<boolean>(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState<boolean>(false);
   const [showRedeployModal, setShowRedeployModal] = useState<boolean>(false);
+  const [showMobileModal, setShowMobileModal] = useState<boolean>(false);
 
   // Loading States
   const [isLoadingPortal, setIsLoadingPortal] = useState(false);
@@ -74,6 +78,7 @@ export default function App() {
   const [isLoadingServers, setIsLoadingServers] = useState(false);
   const [isTogglingPolling, setIsTogglingPolling] = useState(false);
   const [isSyncingBitrixAgents, setIsSyncingBitrixAgents] = useState(false);
+  const [targetChatId, setTargetChatId] = useState<string | null>(null);
 
   // Load Portal Info & Bot Config
   const loadPortalAndBot = async () => {
@@ -137,7 +142,7 @@ export default function App() {
   const loadLogs = async () => {
     try {
       setIsLoadingLogs(true);
-      const res = await fetch('/api/logs?limit=50').then((r) => r.json());
+      const res = await fetch('/api/logs?limit=100').then((r) => r.json());
       if (res.success && Array.isArray(res.data)) {
         setLogs(res.data);
       }
@@ -147,6 +152,13 @@ export default function App() {
       setIsLoadingLogs(false);
     }
   };
+
+  // Auto reload logs whenever switching to the logs tab
+  useEffect(() => {
+    if (activeTab === 'logs') {
+      loadLogs();
+    }
+  }, [activeTab]);
 
   // Load Servers
   const loadServers = async () => {
@@ -166,16 +178,17 @@ export default function App() {
   // Load Worktime & Chats status (with requestingAgentId context for channel isolation)
   const loadWorktimeAndChats = async (agentOverrideId?: string) => {
     try {
-      const worktimeRes = await fetch('/api/worktime/status').then((r) => r.json());
-      let activeAgentId = agentOverrideId || currentAgent?.id;
+      const activeAgentId = agentOverrideId || currentAgent?.id;
+      const statusUrl = activeAgentId
+        ? `/api/worktime/status?agentId=${encodeURIComponent(activeAgentId)}`
+        : '/api/worktime/status';
+
+      const worktimeRes = await fetch(statusUrl).then((r) => r.json());
 
       if (worktimeRes.success && worktimeRes.data) {
         setCurrentAgent(worktimeRes.data.currentAgent);
         setCurrentShift(worktimeRes.data.currentShift);
         setTeam(worktimeRes.data.team || []);
-        if (!activeAgentId && worktimeRes.data.currentAgent?.id) {
-          activeAgentId = worktimeRes.data.currentAgent.id;
-        }
       }
 
       const chatsUrl = activeAgentId
@@ -194,6 +207,7 @@ export default function App() {
   };
 
   useEffect(() => {
+    initBitrix24SDK();
     loadPortalAndBot();
     loadOpenLines();
     loadKnowledgeBase();
@@ -240,12 +254,24 @@ export default function App() {
     }
   }, [currentAgent?.accessRole, activeTab]);
 
-  // Worktime Handlers
+  // Worktime Handlers - Bitrix24 Timeman бүрэн синхрончлол
   const handleClockIn = async () => {
     try {
-      const res = await fetch('/api/worktime/clock-in', { method: 'POST' }).then((r) => r.json());
+      const res = await fetch('/api/worktime/clock-in', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: currentAgent?.id }),
+      }).then((r) => r.json());
+
+      // If running inside Bitrix24 iframe, also notify Bitrix24 portal UI
+      if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
+        try {
+          (window as any).BX24.callMethod('timeman.open', {});
+        } catch {}
+      }
+
       if (res.success) {
-        await loadWorktimeAndChats();
+        await loadWorktimeAndChats(currentAgent?.id);
       } else {
         alert(res.error?.message || 'Clock In хийхэд алдаа гарлаа');
       }
@@ -259,11 +285,18 @@ export default function App() {
       const res = await fetch('/api/worktime/clock-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dailyReport: report }),
+        body: JSON.stringify({ dailyReport: report, agentId: currentAgent?.id }),
       }).then((r) => r.json());
 
+      // If running inside Bitrix24 iframe, also notify Bitrix24 portal UI
+      if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
+        try {
+          (window as any).BX24.callMethod('timeman.close', { report: report || 'Өдрийн ээлж дууссан' });
+        } catch {}
+      }
+
       if (res.success) {
-        await loadWorktimeAndChats();
+        await loadWorktimeAndChats(currentAgent?.id);
       } else {
         alert(res.error?.message || 'Clock Out хийхэд алдаа гарлаа');
       }
@@ -274,9 +307,20 @@ export default function App() {
 
   const handleStartBreak = async () => {
     try {
-      const res = await fetch('/api/worktime/break/start', { method: 'POST' }).then((r) => r.json());
+      const res = await fetch('/api/worktime/break/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: currentAgent?.id }),
+      }).then((r) => r.json());
+
+      if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
+        try {
+          (window as any).BX24.callMethod('timeman.pause', {});
+        } catch {}
+      }
+
       if (res.success) {
-        await loadWorktimeAndChats();
+        await loadWorktimeAndChats(currentAgent?.id);
       }
     } catch (err) {
       console.error('Failed to start break:', err);
@@ -285,9 +329,20 @@ export default function App() {
 
   const handleResumeWork = async () => {
     try {
-      const res = await fetch('/api/worktime/break/resume', { method: 'POST' }).then((r) => r.json());
+      const res = await fetch('/api/worktime/break/resume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: currentAgent?.id }),
+      }).then((r) => r.json());
+
+      if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
+        try {
+          (window as any).BX24.callMethod('timeman.open', {});
+        } catch {}
+      }
+
       if (res.success) {
-        await loadWorktimeAndChats();
+        await loadWorktimeAndChats(currentAgent?.id);
       }
     } catch (err) {
       console.error('Failed to resume work:', err);
@@ -299,14 +354,30 @@ export default function App() {
       const res = await fetch('/api/worktime/status', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status, agentId: currentAgent?.id }),
       }).then((r) => r.json());
 
       if (res.success) {
-        await loadWorktimeAndChats();
+        await loadWorktimeAndChats(currentAgent?.id);
       }
     } catch (err) {
       console.error('Failed to update status:', err);
+    }
+  };
+
+  const handleSyncBitrixWorktime = async () => {
+    try {
+      const res = await fetch('/api/worktime/sync-bitrix', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agentId: currentAgent?.id }),
+      }).then((r) => r.json());
+
+      if (res.success) {
+        await loadWorktimeAndChats(currentAgent?.id);
+      }
+    } catch (err) {
+      console.error('Failed to sync Bitrix worktime:', err);
     }
   };
 
@@ -558,6 +629,7 @@ export default function App() {
         onNavigateToChannels={() => setActiveTab('channels')}
         isAgentRole={isAgentRole}
         onOpenRedeploy={() => setShowRedeployModal(true)}
+        onOpenMobileGuide={() => setShowMobileModal(true)}
       />
 
       {/* Operator Worktime & Shift Control Bar */}
@@ -571,6 +643,7 @@ export default function App() {
         onResumeWork={handleResumeWork}
         onSetStatus={handleSetStatus}
         onSwitchAgent={handleSwitchAgent}
+        onSyncBitrix={handleSyncBitrixWorktime}
         onOpenTeamModal={() => setShowTeamModal(true)}
         onOpenPermissionsModal={!isAgentRole ? () => setShowPermissionsModal(true) : undefined}
       />
@@ -614,8 +687,17 @@ export default function App() {
             })}
           </nav>
 
-          {/* Right quick actions: Permissions modal button for Admin/Supervisor or role chip for Agent */}
-          <div className="flex items-center gap-2 shrink-0 py-1 pl-2">
+          {/* Right quick actions: Mobile guide, Permissions, Redeploy */}
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 py-1 pl-2">
+            <button
+              id="subnav-mobile-btn"
+              onClick={() => setShowMobileModal(true)}
+              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+              title="Битрикс24 гар утасны апп-д нээх заавар & QR код"
+            >
+              <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+              <span className="hidden sm:inline">Гар утас</span>
+            </button>
             {!isAgentRole ? (
               <>
                 <button
@@ -657,12 +739,13 @@ export default function App() {
             articles={articles}
             onOpenTeamModal={() => setShowTeamModal(true)}
             botConfig={botConfig}
+            targetChatId={targetChatId}
             onBindLine={handleBindLine}
             onUnbindLine={handleUnbindLine}
           />
         </div>
       ) : (
-        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8 pb-20">
           {activeTab === 'inquiries' && (
             <InquiryAnalyticsTab
               openLines={openLines}
@@ -709,6 +792,10 @@ export default function App() {
               logs={logs}
               isLoading={isLoadingLogs}
               onRefresh={loadLogs}
+              onSelectChat={(chatId) => {
+                setTargetChatId(chatId);
+                setActiveTab('chat');
+              }}
             />
           )}
 
@@ -753,6 +840,11 @@ export default function App() {
         currentAgent={currentAgent}
         onUpdatePermissions={handleUpdatePermissions}
         onSwitchAgent={handleSwitchAgent}
+      />
+      {/* Bitrix24 Mobile App & PWA Modal */}
+      <BitrixMobileModal
+        isOpen={showMobileModal}
+        onClose={() => setShowMobileModal(false)}
       />
     </div>
   );

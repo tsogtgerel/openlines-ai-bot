@@ -2,54 +2,6 @@
   "currentAgentId": "bx-15",
   "agents": [
     {
-      "id": "agent-1",
-      "name": "Болдбаатар Ц.",
-      "role": "Ахлах онлайн оператор",
-      "avatar": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150",
-      "status": "online",
-      "email": "boldbaatar@bsb.mn",
-      "phone": "9911-0021",
-      "isClockedIn": true,
-      "isOnBreak": false,
-      "activeShiftId": "shift-1"
-    },
-    {
-      "id": "agent-2",
-      "name": "Анударь Э.",
-      "role": "Борлуулалтын зөвлөх",
-      "avatar": "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150",
-      "status": "busy",
-      "email": "anudari@bsb.mn",
-      "phone": "8811-3344",
-      "isClockedIn": true,
-      "isOnBreak": false,
-      "activeShiftId": "shift-2"
-    },
-    {
-      "id": "agent-3",
-      "name": "Тэмүүлэн М.",
-      "role": "Хүргэлт & Сервис туслах",
-      "avatar": "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150",
-      "status": "break",
-      "email": "temuulen@bsb.mn",
-      "phone": "9555-8899",
-      "isClockedIn": true,
-      "isOnBreak": true,
-      "activeShiftId": "shift-3"
-    },
-    {
-      "id": "agent-4",
-      "name": "Сарнай Б.",
-      "role": "Харилцагчийн үйлчилгээний менежер",
-      "avatar": "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150",
-      "status": "offline",
-      "email": "sarnai@bsb.mn",
-      "phone": "9901-5566",
-      "isClockedIn": false,
-      "isOnBreak": false,
-      "activeShiftId": null
-    },
-    {
       "id": "bx-15",
       "bitrixUserId": 15,
       "name": "Цогтгэрэл Ч",
@@ -60,7 +12,7 @@
       "phone": "+976 75100272",
       "isClockedIn": true,
       "isOnBreak": false,
-      "activeShiftId": null,
+      "activeShiftId": "shift-1789528368537",
       "assignedChannelIds": [
         1,
         3,
@@ -97,7 +49,10 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 16
+      "activeSessions": 16,
+      "accessRole": "admin",
+      "canAccessAllChannels": true,
+      "bitrixWorkdayStatus": "OPENED"
     },
     {
       "id": "bx-121",
@@ -105,10 +60,10 @@
       "name": "Азжаргал Чулуунбат",
       "role": "Дэлгүүрийн менежер",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/8d6/8d68ae334a8f6f77e45c97b4511fd97d/12.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "azjargal@bsb.mn",
       "phone": "976-75108585",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -123,7 +78,9 @@
         "Интернэт дэлгүүр - Telegram",
         "Интернэт дэлгүүр - WhatsApp - Instant"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-123",
@@ -153,7 +110,9 @@
         "Интернэт дэлгүүр - Telegram",
         "Интернэт дэлгүүр - WhatsApp - Instant"
       ],
-      "activeSessions": 12
+      "activeSessions": 1,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-125",
@@ -183,7 +142,9 @@
         "Интернэт дэлгүүр - Telegram",
         "Интернэт дэлгүүр - WhatsApp - Instant"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-127",
@@ -213,7 +174,9 @@
         "Интернэт дэлгүүр - Telegram",
         "Интернэт дэлгүүр - WhatsApp - Instant"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-3065",
@@ -241,7 +204,9 @@
         "Интернэт дэлгүүр - Facebook - Messenger",
         "Интернэт дэлгүүр - Telegram"
       ],
-      "activeSessions": 15
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-17",
@@ -283,7 +248,9 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-6751",
@@ -305,7 +272,9 @@
         "Интернэт дэлгүүр - Instagram",
         "Интернэт дэлгүүр - Facebook - Messenger"
       ],
-      "activeSessions": 14
+      "activeSessions": 14,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-193",
@@ -325,7 +294,9 @@
       "assignedChannelNames": [
         "Интернэт дэлгүүр - WhatsApp - Instant"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-43",
@@ -353,7 +324,9 @@
         "БСБ Оффис Мебель - Facebook - Comments",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-45",
@@ -361,10 +334,10 @@
       "name": "Нэргүй Х.",
       "role": "Үйл ажиллагааны мэргэжилтэн",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/818/818a737467049140c25d183d35c167e7/Image _9_.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "nergui@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -381,7 +354,9 @@
         "БСБ Оффис Мебель - Facebook - Comments",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-47",
@@ -403,7 +378,9 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Мебель - Instagram"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-51",
@@ -427,7 +404,9 @@
         "БСБ Мебель - Instagram",
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-77",
@@ -447,7 +426,9 @@
       "assignedChannelNames": [
         "БСБ Оффис Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-4677",
@@ -467,7 +448,9 @@
       "assignedChannelNames": [
         "БСБ Оффис Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4679",
@@ -475,10 +458,10 @@
       "name": "Даваасүрэн Ц.",
       "role": "Худалдааны зөвлөх",
       "avatar": "https://ui-avatars.com/api/?name=%D0%94%D0%B0%D0%B2%D0%B0%D0%B0%D1%81%D2%AF%D1%80%D1%8D%D0%BD%20%D0%A6.&background=3b82f6&color=fff",
-      "status": "offline",
+      "status": "online",
       "email": "mish.ofnyarav@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -489,7 +472,9 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4681",
@@ -497,10 +482,10 @@
       "name": "Оюун-Эрдэнэ Г.",
       "role": "Худалдааны зөвлөх - Кассчин",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/f93/f93fab2cf59da2a31e1cb03dab4728bb/Image _24_.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "mm.ofcash@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -511,7 +496,9 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 306
+      "activeSessions": 316,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4683",
@@ -533,7 +520,9 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 6
+      "activeSessions": 6,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4687",
@@ -555,7 +544,9 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 2
+      "activeSessions": 2,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-49",
@@ -577,7 +568,9 @@
         "БСБ Мебель - Instagram",
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-57",
@@ -601,7 +594,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-4597",
@@ -625,7 +620,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 12
+      "activeSessions": 9,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4601",
@@ -649,7 +646,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4603",
@@ -673,7 +672,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4605",
@@ -697,7 +698,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 165
+      "activeSessions": 27,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4607",
@@ -721,7 +724,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4609",
@@ -745,7 +750,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4613",
@@ -769,7 +776,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4615",
@@ -793,7 +802,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4617",
@@ -817,7 +828,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4619",
@@ -841,7 +854,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 6
+      "activeSessions": 6,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4621",
@@ -865,7 +880,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4623",
@@ -889,7 +906,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4625",
@@ -913,7 +932,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4629",
@@ -937,7 +958,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4631",
@@ -961,7 +984,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 3
+      "activeSessions": 3,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4633",
@@ -985,7 +1010,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 3
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4635",
@@ -1009,7 +1036,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4805",
@@ -1033,7 +1062,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-5223",
@@ -1057,7 +1088,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-59",
@@ -1077,7 +1110,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-61",
@@ -1099,7 +1134,9 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-14131",
@@ -1107,10 +1144,10 @@
       "name": "Э. Нандинцэцэг",
       "role": "Харилцагчийн үйлчилгээний ажилтан",
       "avatar": "https://ui-avatars.com/api/?name=%D0%AD.%20%D0%9D%D0%B0%D0%BD%D0%B4%D0%B8%D0%BD%D1%86%D1%8D%D1%86%D1%8D%D0%B3&background=3b82f6&color=fff",
-      "status": "offline",
+      "status": "online",
       "email": "nandintsetsegn535@gmail.com",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -1119,7 +1156,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 11
+      "activeSessions": 1,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-55",
@@ -1139,7 +1178,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "supervisor",
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-4593",
@@ -1159,7 +1200,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-4639",
@@ -1179,7 +1222,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-16921",
@@ -1199,7 +1244,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 1
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-16923",
@@ -1219,7 +1266,9 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-11",
@@ -1239,10 +1288,28 @@
       "assignedChannelNames": [
         "Viber Test Channel"
       ],
-      "activeSessions": 0
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     }
   ],
   "shifts": [
+    {
+      "id": "shift-1789528368537",
+      "agentId": "bx-15",
+      "agentName": "Цогтгэрэл Ч",
+      "date": "2026-09-16",
+      "clockInTime": "2026-09-16T11:08:20+08:00",
+      "clockOutTime": null,
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "totalBreakSeconds": 12,
+      "workedSeconds": 0,
+      "chatsResolved": 0,
+      "bitrixWorkdayStatus": "OPENED",
+      "bitrixWorkdayId": 1652,
+      "bitrixDuration": "00:00:00"
+    },
     {
       "id": "shift-1",
       "agentId": "agent-1",

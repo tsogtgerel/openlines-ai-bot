@@ -48,6 +48,7 @@ interface OpenChannelChatWorkplaceProps {
   articles: KnowledgeArticle[];
   onOpenTeamModal: () => void;
   botConfig?: BotConfig | null;
+  targetChatId?: string | null;
   onBindLine?: (lineId: number, lineName: string) => Promise<void>;
   onUnbindLine?: (lineId: number) => Promise<void>;
 }
@@ -59,16 +60,29 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   articles,
   onOpenTeamModal,
   botConfig,
+  targetChatId,
   onBindLine,
   onUnbindLine,
 }) => {
   // State
   const [dialogs, setDialogs] = useState<ChatDialog[]>([]);
-  const [selectedDialogId, setSelectedDialogId] = useState<string | null>(null);
+  const [selectedDialogId, setSelectedDialogId] = useState<string | null>(targetChatId || null);
   const [selectedDialog, setSelectedDialog] = useState<ChatDialog | null>(null);
   const [isLoadingDialogs, setIsLoadingDialogs] = useState(false);
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
   const [showMobileDetails, setShowMobileDetails] = useState<boolean>(false);
+
+  // Jump to targeted chat if passed
+  useEffect(() => {
+    if (targetChatId) {
+      setSelectedDialogId(targetChatId);
+      setMobileView('chat');
+      const found = dialogs.find((d) => d.id === targetChatId || d.dialogId === targetChatId);
+      if (found) {
+        setSelectedDialog(found);
+      }
+    }
+  }, [targetChatId, dialogs]);
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
@@ -883,7 +897,10 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     let result = dialogs.filter((d) => {
       if (statusFilter === 'new') return d.status === 'new';
       if (statusFilter === 'my') {
-        return d.status !== 'closed' && (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent));
+        return (
+          (d.status === 'in_progress' || d.status === 'assigned') &&
+          (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
+        );
       }
       if (statusFilter === 'my_closed') return d.status === 'closed' && isMyClosedDialog(d, currentAgent);
       if (statusFilter === 'bot') return d.status === 'bot';
@@ -1045,7 +1062,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const unassignedCount = dialogs.filter((d) => d.status === 'new').length;
   const myActiveCount = dialogs.filter(
     (d) =>
-      d.status !== 'closed' &&
+      (d.status === 'in_progress' || d.status === 'assigned') &&
       (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
   ).length;
   const myClosedCount = dialogs.filter((d) => d.status === 'closed' && isMyClosedDialog(d, currentAgent)).length;
@@ -1477,13 +1494,20 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                             <img
                               src={d.customer.avatar}
                               alt={d.customer.name}
-                              className="w-9 h-9 rounded-full object-cover border border-slate-200"
+                              onError={(e) => {
+                                (e.currentTarget as HTMLElement).style.display = 'none';
+                                const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                                if (fb) fb.style.display = 'flex';
+                              }}
+                              className="w-9 h-9 rounded-full object-cover border border-slate-200 shrink-0"
                             />
-                          ) : (
-                            <div className="w-9 h-9 rounded-full bg-slate-200 flex items-center justify-center text-slate-600 font-bold text-xs">
-                              {d.customer.name.slice(0, 2).toUpperCase()}
-                            </div>
-                          )}
+                          ) : null}
+                          <div
+                            style={{ display: d.customer.avatar ? 'none' : 'flex' }}
+                            className="w-9 h-9 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs shrink-0 select-none shadow-xs"
+                          >
+                            {d.customer.name ? d.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
+                          </div>
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${channelBadge.dot}`}
                             title={channelBadge.label}
@@ -1620,11 +1644,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 </button>
 
                 <div className="relative shrink-0">
-                  <img
-                    src={selectedDialog.customer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                    alt={selectedDialog.customer.name}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200"
-                  />
+                  {selectedDialog.customer.avatar ? (
+                    <img
+                      src={selectedDialog.customer.avatar}
+                      alt={selectedDialog.customer.name}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLElement).style.display = 'none';
+                        const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                        if (fb) fb.style.display = 'flex';
+                      }}
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                    />
+                  ) : null}
+                  <div
+                    style={{ display: selectedDialog.customer.avatar ? 'none' : 'flex' }}
+                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm border border-slate-200 shrink-0 select-none shadow-xs"
+                  >
+                    {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
+                  </div>
                   <span
                     className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-white ${getChannelBadge(selectedDialog.channelType).dot}`}
                   />
@@ -2303,11 +2340,26 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           <div className="hidden xl:flex w-72 2xl:w-80 border-l border-slate-200 bg-white flex-col shrink-0 p-4 space-y-4 overflow-y-auto min-h-0 h-full">
             {/* Customer Profile Card */}
             <div className="text-center pb-3 border-b border-slate-100">
-              <img
-                src={selectedDialog.customer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                alt={selectedDialog.customer.name}
-                className="w-16 h-16 rounded-full object-cover mx-auto border-2 border-slate-100 shadow-xs mb-2"
-              />
+              <div className="relative inline-block mx-auto mb-2">
+                {selectedDialog.customer.avatar ? (
+                  <img
+                    src={selectedDialog.customer.avatar}
+                    alt={selectedDialog.customer.name}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                      const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fb) fb.style.display = 'flex';
+                    }}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-xs"
+                  />
+                ) : null}
+                <div
+                  style={{ display: selectedDialog.customer.avatar ? 'none' : 'flex' }}
+                  className="w-16 h-16 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl border-2 border-slate-100 shadow-xs select-none"
+                >
+                  {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
+                </div>
+              </div>
               <h4 className="font-bold text-slate-900 text-sm">{selectedDialog.customer.name}</h4>
               <p className="text-xs text-slate-400">{selectedDialog.customer.city || 'Улаанбаатар'}</p>
 
@@ -2356,9 +2408,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-500">
                 <span>CRM Lead / Deal:</span>
-                <span className="font-mono font-semibold text-blue-700">
-                  {selectedDialog.customer.crmLeadId || 'LEAD-9912'}
-                </span>
+                {selectedDialog.customer.crmLeadId ? (
+                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs">
+                    {selectedDialog.customer.crmLeadId}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 font-normal italic text-[11px]">
+                    Холбогдоогүй
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-center text-slate-500">
                 <span>Өмнөх захиалга:</span>
@@ -2551,11 +2609,26 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
             {/* Customer Profile Card */}
             <div className="text-center pb-3 border-b border-slate-100">
-              <img
-                src={selectedDialog.customer.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                alt={selectedDialog.customer.name}
-                className="w-16 h-16 rounded-full object-cover mx-auto border-2 border-slate-100 shadow-xs mb-2"
-              />
+              <div className="relative inline-block mx-auto mb-2">
+                {selectedDialog.customer.avatar ? (
+                  <img
+                    src={selectedDialog.customer.avatar}
+                    alt={selectedDialog.customer.name}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLElement).style.display = 'none';
+                      const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                      if (fb) fb.style.display = 'flex';
+                    }}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-slate-100 shadow-xs"
+                  />
+                ) : null}
+                <div
+                  style={{ display: selectedDialog.customer.avatar ? 'none' : 'flex' }}
+                  className="w-16 h-16 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xl border-2 border-slate-100 shadow-xs select-none"
+                >
+                  {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
+                </div>
+              </div>
               <h4 className="font-bold text-slate-900 text-sm">{selectedDialog.customer.name}</h4>
               <p className="text-xs text-slate-400">{selectedDialog.customer.city || 'Улаанбаатар'}</p>
 
@@ -2606,9 +2679,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
               <div className="flex justify-between items-center text-slate-500">
                 <span>CRM Lead / Deal:</span>
-                <span className="font-mono font-semibold text-blue-700">
-                  {selectedDialog.customer.crmLeadId || 'LEAD-9912'}
-                </span>
+                {selectedDialog.customer.crmLeadId ? (
+                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs">
+                    {selectedDialog.customer.crmLeadId}
+                  </span>
+                ) : (
+                  <span className="text-slate-400 font-normal italic text-[11px]">
+                    Холбогдоогүй
+                  </span>
+                )}
               </div>
               <div className="flex justify-between items-center text-slate-500">
                 <span>Өмнөх захиалга:</span>

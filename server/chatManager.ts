@@ -909,9 +909,7 @@ export class ChatManagerService extends EventEmitter {
         dialogId: params.dialogId,
         customer: {
           name: params.senderName || `Харилцагч #${params.senderId || 'Шинэ'}`,
-          avatar:
-            params.senderAvatar ||
-            'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+          avatar: params.senderAvatar || undefined,
           tags: ['Битрикс24 Live'],
         },
         channelId: params.channelId || 39,
@@ -1029,13 +1027,34 @@ export class ChatManagerService extends EventEmitter {
         latestMsg = combinedMessages[combinedMessages.length - 1];
       }
 
+      // If the chat has been returned to the unassigned queue ('new') in Bitrix, do not retain stale assignedAgent
+      const isUnassignedInBitrix = newDialog.status === 'new' && !newDialog.assignedAgentId;
+      const finalAssignedAgentId = isUnassignedInBitrix ? null : (newDialog.assignedAgentId || existing.assignedAgentId);
+      const finalAssignedAgentName = isUnassignedInBitrix ? null : (newDialog.assignedAgentName || existing.assignedAgentName);
+      const finalAssignedAgentAvatar = isUnassignedInBitrix ? null : (newDialog.assignedAgentAvatar || existing.assignedAgentAvatar);
+
+      // Preserve existing customer CRM lead, avatar, and contact details if newDialog has missing ones
+      const mergedCustomer = {
+        ...existing.customer,
+        ...newDialog.customer,
+        crmLeadId: newDialog.customer?.crmLeadId || existing.customer?.crmLeadId,
+        avatar: newDialog.customer?.avatar || existing.customer?.avatar,
+        phone: newDialog.customer?.phone || existing.customer?.phone,
+        email: newDialog.customer?.email || existing.customer?.email,
+        address: newDialog.customer?.address || existing.customer?.address,
+        city: newDialog.customer?.city || existing.customer?.city,
+        totalOrders: newDialog.customer?.totalOrders ?? existing.customer?.totalOrders,
+        lastOrderDate: newDialog.customer?.lastOrderDate || existing.customer?.lastOrderDate,
+      };
+
       this.dialogs[existingIndex] = {
         ...newDialog,
+        customer: mergedCustomer,
         status: finalStatus,
         isStarred: existing.isStarred,
-        assignedAgentId: existing.assignedAgentId || newDialog.assignedAgentId,
-        assignedAgentName: existing.assignedAgentName || newDialog.assignedAgentName,
-        assignedAgentAvatar: existing.assignedAgentAvatar || newDialog.assignedAgentAvatar,
+        assignedAgentId: finalAssignedAgentId,
+        assignedAgentName: finalAssignedAgentName,
+        assignedAgentAvatar: finalAssignedAgentAvatar,
         messages: combinedMessages,
       };
     } else {

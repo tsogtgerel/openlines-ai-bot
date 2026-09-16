@@ -25,6 +25,7 @@ interface WorktimeBarProps {
   onResumeWork: () => Promise<void>;
   onSetStatus: (status: Agent['status']) => Promise<void>;
   onSwitchAgent: (agentId: string) => Promise<void>;
+  onSyncBitrix?: () => Promise<void>;
   onOpenTeamModal: () => void;
   onOpenPermissionsModal?: () => void;
 }
@@ -39,6 +40,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
   onResumeWork,
   onSetStatus,
   onSwitchAgent,
+  onSyncBitrix,
   onOpenTeamModal,
   onOpenPermissionsModal,
 }) => {
@@ -48,6 +50,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
   const [showClockOutModal, setShowClockOutModal] = useState(false);
   const [dailyReport, setDailyReport] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSyncingBitrix, setIsSyncingBitrix] = useState(false);
 
   // Live timer for active shift
   useEffect(() => {
@@ -95,6 +98,43 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
       setDailyReport('');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleClockInAction = async () => {
+    try {
+      setIsSubmitting(true);
+      await onClockIn();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleStartBreakAction = async () => {
+    try {
+      setIsSubmitting(true);
+      await onStartBreak();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResumeAction = async () => {
+    try {
+      setIsSubmitting(true);
+      await onResumeWork();
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSyncBitrixAction = async () => {
+    if (!onSyncBitrix) return;
+    try {
+      setIsSyncingBitrix(true);
+      await onSyncBitrix();
+    } finally {
+      setIsSyncingBitrix(false);
     }
   };
 
@@ -282,33 +322,83 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
               <span className="font-semibold text-white">{currentShift?.chatsResolved ?? 0}</span>
             </div>
 
+            {/* Bitrix24 Timeman Sync Status */}
+            <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 rounded-lg bg-slate-900/60 border border-slate-700/60 text-[11px]">
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span
+                  className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                    currentAgent.bitrixWorkdayStatus === 'OPENED' || isClockedIn
+                      ? 'bg-emerald-400'
+                      : currentAgent.bitrixWorkdayStatus === 'PAUSED' || isOnBreak
+                      ? 'bg-amber-400'
+                      : 'bg-slate-400'
+                  }`}
+                />
+                <span
+                  className={`relative inline-flex rounded-full h-2 w-2 ${
+                    currentAgent.bitrixWorkdayStatus === 'OPENED' || isClockedIn
+                      ? 'bg-emerald-500'
+                      : currentAgent.bitrixWorkdayStatus === 'PAUSED' || isOnBreak
+                      ? 'bg-amber-500'
+                      : 'bg-slate-500'
+                  }`}
+                />
+              </span>
+              <span className="text-slate-400 font-mono text-[10px]">Bitrix:</span>
+              <span
+                className={`font-semibold font-mono text-[10px] ${
+                  currentAgent.bitrixWorkdayStatus === 'OPENED' || isClockedIn
+                    ? 'text-emerald-300'
+                    : currentAgent.bitrixWorkdayStatus === 'PAUSED' || isOnBreak
+                    ? 'text-amber-300'
+                    : 'text-slate-400'
+                }`}
+              >
+                {currentAgent.bitrixWorkdayStatus || (isClockedIn ? 'OPENED' : 'CLOSED')}
+              </span>
+              {onSyncBitrix && (
+                <button
+                  type="button"
+                  onClick={handleSyncBitrixAction}
+                  disabled={isSyncingBitrix}
+                  title="Bitrix24 timeman статусыг дахин шалгах"
+                  className="p-0.5 ml-0.5 text-slate-400 hover:text-white rounded hover:bg-slate-800 transition disabled:opacity-50"
+                >
+                  <RotateCcw className={`w-3 h-3 ${isSyncingBitrix ? 'animate-spin text-blue-400' : ''}`} />
+                </button>
+              )}
+            </div>
+
             {/* Right: Clock-in / Clock-out & Break actions (Inline on mobile/desktop) */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               {!isClockedIn ? (
                 <button
                   id="clock-in-btn"
-                  onClick={onClockIn}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm shadow-emerald-600/20 active:scale-95"
+                  onClick={handleClockInAction}
+                  disabled={isSubmitting}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs transition shadow-sm shadow-emerald-600/20 active:scale-95 disabled:opacity-60"
                 >
-                  <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
-                  <span>Clock In</span>
+                  <Play className={`w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current ${isSubmitting ? 'animate-spin' : ''}`} />
+                  <span>{isSubmitting ? 'Нээж байна...' : 'Clock In'}</span>
                 </button>
               ) : (
                 <>
                   {isOnBreak ? (
                     <button
                       id="resume-work-btn"
-                      onClick={onResumeWork}
-                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs transition"
+                      onClick={handleResumeAction}
+                      disabled={isSubmitting}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white font-medium text-xs transition disabled:opacity-60"
                     >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>Буцах</span>
+                      <Play className={`w-3 h-3 fill-current ${isSubmitting ? 'animate-spin' : ''}`} />
+                      <span>{isSubmitting ? '...' : 'Буцах'}</span>
                     </button>
                   ) : (
                     <button
                       id="start-break-btn"
-                      onClick={onStartBreak}
-                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/40 text-amber-200 border border-amber-600/40 font-medium text-xs transition"
+                      onClick={handleStartBreakAction}
+                      disabled={isSubmitting}
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-amber-600/30 hover:bg-amber-600/40 text-amber-200 border border-amber-600/40 font-medium text-xs transition disabled:opacity-60"
                     >
                       <Coffee className="w-3 h-3" />
                       <span className="hidden sm:inline">Завсарлага</span>
@@ -318,7 +408,8 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                   <button
                     id="clock-out-modal-btn"
                     onClick={() => setShowClockOutModal(true)}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-600/30 font-medium text-xs transition"
+                    disabled={isSubmitting}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-600/30 font-medium text-xs transition disabled:opacity-60"
                   >
                     <LogOut className="w-3 h-3" />
                     <span>Тарсан</span>

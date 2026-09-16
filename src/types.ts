@@ -28,12 +28,23 @@ export interface DialogLog {
   id: string;
   timestamp: string;
   dialogId: string;
+  chatId?: string;
+  customerName?: string;
+  customerAvatar?: string;
+  channelId?: number | string;
+  channelName?: string;
+  channelType?: string;
   customerMessage: string;
   botAnswer: string;
+  responderType?: 'bot' | 'agent' | 'system';
+  responderName?: string;
+  responderAvatar?: string;
+  status?: string;
   handedOff: boolean;
-  handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button';
-  matchedArticles: { id: string; title: string; score: number }[];
+  handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined' | 'assigned_to_operator' | 'manual_transfer';
+  matchedArticles?: { id: string; title: string; score: number }[];
   durationMs: number;
+  messagesCount?: number;
 }
 
 export interface ChannelAgent {
@@ -160,6 +171,7 @@ export interface Agent {
   assignedChannelNames?: string[];
   activeSessions?: number;
   canAccessAllChannels?: boolean;
+  bitrixWorkdayStatus?: 'OPENED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
 }
 
 export interface WorkShift {
@@ -176,6 +188,9 @@ export interface WorkShift {
   workedSeconds: number;
   chatsResolved: number;
   dailyReport?: string;
+  bitrixWorkdayStatus?: 'OPENED' | 'PAUSED' | 'CLOSED' | 'EXPIRED' | string;
+  bitrixWorkdayId?: number;
+  bitrixDuration?: string;
 }
 
 export type InquiryCategory =

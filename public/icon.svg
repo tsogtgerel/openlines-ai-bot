@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="bubble-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
+  <!-- Chat icon -->
+  <g transform="translate(96, 96)">
+    <!-- Main Bubble -->
+    <path d="M40 30 C 40 13.43, 53.43 0, 70 0 L 250 0 C 266.57 0, 280 13.43, 280 30 L 280 190 C 280 206.57, 266.57 220, 250 220 L 100 220 L 40 270 L 40 220 C 23.43 220, 40 220, 40 220 Z" fill="url(#bubble-grad)" />
+    <!-- Three dots -->
+    <circle cx="100" cy="110" r="16" fill="#2563eb" />
+    <circle cx="160" cy="110" r="16" fill="#2563eb" />
+    <circle cx="220" cy="110" r="16" fill="#2563eb" />
+    <!-- Online status badge -->
+    <circle cx="270" cy="40" r="28" fill="#10b981" stroke="#ffffff" stroke-width="8" />
+  </g>
+</svg>

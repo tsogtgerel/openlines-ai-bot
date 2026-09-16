@@ -34,11 +34,20 @@ async function startServer() {
   const app = express();
   app.use(express.json());
 
-  // Allow embedding in Bitrix24 iframe
+  // Allow embedding in Bitrix24 iframe and mobile app webview
   app.use((req, res, next) => {
     res.removeHeader('X-Frame-Options');
     res.setHeader('Content-Security-Policy', "frame-ancestors *");
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
     next();
+  });
+
+  // Serve PWA Web App Manifest with correct MIME type
+  app.get(['/manifest.webmanifest', '/manifest.json'], (req, res) => {
+    res.setHeader('Content-Type', 'application/manifest+json');
+    res.sendFile(path.join(process.cwd(), 'public', 'manifest.webmanifest'));
   });
 
   // ==========================================================================
@@ -330,11 +339,150 @@ async function startServer() {
   // ==========================================================================
   /**
    * GET /api/logs
-   * Ботын хамгийн сүүлийн харилцан ярианы лог (handoff шалтгаан, үргэлжилсэн хугацаа гэх мэт).
+   * Бүх нээлттэй сувгийн харилцан яриа, ботын лог болон операторын шилжүүлэлтийн бодит түүх
    */
   app.get('/api/logs', (req, res) => {
-    const limit = parseInt(req.query.limit as string) || 50;
-    res.json({ success: true, data: botWorker.getLogs(limit) });
+    try {
+      const limit = parseInt(req.query.limit as string) || 100;
+      const filter = (req.query.filter as string) || 'all'; // 'all' | 'answered' | 'handed_off'
+      const channelId = req.query.channelId as string;
+      const search = ((req.query.search as string) || '').toLowerCase().trim();
+
+      // 1. Get real dialogs from chatManager
+      const allDialogs = chatManager.getAllDialogs();
+      const realLogs = allDialogs.map((d) => {
+        const custMsgs = d.messages.filter((m) => m.sender === 'customer');
+        const lastCust = custMsgs[custMsgs.length - 1];
+        const lastCustText = lastCust?.text || d.lastMessageText || 'Харилцагчийн асуулт';
+
+        const agentMsgs = d.messages.filter((m) => m.sender === 'agent' && !m.isInternalNote);
+        const replies = d.messages.filter(
+          (m) => (m.sender === 'agent' || m.sender === 'bot') && !m.isInternalNote
+        );
+        const lastReply = replies[replies.length - 1];
+
+        let durationMs = 0;
+        if (lastCust && lastReply) {
+          const diff = new Date(lastReply.timestamp).getTime() - new Date(lastCust.timestamp).getTime();
+          if (diff > 0 && diff < 86400000) {
+            durationMs = diff;
+          }
+        }
+
+        const isHandedOff = d.status !== 'bot' || Boolean(d.assignedAgentId) || agentMsgs.length > 0;
+        let handoffReason: string | undefined = undefined;
+        if (isHandedOff) {
+          if (d.assignedAgentName || d.assignedAgentId) {
+            handoffReason = 'assigned_to_operator';
+          } else if (lastCustText.toLowerCase().includes('/operator') || lastCustText.includes('оператор')) {
+            handoffReason = 'user_button';
+          } else if (d.status === 'closed') {
+            handoffReason = 'manual_transfer';
+          } else {
+            handoffReason = 'keyword';
+          }
+        }
+
+        let responderType: 'bot' | 'agent' | 'system' = 'system';
+        let responderName = 'Систем';
+        let responderAvatar: string | undefined = undefined;
+        if (lastReply) {
+          responderType = lastReply.sender as 'bot' | 'agent';
+          responderName =
+            lastReply.senderName ||
+            (lastReply.sender === 'bot' ? 'BSB AI Туслах' : d.assignedAgentName || 'Оператор');
+          responderAvatar = lastReply.senderAvatar || d.assignedAgentAvatar || undefined;
+        } else if (d.assignedAgentName) {
+          responderType = 'agent';
+          responderName = d.assignedAgentName;
+          responderAvatar = d.assignedAgentAvatar || undefined;
+        }
+
+        let botAnswerText = 'Операторын хариу хүлээгдэж буй...';
+        if (lastReply) {
+          botAnswerText = lastReply.text;
+        } else if (d.status === 'closed') {
+          botAnswerText = d.resolutionSummary || 'Чат амжилттай шийдвэрлэгдэж хаагдсан.';
+        }
+
+        return {
+          id: `log-${d.id}`,
+          dialogId: d.dialogId || d.id,
+          chatId: d.id,
+          timestamp: d.lastMessageTime || d.createdAt,
+          customerName: d.customer.name,
+          customerAvatar: d.customer.avatar,
+          channelId: d.channelId,
+          channelName: d.channelName,
+          channelType: d.channelType,
+          customerMessage: lastCustText,
+          botAnswer: botAnswerText,
+          responderType,
+          responderName,
+          responderAvatar,
+          status: d.status,
+          handedOff: isHandedOff,
+          handoffReason,
+          matchedArticles: (d.customer.tags || []).map((t) => ({ id: t, title: t, score: 0.9 })),
+          durationMs,
+          messagesCount: d.messages.length,
+        };
+      });
+
+      // 2. Combine with bot worker simulator logs
+      const botLogs = botWorker.getLogs(50).map((l) => ({
+        ...l,
+        chatId: l.dialogId,
+        customerName: 'Симулятор хэрэглэгч',
+        channelId: 'simulator',
+        channelName: 'Туршилтын симулятор',
+        channelType: 'webchat' as const,
+        responderType: (l.handedOff ? 'agent' : 'bot') as 'agent' | 'bot',
+        responderName: l.handedOff ? 'Оператор' : 'BSB AI Туслах',
+        status: l.handedOff ? 'assigned' : 'closed',
+      }));
+
+      // Merge and sort newest first
+      const combined = [...realLogs, ...botLogs].sort(
+        (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      // Apply filtering
+      let filtered = combined;
+      if (filter === 'answered') {
+        filtered = filtered.filter((l) => !l.handedOff);
+      } else if (filter === 'handed_off') {
+        filtered = filtered.filter((l) => l.handedOff);
+      }
+
+      if (channelId && channelId !== 'all') {
+        filtered = filtered.filter((l) => String(l.channelId || '') === String(channelId));
+      }
+
+      if (search) {
+        filtered = filtered.filter(
+          (l) =>
+            (l.customerName && l.customerName.toLowerCase().includes(search)) ||
+            (l.customerMessage && l.customerMessage.toLowerCase().includes(search)) ||
+            (l.botAnswer && l.botAnswer.toLowerCase().includes(search)) ||
+            (l.dialogId && l.dialogId.toLowerCase().includes(search)) ||
+            (l.channelName && l.channelName.toLowerCase().includes(search))
+        );
+      }
+
+      res.json({
+        success: true,
+        data: filtered.slice(0, limit),
+        total: filtered.length,
+        stats: {
+          totalLogs: combined.length,
+          handedOffCount: combined.filter((l) => l.handedOff).length,
+          answeredCount: combined.filter((l) => !l.handedOff).length,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
   });
 
   /**
@@ -383,9 +531,15 @@ async function startServer() {
    */
   app.post('/api/analytics/generate-report', async (req, res) => {
     try {
-      const { channels } = req.body || {};
+      const { channels, forceAi, timeRange, startDate, endDate } = req.body || {};
       const channelIds = Array.isArray(channels) ? channels : undefined;
-      const report = await inquiryAnalyticsService.generateReport(channelIds);
+      const report = await inquiryAnalyticsService.generateReport(
+        channelIds,
+        Boolean(forceAi),
+        timeRange,
+        startDate,
+        endDate
+      );
       res.json({
         success: true,
         data: report,
@@ -401,12 +555,17 @@ async function startServer() {
    */
   app.get('/api/analytics/agent-performance', (req, res) => {
     try {
-      const { channels } = req.query;
+      const { channels, timeRange, startDate, endDate } = req.query;
       let channelIds: string[] | undefined;
       if (typeof channels === 'string') {
         channelIds = channels.split(',').map((s) => s.trim()).filter(Boolean);
       }
-      const stats = inquiryAnalyticsService.getAgentPerformanceStats(channelIds);
+      const stats = inquiryAnalyticsService.getAgentPerformanceStats(
+        channelIds,
+        typeof timeRange === 'string' ? timeRange : undefined,
+        typeof startDate === 'string' ? startDate : undefined,
+        typeof endDate === 'string' ? endDate : undefined
+      );
       res.json({
         success: true,
         data: stats,
@@ -879,18 +1038,78 @@ async function startServer() {
   /**
    * GET /api/worktime/status
    * Одоо нэвтэрсэн операторын ээлжийн статус (ажиллаж байгаа, завсарласан, нийт шийдсэн чат гэх мэт) болон багийн бүх гишүүд.
+   * Bitrix24 timeman бодит төлөвтэй шууд синхрончлогдоно.
    */
-  app.get('/api/worktime/status', (req, res) => {
+  app.get('/api/worktime/status', async (req, res) => {
     try {
-      const currentAgent = worktimeManager.getCurrentAgent();
+      const requestedAgentId = (req.query.agentId as string) || undefined;
+      let currentAgent = requestedAgentId
+        ? worktimeManager.getAgentById(requestedAgentId) || worktimeManager.getCurrentAgent()
+        : worktimeManager.getCurrentAgent();
+
+      let bitrixLiveStatus: any = null;
+
+      // Bitrix24 portal-аас timeman төлөвийг шалгаж шууд синхрончлох
+      if (currentAgent && currentAgent.bitrixUserId) {
+        try {
+          const bResp = await vibeRequest('GET', `/v1/workday/status?userId=${currentAgent.bitrixUserId}`);
+          if (bResp.success && bResp.data) {
+            bitrixLiveStatus = bResp.data;
+            const synced = worktimeManager.syncAgentWorkdayFromBitrix(currentAgent.id, bResp.data);
+            currentAgent = synced.agent;
+          }
+        } catch (err: any) {
+          console.warn(`[WorkdaySync] /v1/workday/status error for user ${currentAgent.bitrixUserId}:`, err?.message || err);
+        }
+      }
+
       const currentShift = worktimeManager.getCurrentShift(currentAgent.id);
       const team = worktimeManager.getAllAgents();
+
       res.json({
         success: true,
         data: {
           currentAgent,
           currentShift,
           team,
+          bitrixLive: bitrixLiveStatus,
+        },
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/worktime/sync-bitrix
+   * Bitrix24 timeman төлөвийг хүчээр дахин татаж бүхэлд нь синхрончлох
+   */
+  app.post('/api/worktime/sync-bitrix', async (req, res) => {
+    try {
+      const { agentId } = req.body;
+      const targetAgent = agentId ? worktimeManager.getAgentById(agentId) : worktimeManager.getCurrentAgent();
+      if (!targetAgent) {
+        return res.status(404).json({ success: false, error: { message: 'Agent not found' } });
+      }
+
+      let bitrixLiveStatus: any = null;
+      if (targetAgent.bitrixUserId) {
+        const bResp = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+        if (bResp.success && bResp.data) {
+          bitrixLiveStatus = bResp.data;
+          worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bResp.data);
+        }
+      }
+
+      const updatedAgent = worktimeManager.getAgentById(targetAgent.id);
+      const shift = worktimeManager.getCurrentShift(targetAgent.id);
+
+      res.json({
+        success: true,
+        data: {
+          agent: updatedAgent,
+          shift,
+          bitrixLive: bitrixLiveStatus,
         },
       });
     } catch (e: any) {
@@ -902,9 +1121,18 @@ async function startServer() {
    * GET /api/worktime/current
    * Одоо сонгогдсон операторын дэлгэрэнгүй ээлжийн мэдээлэл.
    */
-  app.get('/api/worktime/current', (req, res) => {
+  app.get('/api/worktime/current', async (req, res) => {
     try {
-      const agent = worktimeManager.getCurrentAgent();
+      let agent = worktimeManager.getCurrentAgent();
+      if (agent.bitrixUserId) {
+        try {
+          const bResp = await vibeRequest('GET', `/v1/workday/status?userId=${agent.bitrixUserId}`);
+          if (bResp.success && bResp.data) {
+            const synced = worktimeManager.syncAgentWorkdayFromBitrix(agent.id, bResp.data);
+            agent = synced.agent;
+          }
+        } catch {}
+      }
       const shift = worktimeManager.getCurrentShift(agent.id);
       res.json({ success: true, data: { agent, shift } });
     } catch (e: any) {
@@ -931,13 +1159,27 @@ async function startServer() {
    * POST /api/worktime/switch-agent
    * Операторын нэвтрэх хэрэглэгчийг солих (эсвэл Bitrix24 хэрэглэгчийн ID-аар таних).
    */
-  app.post('/api/worktime/switch-agent', (req, res) => {
+  app.post('/api/worktime/switch-agent', async (req, res) => {
     try {
       const { agentId, bitrixUserId } = req.body;
       if (!agentId && !bitrixUserId) {
         return res.status(400).json({ success: false, error: { message: 'agentId or bitrixUserId required' } });
       }
-      const agent = worktimeManager.setCurrentAgent(agentId || `bx-${bitrixUserId}`, bitrixUserId ? Number(bitrixUserId) : undefined);
+      let agent = worktimeManager.setCurrentAgent(agentId || `bx-${bitrixUserId}`, bitrixUserId ? Number(bitrixUserId) : undefined);
+      
+      // Сонгогдсон операторын Bitrix24 timeman төлөвийг синхрончлох
+      if (agent.bitrixUserId) {
+        try {
+          const bResp = await vibeRequest('GET', `/v1/workday/status?userId=${agent.bitrixUserId}`);
+          if (bResp.success && bResp.data) {
+            const synced = worktimeManager.syncAgentWorkdayFromBitrix(agent.id, bResp.data);
+            agent = synced.agent;
+          }
+        } catch (err: any) {
+          console.warn(`[WorkdaySync] Error checking switch status:`, err?.message || err);
+        }
+      }
+
       const shift = worktimeManager.getCurrentShift(agent.id);
       res.json({ success: true, data: { agent, shift } });
     } catch (e: any) {
@@ -971,13 +1213,61 @@ async function startServer() {
 
   /**
    * POST /api/worktime/clock-in
-   * Ээлж эхлүүлэх (Clock-In). Тухайн өдрийн ажлын эхлэх цаг болон шинэ ээлжийн ID үүснэ.
+   * Ээлж эхлүүлэх (Clock-In). Bitrix24 timeman.open дуудаж, ажлын өдрийг албан ёсоор эхлүүлнэ.
    */
-  app.post('/api/worktime/clock-in', (req, res) => {
+  app.post('/api/worktime/clock-in', async (req, res) => {
     try {
       const { agentId } = req.body;
-      const outcome = worktimeManager.clockIn(agentId);
-      res.json({ success: true, data: outcome });
+      const targetAgent = agentId ? worktimeManager.getAgentById(agentId) : worktimeManager.getCurrentAgent();
+      if (!targetAgent) {
+        return res.status(404).json({ success: false, error: { message: 'Agent not found' } });
+      }
+
+      let bitrixResult: any = null;
+      let bitrixError: any = null;
+
+      // 1. Bitrix24 portal дээр timeman.open дуудах
+      if (targetAgent.bitrixUserId) {
+        try {
+          const bxRes = await vibeRequest('POST', '/v1/workday/open', { userId: targetAgent.bitrixUserId });
+          if (bxRes.success && bxRes.data) {
+            bitrixResult = bxRes.data;
+          } else {
+            bitrixError = bxRes.error;
+            // Хэрэв аль хэдийн нээгдсэн гэж алдаа өгсөн бол одоогийн төлөвийг татах
+            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+            if (check.success && check.data) {
+              bitrixResult = check.data;
+            }
+          }
+        } catch (err: any) {
+          console.error('[WorkdaySync] /v1/workday/open error:', err?.message || err);
+          try {
+            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+            if (check.success && check.data) {
+              bitrixResult = check.data;
+            }
+          } catch {}
+        }
+      }
+
+      // 2. Системийн дотоод төлөвийг Bitrix24-тэй синхрон шинэчлэх
+      let outcome;
+      if (bitrixResult) {
+        outcome = worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bitrixResult);
+      } else {
+        outcome = worktimeManager.clockIn(targetAgent.id);
+      }
+
+      res.json({
+        success: true,
+        data: outcome,
+        bitrixResult,
+        bitrixError,
+        message: bitrixResult
+          ? `Bitrix24 портал дээр ${targetAgent.name} ажилтны өдөр амжилттай нээгдлээ.`
+          : 'Ажлын ээлж амжилттай эхэллээ.',
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -985,13 +1275,67 @@ async function startServer() {
 
   /**
    * POST /api/worktime/clock-out
-   * Ээлж дуусгах (Clock-Out). Нийт ажилласан секунд, завсарлага болон өдрийн товч тайланг хадгална.
+   * Ээлж дуусгах (Clock-Out). Bitrix24 timeman.close дуудаж, тайлангийн хамт өдрийг хаана.
    */
-  app.post('/api/worktime/clock-out', (req, res) => {
+  app.post('/api/worktime/clock-out', async (req, res) => {
     try {
       const { dailyReport, agentId } = req.body;
-      const outcome = worktimeManager.clockOut(dailyReport, agentId);
-      res.json({ success: true, data: outcome });
+      const targetAgent = agentId ? worktimeManager.getAgentById(agentId) : worktimeManager.getCurrentAgent();
+      if (!targetAgent) {
+        return res.status(404).json({ success: false, error: { message: 'Agent not found' } });
+      }
+
+      let bitrixResult: any = null;
+      let bitrixError: any = null;
+
+      // 1. Bitrix24 portal дээр timeman.close дуудах
+      if (targetAgent.bitrixUserId) {
+        try {
+          const reportText = dailyReport || 'Өдрийн ээлж дууссан';
+          const bxRes = await vibeRequest('POST', '/v1/workday/close', {
+            userId: targetAgent.bitrixUserId,
+            report: reportText,
+          });
+          if (bxRes.success && bxRes.data) {
+            bitrixResult = bxRes.data;
+          } else {
+            bitrixError = bxRes.error;
+            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+            if (check.success && check.data) {
+              bitrixResult = check.data;
+            }
+          }
+        } catch (err: any) {
+          console.error('[WorkdaySync] /v1/workday/close error:', err?.message || err);
+          try {
+            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+            if (check.success && check.data) {
+              bitrixResult = check.data;
+            }
+          } catch {}
+        }
+      }
+
+      // 2. Системийн дотоод ээлжийг хааж, тайланг хадгалах
+      let outcome;
+      if (bitrixResult) {
+        outcome = worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bitrixResult);
+        if (outcome.shift && dailyReport) {
+          outcome.shift.dailyReport = dailyReport;
+        }
+      } else {
+        outcome = worktimeManager.clockOut(dailyReport, targetAgent.id);
+      }
+
+      res.json({
+        success: true,
+        data: outcome,
+        bitrixResult,
+        bitrixError,
+        message: bitrixResult
+          ? `Bitrix24 портал дээр ${targetAgent.name} ажилтны өдөр амжилттай хаагдлаа.`
+          : 'Ажлын ээлж амжилттай хаагдлаа.',
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -999,13 +1343,36 @@ async function startServer() {
 
   /**
    * POST /api/worktime/break
-   * Ажлын завсарлага эхлүүлэх (Break start). Операторын статус 'break' болж завсарлагын хугацаа тоологдоно.
+   * Ажлын завсарлага эхлүүлэх (Break start). Bitrix24 дээр timeman.pause дуудна.
    */
-  app.post(['/api/worktime/break', '/api/worktime/break/start'], (req, res) => {
+  app.post(['/api/worktime/break', '/api/worktime/break/start'], async (req, res) => {
     try {
       const { agentId } = req.body;
-      const outcome = worktimeManager.startBreak(agentId);
-      res.json({ success: true, data: outcome });
+      const targetAgent = agentId ? worktimeManager.getAgentById(agentId) : worktimeManager.getCurrentAgent();
+      if (!targetAgent) {
+        return res.status(404).json({ success: false, error: { message: 'Agent not found' } });
+      }
+
+      let bitrixResult: any = null;
+      if (targetAgent.bitrixUserId) {
+        try {
+          const bxRes = await vibeRequest('POST', '/v1/workday/pause', { userId: targetAgent.bitrixUserId });
+          if (bxRes.success && bxRes.data) {
+            bitrixResult = bxRes.data;
+          }
+        } catch (err: any) {
+          console.warn('[WorkdaySync] /v1/workday/pause error:', err?.message || err);
+        }
+      }
+
+      let outcome;
+      if (bitrixResult) {
+        outcome = worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bitrixResult);
+      } else {
+        outcome = worktimeManager.startBreak(targetAgent.id);
+      }
+
+      res.json({ success: true, data: outcome, bitrixResult });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1013,13 +1380,36 @@ async function startServer() {
 
   /**
    * POST /api/worktime/resume
-   * Завсарлага дуусгаж ажилдаа эргэн орох (Resume work).
+   * Завсарлага дуусгаж ажилдаа эргэн орох (Resume work). Bitrix24 дээр timeman.open дуудна.
    */
-  app.post(['/api/worktime/resume', '/api/worktime/break/resume'], (req, res) => {
+  app.post(['/api/worktime/resume', '/api/worktime/break/resume'], async (req, res) => {
     try {
       const { agentId } = req.body;
-      const outcome = worktimeManager.resumeWork(agentId);
-      res.json({ success: true, data: outcome });
+      const targetAgent = agentId ? worktimeManager.getAgentById(agentId) : worktimeManager.getCurrentAgent();
+      if (!targetAgent) {
+        return res.status(404).json({ success: false, error: { message: 'Agent not found' } });
+      }
+
+      let bitrixResult: any = null;
+      if (targetAgent.bitrixUserId) {
+        try {
+          const bxRes = await vibeRequest('POST', '/v1/workday/open', { userId: targetAgent.bitrixUserId });
+          if (bxRes.success && bxRes.data) {
+            bitrixResult = bxRes.data;
+          }
+        } catch (err: any) {
+          console.warn('[WorkdaySync] /v1/workday/open (resume) error:', err?.message || err);
+        }
+      }
+
+      let outcome;
+      if (bitrixResult) {
+        outcome = worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bitrixResult);
+      } else {
+        outcome = worktimeManager.resumeWork(targetAgent.id);
+      }
+
+      res.json({ success: true, data: outcome, bitrixResult });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
