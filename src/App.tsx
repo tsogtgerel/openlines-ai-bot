@@ -44,6 +44,7 @@ import {
   WorkShift,
   ChatDialog,
   AccessRole,
+  PersonalPerformanceSummary,
 } from './types';
 
 type ActiveTab = 'chat' | 'inquiries' | 'channels' | 'kb' | 'prompts' | 'logs' | 'sandbox' | 'deploy';
@@ -62,6 +63,7 @@ export default function App() {
   // Omnichannel Chats & Worktime State
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
   const [currentShift, setCurrentShift] = useState<WorkShift | null>(null);
+  const [personalPerformance, setPersonalPerformance] = useState<PersonalPerformanceSummary | null>(null);
   const [team, setTeam] = useState<Agent[]>([]);
   const [chatsCount, setChatsCount] = useState<number>(0);
   const [unreadCount, setUnreadCount] = useState<number>(0);
@@ -189,6 +191,9 @@ export default function App() {
         setCurrentAgent(worktimeRes.data.currentAgent);
         setCurrentShift(worktimeRes.data.currentShift);
         setTeam(worktimeRes.data.team || []);
+        if (worktimeRes.data.personalPerformance) {
+          setPersonalPerformance(worktimeRes.data.personalPerformance);
+        }
       }
 
       const chatsUrl = activeAgentId
@@ -230,6 +235,9 @@ export default function App() {
           if (data.success && data.data) {
             setCurrentAgent(data.data.agent);
             setCurrentShift(data.data.shift);
+            if (data.data.personalPerformance) {
+              setPersonalPerformance(data.data.personalPerformance);
+            }
             loadWorktimeAndChats(data.data.agent.id);
           } else {
             loadWorktimeAndChats();
@@ -392,6 +400,9 @@ export default function App() {
       if (res.success && res.data) {
         setCurrentAgent(res.data.agent);
         setCurrentShift(res.data.shift);
+        if (res.data.personalPerformance) {
+          setPersonalPerformance(res.data.personalPerformance);
+        }
         await loadWorktimeAndChats(res.data.agent.id);
       }
     } catch (err) {
@@ -614,29 +625,32 @@ export default function App() {
   return (
     <div
       className={`${
-        activeTab === 'chat'
-          ? 'min-h-screen lg:h-screen lg:overflow-hidden flex flex-col'
+        isAgentRole || activeTab === 'chat'
+          ? 'h-screen max-h-screen overflow-hidden flex flex-col'
           : 'min-h-screen flex flex-col'
       } bg-slate-50 font-sans text-slate-900 overflow-x-hidden`}
     >
-      {/* Top Application Header */}
-      <Header
-        portalInfo={portalInfo}
-        botConfig={botConfig}
-        onTogglePolling={handleTogglePolling}
-        isToggling={isTogglingPolling}
-        onUnbindLine={handleUnbindLine}
-        onNavigateToChannels={() => setActiveTab('channels')}
-        isAgentRole={isAgentRole}
-        onOpenRedeploy={() => setShowRedeployModal(true)}
-        onOpenMobileGuide={() => setShowMobileModal(true)}
-      />
+      {/* Top Application Header - only visible for Admin / Supervisor roles */}
+      {!isAgentRole && (
+        <Header
+          portalInfo={portalInfo}
+          botConfig={botConfig}
+          onTogglePolling={handleTogglePolling}
+          isToggling={isTogglingPolling}
+          onUnbindLine={handleUnbindLine}
+          onNavigateToChannels={() => setActiveTab('channels')}
+          isAgentRole={isAgentRole}
+          onOpenRedeploy={() => setShowRedeployModal(true)}
+          onOpenMobileGuide={() => setShowMobileModal(true)}
+        />
+      )}
 
-      {/* Operator Worktime & Shift Control Bar */}
+      {/* Operator Worktime & Shift Control Bar (serves as the clean, slim topbar in Agent View) */}
       <WorktimeBar
         currentAgent={currentAgent}
         currentShift={currentShift}
         team={team}
+        performanceSummary={personalPerformance}
         onClockIn={handleClockIn}
         onClockOut={handleClockOut}
         onStartBreak={handleStartBreak}
@@ -646,88 +660,99 @@ export default function App() {
         onSyncBitrix={handleSyncBitrixWorktime}
         onOpenTeamModal={() => setShowTeamModal(true)}
         onOpenPermissionsModal={!isAgentRole ? () => setShowPermissionsModal(true) : undefined}
+        isAgentRole={isAgentRole}
+        onSwitchToAdmin={() => {
+          const adminAgent = team.find((a) => a.accessRole === 'admin') || team[0];
+          if (adminAgent) handleSwitchAgent(adminAgent.id);
+        }}
+        onOpenMobileGuide={() => setShowMobileModal(true)}
       />
 
-      {/* Main Subheader Navigation */}
-      <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs shrink-0">
-        <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between">
-          <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-1.5 sm:py-2 scrollbar-none" aria-label="Tabs" style={{ WebkitOverflowScrolling: 'touch' }}>
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
+      {/* Main Subheader Navigation (Only shown for Admin / Supervisor roles) */}
+      {!isAgentRole && (
+        <div className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-xs shrink-0">
+          <div className="max-w-7xl mx-auto px-2 sm:px-6 lg:px-8 flex items-center justify-between">
+            <nav className="flex space-x-1 sm:space-x-2 overflow-x-auto py-1.5 sm:py-2 scrollbar-none" aria-label="Tabs" style={{ WebkitOverflowScrolling: 'touch' }}>
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeTab === item.id;
 
-              return (
-                <button
-                  key={item.id}
-                  id={`tab-${item.id}`}
-                  onClick={() => setActiveTab(item.id as ActiveTab)}
-                  className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
-                    isActive
-                      ? 'bg-blue-600 text-white shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
-                  <span>{item.label}</span>
-                  {typeof item.count === 'number' && (
-                    <span
-                      className={`px-1.5 py-0.2 text-[10px] font-mono rounded-full ${
-                        isActive
-                          ? 'bg-blue-800 text-blue-100 font-bold'
-                          : item.unread && item.unread > 0
-                          ? 'bg-rose-600 text-white font-bold animate-pulse'
-                          : 'bg-slate-200 text-slate-700'
-                      }`}
-                    >
-                      {item.unread && item.unread > 0 ? `${item.unread} шинэ` : item.count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                return (
+                  <button
+                    key={item.id}
+                    id={`tab-${item.id}`}
+                    onClick={() => setActiveTab(item.id as ActiveTab)}
+                    className={`inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors whitespace-nowrap shrink-0 min-h-[36px] ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-white' : 'text-slate-500'}`} />
+                    <span>{item.label}</span>
+                    {typeof item.count === 'number' && (
+                      <span
+                        className={`px-1.5 py-0.2 text-[10px] font-mono rounded-full ${
+                          isActive
+                            ? 'bg-blue-800 text-blue-100 font-bold'
+                            : item.unread && item.unread > 0
+                            ? 'bg-rose-600 text-white font-bold animate-pulse'
+                            : 'bg-slate-200 text-slate-700'
+                        }`}
+                      >
+                        {item.unread && item.unread > 0 ? `${item.unread} шинэ` : item.count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </nav>
 
-          {/* Right quick actions: Mobile guide, Permissions, Redeploy */}
-          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 py-1 pl-2">
-            <button
-              id="subnav-mobile-btn"
-              onClick={() => setShowMobileModal(true)}
-              className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
-              title="Битрикс24 гар утасны апп-д нээх заавар & QR код"
-            >
-              <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
-              <span className="hidden sm:inline">Гар утас</span>
-            </button>
-            {!isAgentRole ? (
-              <>
-                <button
-                  id="subnav-redeploy-btn"
-                  onClick={() => setShowRedeployModal(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
-                  title="Код өөрчлөгдсөн тохиолдолд дахин Build & Deploy хийх"
-                >
-                  <Rocket className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">Redeploy</span>
-                </button>
-                <button
-                  id="subnav-permissions-btn"
-                  onClick={() => setShowPermissionsModal(true)}
-                  className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
-                  title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
-                >
-                  <Shield className="w-3.5 h-3.5 text-indigo-600" />
-                  <span className="hidden sm:inline">Эрхийн тохиргоо</span>
-                </button>
-              </>
-            ) : (
-              <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-700 font-medium">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                <span>Операторын горим (Live чат)</span>
-              </div>
-            )}
+            {/* Right quick actions: Mobile guide, View switcher, Permissions, Redeploy */}
+            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 py-1 pl-2">
+              <button
+                id="subnav-mobile-btn"
+                onClick={() => setShowMobileModal(true)}
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                title="Битрикс24 гар утасны апп-д нээх заавар & QR код"
+              >
+                <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Гар утас</span>
+              </button>
+              <button
+                id="subnav-agent-view-btn"
+                onClick={() => {
+                  const opAgent = team.find((a) => a.accessRole === 'agent');
+                  if (opAgent) handleSwitchAgent(opAgent.id);
+                }}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition shrink-0 shadow-xs"
+                title="Шууд операторын ажлын байр (Live Chat) харагдац руу шилжих"
+              >
+                <Headphones className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Операторын харагдац (Agent View)</span>
+              </button>
+              <button
+                id="subnav-redeploy-btn"
+                onClick={() => setShowRedeployModal(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
+                title="Код өөрчлөгдсөн тохиолдолд дахин Build & Deploy хийх"
+              >
+                <Rocket className="w-3.5 h-3.5 text-blue-600" />
+                <span className="hidden sm:inline">Redeploy</span>
+              </button>
+              <button
+                id="subnav-permissions-btn"
+                onClick={() => setShowPermissionsModal(true)}
+                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
+              >
+                <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                <span className="hidden sm:inline">Эрхийн тохиргоо</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Tab Content */}
       {activeTab === 'chat' ? (

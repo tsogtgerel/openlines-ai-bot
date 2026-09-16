@@ -213,6 +213,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const prevMessageCountRef = useRef<number>(0);
+  const prevLastMessageKeyRef = useRef<string | null>(null);
   const prevDialogIdRef = useRef<string | null>(null);
   const isNearBottomRef = useRef<boolean>(true);
   const [showScrollBottomBtn, setShowScrollBottomBtn] = useState<boolean>(false);
@@ -246,6 +247,80 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       text: 'БСБ-гийн бүх салбар их дэлгүүрүүд Даваа-Ням гарагт өдөр бүр 10:00 - 20:00 цагийн хооронд завсарлагагүй ажиллаж байна.',
     },
   ];
+
+  // Auto-scroll helper to smoothly bring the chat message thread to the bottom
+  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Direct scroll attempt immediately
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior,
+    });
+
+    if (messagesEndRef.current) {
+      try {
+        messagesEndRef.current.scrollIntoView({
+          behavior,
+          block: 'end',
+          inline: 'nearest',
+        });
+      } catch {}
+    }
+
+    isNearBottomRef.current = true;
+    setShowScrollBottomBtn(false);
+    setHasNewMessagesWhileScrolled(false);
+
+    // Multi-stage frame checks to guarantee scroll reaches the bottom even if images or layout repainted
+    requestAnimationFrame(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior,
+        });
+        messagesEndRef.current?.scrollIntoView({ behavior, block: 'end', inline: 'nearest' });
+      }
+    });
+
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior,
+        });
+        messagesEndRef.current?.scrollIntoView({ behavior, block: 'end', inline: 'nearest' });
+      }
+    }, 60);
+
+    setTimeout(() => {
+      if (container) {
+        container.scrollTo({
+          top: container.scrollHeight,
+          behavior,
+        });
+        messagesEndRef.current?.scrollIntoView({ behavior, block: 'end', inline: 'nearest' });
+      }
+    }, 180);
+  };
+
+  // Monitor user scrolling to detect if user has scrolled up to review previous history
+  const handleScrollMessages = () => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    // Threshold of 120px to consider the user "at the bottom"
+    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const isAtBottom = distanceFromBottom <= 120;
+
+    isNearBottomRef.current = isAtBottom;
+    setShowScrollBottomBtn(!isAtBottom);
+
+    if (isAtBottom) {
+      setHasNewMessagesWhileScrolled(false);
+    }
+  };
 
   // Load all dialogs
   const loadDialogs = async () => {
@@ -405,11 +480,26 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           }
 
           const targetId = dialogId || updatedDialog?.id;
+          const isActiveChannel =
+            Boolean(targetId) &&
+            ((selectedDialogId && (selectedDialogId === targetId || String(selectedDialogId) === String(targetId))) ||
+              (selectedDialog &&
+                (selectedDialog.id === targetId ||
+                  selectedDialog.dialogId === targetId ||
+                  String(selectedDialog.id) === String(targetId) ||
+                  String(selectedDialog.dialogId) === String(targetId))));
 
           // Immediately update open conversation if it matches
           setSelectedDialog((prev) => {
             if (!prev) return prev;
-            if (prev.id !== targetId && prev.dialogId !== targetId) return prev;
+            if (
+              prev.id !== targetId &&
+              prev.dialogId !== targetId &&
+              String(prev.id) !== String(targetId) &&
+              String(prev.dialogId) !== String(targetId)
+            ) {
+              return prev;
+            }
 
             const messageAlreadyPresent = prev.messages.some(
               (m) =>
@@ -432,6 +522,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               unreadCount: 0,
             };
           });
+
+          // Trigger auto-scroll-to-bottom effect if message was received in the currently active channel
+          if (isActiveChannel) {
+            scrollToBottom('smooth');
+          }
 
           // Reflect immediately in the dialogs list
           setDialogs((prev) => {
@@ -603,6 +698,49 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               if (msg && msg.sender !== 'agent') {
                 playIncomingMessageSound();
               }
+              const targetId = data.dialogId || data.dialog?.id;
+              const isActiveChannel =
+                Boolean(targetId) &&
+                ((selectedDialogId && (selectedDialogId === targetId || String(selectedDialogId) === String(targetId))) ||
+                  (selectedDialog &&
+                    (selectedDialog.id === targetId ||
+                      selectedDialog.dialogId === targetId ||
+                      String(selectedDialog.id) === String(targetId) ||
+                      String(selectedDialog.dialogId) === String(targetId))));
+
+              if (isActiveChannel && msg) {
+                setSelectedDialog((prev) => {
+                  if (!prev) return prev;
+                  if (
+                    prev.id !== targetId &&
+                    prev.dialogId !== targetId &&
+                    String(prev.id) !== String(targetId) &&
+                    String(prev.dialogId) !== String(targetId)
+                  ) {
+                    return prev;
+                  }
+                  const messageAlreadyPresent = prev.messages.some(
+                    (m) =>
+                      m.id === msg.id ||
+                      (msg.text &&
+                        m.text === msg.text &&
+                        Math.abs(new Date(m.timestamp).getTime() - new Date(msg.timestamp).getTime()) < 1000)
+                  );
+                  if (messageAlreadyPresent) {
+                    return data.dialog ? { ...prev, ...data.dialog } : prev;
+                  }
+                  return {
+                    ...prev,
+                    ...(data.dialog || {}),
+                    messages: [...prev.messages, msg],
+                    lastMessageText: msg.text || prev.lastMessageText,
+                    lastMessageTime: msg.timestamp || prev.lastMessageTime,
+                    lastMessageSender: msg.sender || prev.lastMessageSender,
+                    unreadCount: 0,
+                  };
+                });
+                scrollToBottom('smooth');
+              }
             }
           } catch {}
         };
@@ -771,73 +909,53 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     return () => clearTimeout(handler);
   }, [searchQuery]);
 
-  // Scroll helper to snap to the bottom of the active conversation thread
-  const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior,
-    });
-    isNearBottomRef.current = true;
-    setShowScrollBottomBtn(false);
-    setHasNewMessagesWhileScrolled(false);
-  };
-
-  // Monitor user scrolling to detect if user has scrolled up to review previous history
-  const handleScrollMessages = () => {
-    const container = messagesContainerRef.current;
-    if (!container) return;
-
-    // Threshold of 120px to consider the user "at the bottom"
-    const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
-    const isAtBottom = distanceFromBottom <= 120;
-
-    isNearBottomRef.current = isAtBottom;
-    setShowScrollBottomBtn(!isAtBottom);
-
-    if (isAtBottom) {
-      setHasNewMessagesWhileScrolled(false);
-    }
-  };
-
-  // Scroll messages container:
-  // - Snaps to bottom on dialog switch
-  // - Automatically snaps to bottom when a new message arrives IF the agent is near bottom
-  // - Preserves scroll position if agent scrolled up to review previous history, and shows a badge/button
+  // Auto-scroll-to-bottom effect in the chat message thread:
+  // - Triggers whenever a new message is received or added in the active channel
+  // - Snaps to the bottom immediately when switching to another active conversation
   useEffect(() => {
-    if (!messagesContainerRef.current) return;
+    if (!messagesContainerRef.current || !selectedDialog) return;
 
-    const currentMsgCount = selectedDialog?.messages?.length || 0;
-    const isDifferentDialog = prevDialogIdRef.current !== selectedDialog?.id;
-    const hasNewMessages = currentMsgCount > prevMessageCountRef.current;
+    const messages = selectedDialog.messages || [];
+    const currentMsgCount = messages.length;
+    const lastMsg = currentMsgCount > 0 ? messages[currentMsgCount - 1] : null;
+    const lastMsgKey = lastMsg ? `${lastMsg.id || ''}-${lastMsg.timestamp || ''}` : '';
 
-    prevDialogIdRef.current = selectedDialog?.id || null;
+    const isDifferentDialog = prevDialogIdRef.current !== selectedDialog.id;
+    const hasNewMessages =
+      currentMsgCount > prevMessageCountRef.current ||
+      (lastMsgKey !== '' && lastMsgKey !== prevLastMessageKeyRef.current);
+
+    prevDialogIdRef.current = selectedDialog.id;
     prevMessageCountRef.current = currentMsgCount;
+    prevLastMessageKeyRef.current = lastMsgKey;
 
     if (isDifferentDialog) {
       // Switched to a new or different conversation: always snap immediately to bottom
-      isNearBottomRef.current = true;
-      setShowScrollBottomBtn(false);
-      setHasNewMessagesWhileScrolled(false);
-      setTimeout(() => {
-        scrollToBottom('auto');
-      }, 50);
+      scrollToBottom('auto');
     } else if (hasNewMessages) {
-      // New message arrived in current thread
-      if (isNearBottomRef.current) {
-        // Agent is at or near the bottom: automatically snap down smoothly
-        setTimeout(() => {
-          scrollToBottom('smooth');
-        }, 50);
-      } else {
-        // Agent is scrolled up reviewing history: DO NOT disrupt their scroll position!
-        // Show indicator that new messages have arrived below
-        setHasNewMessagesWhileScrolled(true);
-        setShowScrollBottomBtn(true);
-      }
+      // New message received in the active channel: trigger smooth auto-scroll to bottom
+      scrollToBottom('smooth');
     }
-  }, [selectedDialog?.id, selectedDialog?.messages?.length]);
+  }, [
+    selectedDialog?.id,
+    selectedDialog?.messages?.length,
+    selectedDialog?.messages?.[(selectedDialog?.messages?.length || 1) - 1]?.id,
+    selectedDialog?.messages?.[(selectedDialog?.messages?.length || 1) - 1]?.timestamp,
+  ]);
+
+  // When active typing indicator appears in current channel, smoothly ensure it is visible if already at bottom
+  useEffect(() => {
+    if (!selectedDialog) return;
+    const currentTypers = (
+      activeTypers[selectedDialog.id] ||
+      (selectedDialog.dialogId ? activeTypers[selectedDialog.dialogId] : null) ||
+      []
+    ).filter((t: TypingUser) => t.agentId !== currentAgent?.id);
+
+    if (currentTypers.length > 0 && isNearBottomRef.current) {
+      scrollToBottom('smooth');
+    }
+  }, [activeTypers, selectedDialog?.id, selectedDialog?.dialogId, currentAgent?.id]);
 
   // Select a dialog and mark as read
   const handleSelectDialog = async (dialog: ChatDialog) => {
@@ -1439,8 +1557,10 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const allClosedCount = dialogs.filter((d) => d.status === 'closed').length;
   const starredCount = dialogs.filter((d) => Boolean(d.isStarred)).length;
 
+  const isAgent = currentAgent?.accessRole === 'agent';
+
   return (
-    <div className="flex-1 flex flex-col min-h-0 h-full bg-white border-0 sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm overflow-hidden m-0 sm:m-3 lg:m-4">
+    <div className={`flex-1 flex flex-col min-h-0 h-full bg-white border-0 ${isAgent ? 'sm:border-t sm:border-slate-200 rounded-none m-0' : 'sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm m-0 sm:m-3 lg:m-4'} overflow-hidden`}>
       {/* 3-Column Workspace */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 h-full overflow-hidden">
         {/* ========================================================

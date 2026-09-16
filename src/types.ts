@@ -271,6 +271,15 @@ export interface AgentPerformanceStat {
   rating: number; // 1-5 (e.g. 4.8)
 }
 
+export interface PersonalPerformanceSummary {
+  chatsHandledToday: number;
+  resolvedToday: number;
+  activeChatsCount?: number;
+  avgResponseTimeSeconds: number;
+  avgResponseTimeFormatted: string;
+  rating?: number;
+}
+
 export interface InquiryAnalyticsReport {
   generatedAt: string;
   period: string;

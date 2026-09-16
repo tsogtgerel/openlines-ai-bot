@@ -7,12 +7,12 @@
       "name": "Цогтгэрэл Ч",
       "role": "Мэдээллийн технологийн захирал",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-      "status": "online",
+      "status": "offline",
       "email": "tsogtgerel@bsb.mn",
       "phone": "+976 75100272",
-      "isClockedIn": true,
+      "isClockedIn": false,
       "isOnBreak": false,
-      "activeShiftId": "shift-1789528368537",
+      "activeShiftId": null,
       "assignedChannelIds": [
         1,
         3,
@@ -49,10 +49,10 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 16,
+      "activeSessions": 32,
       "accessRole": "admin",
       "canAccessAllChannels": true,
-      "bitrixWorkdayStatus": "OPENED"
+      "bitrixWorkdayStatus": "CLOSED"
     },
     {
       "id": "bx-121",
@@ -60,10 +60,10 @@
       "name": "Азжаргал Чулуунбат",
       "role": "Дэлгүүрийн менежер",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/8d6/8d68ae334a8f6f77e45c97b4511fd97d/12.jpg.png",
-      "status": "online",
+      "status": "offline",
       "email": "azjargal@bsb.mn",
       "phone": "976-75108585",
-      "isClockedIn": true,
+      "isClockedIn": false,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -88,10 +88,10 @@
       "name": "Чойжамц Нацагдорж",
       "role": "Электрон барааны борлуулалтын мэргэжилтэн ",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/c75/c7505a622eecddb52e76b95170368386/567977721_24908208622164748_4936827512471618772_n.jpg.png",
-      "status": "online",
+      "status": "offline",
       "email": "choijamts@bsb.mn",
       "phone": "+976 80208585",
-      "isClockedIn": true,
+      "isClockedIn": false,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -496,7 +496,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 314,
+      "activeSessions": 322,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -604,10 +604,10 @@
       "name": "Айсулу Х.",
       "role": "ХЗ гэрийн мебель",
       "avatar": "https://ui-avatars.com/api/?name=%D0%90%D0%B9%D1%81%D1%83%D0%BB%D1%83%20%D0%A5.&background=3b82f6&color=fff",
-      "status": "offline",
+      "status": "online",
       "email": "khaysulu4@gmail.com",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 24,
+      "activeSessions": 30,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1291,6 +1291,28 @@
       "activeSessions": 0,
       "accessRole": "agent",
       "canAccessAllChannels": false
+    },
+    {
+      "id": "bx-3997",
+      "bitrixUserId": 3997,
+      "name": "Сүхбат Отгонбаатар",
+      "role": "Сургалтын мэргэжилтэн",
+      "avatar": "https://cdn.bitrix24.com/b34916009/main/340/340c4279ecfe92f3b911c7dc0445ab3a/F94EA2DC-6511-466A-A418-D54F4B64D601.png",
+      "status": "online",
+      "email": "sukhbat@bsb.mn",
+      "phone": "976 75100272",
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "activeShiftId": null,
+      "assignedChannelIds": [
+        11
+      ],
+      "assignedChannelNames": [
+        "Интернэт дэлгүүр - Facebook - Messenger"
+      ],
+      "activeSessions": 0,
+      "accessRole": "agent",
+      "canAccessAllChannels": false
     }
   ],
   "shifts": [
@@ -1300,13 +1322,13 @@
       "agentName": "Цогтгэрэл Ч",
       "date": "2026-09-16",
       "clockInTime": "2026-09-16T11:08:20+08:00",
-      "clockOutTime": null,
-      "isClockedIn": true,
+      "clockOutTime": "2026-09-16T13:42:06+08:00",
+      "isClockedIn": false,
       "isOnBreak": false,
       "totalBreakSeconds": 22,
-      "workedSeconds": 0,
+      "workedSeconds": 9204,
       "chatsResolved": 1,
-      "bitrixWorkdayStatus": "OPENED",
+      "bitrixWorkdayStatus": "CLOSED",
       "bitrixWorkdayId": 1652,
       "bitrixDuration": "00:00:00",
       "breakStartTime": "2026-09-16T04:22:33.490Z"
