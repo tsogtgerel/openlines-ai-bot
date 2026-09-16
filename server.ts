@@ -1383,6 +1383,12 @@ async function startServer() {
   app.post('/api/chats/:id/reopen', (req, res) => {
     try {
       const dialog = chatManager.reopenDialog(req.params.id);
+      if (dialog.dialogId?.startsWith('chat')) {
+        const numId = parseInt(dialog.dialogId.replace('chat', ''), 10);
+        if (!isNaN(numId)) {
+          bitrixOpenlinesSync.markChatReopened(numId);
+        }
+      }
       res.json({ success: true, data: dialog });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });

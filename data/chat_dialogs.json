@@ -5,7 +5,7 @@
     "customer": {
       "name": "Tuyajargal Bayaraa",
       "tags": [
-        "FACEBOOKCOMMENTS",
+        "FACEBOOK",
         "Битрикс24 Live"
       ]
     },
@@ -135,6 +135,14 @@
         "senderName": "Систем",
         "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
         "timestamp": "2026-09-16T07:24:12+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1112268",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-16T07:34:58+03:00",
         "status": "delivered"
       }
     ]
@@ -375,7 +383,7 @@
     "customer": {
       "name": "Guest",
       "tags": [
-        "WEBCHAT",
+        "LIVECHAT",
         "Битрикс24 Live"
       ]
     },
@@ -392,6 +400,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-16T06:01:33+03:00",
+    "closedAt": "2026-09-16T06:12:01+03:00",
     "messages": [
       {
         "id": "bx-1111760",

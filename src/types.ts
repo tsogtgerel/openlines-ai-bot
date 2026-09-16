@@ -148,6 +148,7 @@ export interface ChatDialog {
   isStarred?: boolean;
   resolutionSummary?: string;
   closedAt?: string;
+  reopenedAt?: string;
   createdAt: string;
   messages: ChatMessage[];
 }

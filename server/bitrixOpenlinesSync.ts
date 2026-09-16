@@ -292,6 +292,20 @@ export class BitrixOpenlinesSyncService {
         status = 'in_progress';
       }
 
+      // If existing dialog was explicitly reopened locally, and no new close happened in Bitrix after reopening
+      let closedAtDate: string | undefined = s.dateClose || undefined;
+      let reopenedAtDate: string | undefined = existingDialog?.reopenedAt;
+      if (existingDialog?.reopenedAt) {
+        const reopenTime = new Date(existingDialog.reopenedAt).getTime();
+        const bitrixCloseTime = s.dateClose ? new Date(s.dateClose).getTime() : 0;
+        if (status === 'closed' && (!bitrixCloseTime || reopenTime >= bitrixCloseTime)) {
+          status = existingDialog.status === 'closed' ? 'in_progress' : existingDialog.status;
+          closedAtDate = undefined;
+        } else if (status === 'closed' && bitrixCloseTime > reopenTime) {
+          reopenedAtDate = undefined;
+        }
+      }
+
       return {
         id: `chat-${s.chatId}`,
         dialogId: `chat${s.chatId}`,
@@ -315,7 +329,8 @@ export class BitrixOpenlinesSyncService {
         lastMessageSender: lastMsg ? lastMsg.sender : 'system',
         unreadCount: status === 'new' ? 1 : 0,
         createdAt: s.dateCreate,
-        closedAt: s.dateClose || undefined,
+        closedAt: closedAtDate,
+        reopenedAt: reopenedAtDate,
         messages,
       };
     } catch (e: any) {
@@ -508,6 +523,7 @@ export class BitrixOpenlinesSyncService {
 
   async finishOperatorChat(chatId: number): Promise<any> {
     try {
+      this.markChatClosed(chatId);
       return await vibeRequest('POST', '/v1/openlines/operator/finish', {
         chatId,
       });
@@ -515,6 +531,14 @@ export class BitrixOpenlinesSyncService {
       console.warn('[OpenlinesSync] Error finishing openline chat:', e.message);
       return null;
     }
+  }
+
+  markChatReopened(chatId: number) {
+    this.knownSessionStatuses.set(chatId, 'opened');
+  }
+
+  markChatClosed(chatId: number) {
+    this.knownSessionStatuses.set(chatId, 'closed');
   }
 
   startAutoSync(intervalMs = 3000) {

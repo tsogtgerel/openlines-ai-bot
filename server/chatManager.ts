@@ -79,6 +79,7 @@ export interface ChatDialog {
   isStarred?: boolean; // Онцолсон/од тавьсан эсэх
   resolutionSummary?: string; // Чат хаах үеийн шийдвэрлэлтийн дүгнэлт
   closedAt?: string; // Чат хаагдсан цаг
+  reopenedAt?: string; // Чат дахин нээгдсэн цаг
   createdAt: string; // Чат үүссэн цаг
   messages: ChatMessage[]; // Чат дахь бүх мессежүүд
 }
@@ -803,6 +804,7 @@ export class ChatManagerService extends EventEmitter {
 
     dialog.status = 'closed';
     dialog.closedAt = new Date().toISOString();
+    delete dialog.reopenedAt;
     dialog.resolutionSummary = resolutionSummary || 'Асуудал амжилттай шийдвэрлэгдсэн';
     if (closedByAgentId) dialog.closedByAgentId = closedByAgentId;
     else if (!dialog.closedByAgentId && dialog.assignedAgentId) dialog.closedByAgentId = dialog.assignedAgentId;
@@ -828,7 +830,9 @@ export class ChatManagerService extends EventEmitter {
     if (!dialog) throw new Error(`Dialog not found: ${id}`);
 
     dialog.status = 'in_progress';
+    dialog.reopenedAt = new Date().toISOString();
     delete dialog.closedAt;
+    delete dialog.resolutionSummary;
 
     dialog.messages.push({
       id: `sys-${Date.now()}`,
@@ -1048,16 +1052,51 @@ export class ChatManagerService extends EventEmitter {
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
-      // Determine the most accurate status:
-      // If locally marked as 'bot' and new status is not 'closed' or human-assigned, keep 'bot'
-      let finalStatus = newDialog.status;
-      if (existing.status === 'bot' && newDialog.status !== 'closed' && !newDialog.assignedAgentId) {
-        finalStatus = 'bot';
-      }
-
       hasNewMessages = combinedMessages.length > prevMsgCount;
       if (hasNewMessages) {
         latestMsg = combinedMessages[combinedMessages.length - 1];
+      }
+
+      // Check whether a fresh incoming customer message arrived
+      const isNewCustomerMessage = hasNewMessages && latestMsg && latestMsg.sender === 'customer';
+
+      // Determine the most accurate status:
+      let finalStatus = newDialog.status;
+      let finalClosedAt = newDialog.closedAt;
+      let finalReopenedAt = existing.reopenedAt;
+      let finalResolutionSummary = existing.resolutionSummary || newDialog.resolutionSummary;
+      let finalClosedByAgentId = existing.closedByAgentId || newDialog.closedByAgentId;
+      let finalClosedByAgentName = existing.closedByAgentName || newDialog.closedByAgentName;
+      let finalClosedByAgentAvatar = existing.closedByAgentAvatar || newDialog.closedByAgentAvatar;
+
+      if (existing.reopenedAt) {
+        // Chat was reopened by agent/user
+        const reopenTime = new Date(existing.reopenedAt).getTime();
+        const bitrixCloseTime = newDialog.closedAt ? new Date(newDialog.closedAt).getTime() : 0;
+
+        if (newDialog.status === 'closed' && (!bitrixCloseTime || reopenTime >= bitrixCloseTime)) {
+          // Bitrix still reports previous closed status, but user explicitly reopened it
+          finalStatus = existing.status === 'closed' ? 'in_progress' : existing.status;
+          finalClosedAt = undefined;
+        } else if (newDialog.status === 'closed' && bitrixCloseTime > reopenTime) {
+          // Closed again in Bitrix AFTER reopening
+          finalStatus = 'closed';
+          finalReopenedAt = undefined;
+        }
+      } else if (existing.status === 'closed' && existing.closedAt) {
+        // Chat was closed locally
+        if (!isNewCustomerMessage && newDialog.status !== 'closed') {
+          // Bitrix sync hasn't closed yet, retain closed status locally
+          finalStatus = 'closed';
+          finalClosedAt = existing.closedAt;
+        } else if (isNewCustomerMessage) {
+          // Customer sent a new message after close, automatically reopen
+          finalStatus = 'new';
+          finalClosedAt = undefined;
+          finalReopenedAt = new Date().toISOString();
+        }
+      } else if (existing.status === 'bot' && newDialog.status !== 'closed' && !newDialog.assignedAgentId) {
+        finalStatus = 'bot';
       }
 
       // If the chat has been returned to the unassigned queue ('new') in Bitrix, do not retain stale assignedAgent
@@ -1084,6 +1123,12 @@ export class ChatManagerService extends EventEmitter {
         ...newDialog,
         customer: mergedCustomer,
         status: finalStatus,
+        closedAt: finalClosedAt,
+        reopenedAt: finalReopenedAt,
+        resolutionSummary: finalStatus === 'closed' ? finalResolutionSummary : undefined,
+        closedByAgentId: finalStatus === 'closed' ? finalClosedByAgentId : undefined,
+        closedByAgentName: finalStatus === 'closed' ? finalClosedByAgentName : undefined,
+        closedByAgentAvatar: finalStatus === 'closed' ? finalClosedByAgentAvatar : undefined,
         isStarred: existing.isStarred,
         assignedAgentId: finalAssignedAgentId,
         assignedAgentName: finalAssignedAgentName,
