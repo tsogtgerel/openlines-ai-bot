@@ -13,9 +13,19 @@
  */
 
 import express from 'express';
+import http from 'http';
+import { WebSocketServer, WebSocket } from 'ws';
 import path from 'path';
 import dotenv from 'dotenv';
-import { vibeRequest } from './server/vibeApi';
+import {
+  vibeRequest,
+  crmCreateDeal,
+  crmUpdateLead,
+  crmGetLead,
+  crmGetDeal,
+  crmGetStatuses,
+  BITRIX_PORTAL_DOMAIN,
+} from './server/vibeApi';
 import { knowledgeBase } from './server/knowledgeBase';
 import { botWorker } from './server/botWorker';
 import { chatManager } from './server/chatManager';
@@ -23,6 +33,7 @@ import { worktimeManager } from './server/worktimeManager';
 import { bitrixAgentsService } from './server/bitrixAgentsService';
 import { bitrixOpenlinesSync } from './server/bitrixOpenlinesSync';
 import { inquiryAnalyticsService } from './server/inquiryAnalyticsService';
+import { typingManager } from './server/typingManager';
 
 // .env файлын тохиргоог ачааллах
 dotenv.config();
@@ -33,6 +44,9 @@ const PORT = 3000;
 async function startServer() {
   const app = express();
   app.use(express.json());
+
+  // WebSocket broadcast forwarder reference
+  let broadcastWs: (data: any, excludeWs?: WebSocket) => void = () => {};
 
   // Allow embedding in Bitrix24 iframe and mobile app webview
   app.use((req, res, next) => {
@@ -886,6 +900,18 @@ async function startServer() {
         isInternalNote: Boolean(isInternalNote),
       });
 
+      // Clear typing indicator for the message author
+      try {
+        const afterTypers = typingManager.setTyping(
+          id,
+          { agentId: senderAgentId || senderName || sender || 'user', name: senderName || 'User' },
+          false
+        );
+        const clearTypingEvent = { type: 'typing:update', dialogId: id, typers: afterTypers };
+        broadcastWs(clearTypingEvent);
+        chatManager.emit('change', clearTypingEvent);
+      } catch {}
+
       // Хэрэв оператор бодит харилцагчид бичиж байгаа бол Bitrix24 чат руу илгээнэ
       if (sender === 'agent' && !isInternalNote) {
         const dialogId = outcome.dialog.dialogId;
@@ -904,6 +930,100 @@ async function startServer() {
       }
 
       res.json({ success: true, data: outcome });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/typing
+   * Real-time typing notification endpoint (WebSocket & polling fallback)
+   */
+  app.post('/api/chats/:id/typing', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { isTyping, agentId, name, role, avatar } = req.body || {};
+      const typers = typingManager.setTyping(
+        id,
+        {
+          agentId: agentId || name || 'user',
+          name: name || 'Оператор',
+          role: role || 'agent',
+          avatar,
+        },
+        Boolean(isTyping)
+      );
+
+      const typingEvent = { type: 'typing:update', dialogId: id, typers };
+      broadcastWs(typingEvent);
+      chatManager.emit('change', typingEvent);
+
+      res.json({ success: true, data: { dialogId: id, typers } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/chats/:id/typing
+   * Get active typers for a specific dialog
+   */
+  app.get('/api/chats/:id/typing', (req, res) => {
+    try {
+      const typers = typingManager.getTypers(req.params.id);
+      res.json({ success: true, data: { dialogId: req.params.id, typers } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/chats/typing/all
+   * Get all active typers mapped across all dialogs
+   */
+  app.get('/api/chats/typing/all', (req, res) => {
+    try {
+      const all = typingManager.getAllActiveTypers();
+      res.json({ success: true, data: all });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/simulate-typing
+   * Simulate a customer or operator typing for a duration (e.g. 4 seconds)
+   */
+  app.post('/api/chats/:id/simulate-typing', (req, res) => {
+    try {
+      const { id } = req.params;
+      const { name, role, durationMs } = req.body || {};
+      const targetName = name || 'Харилцагч';
+      const targetRole = role || 'customer';
+      const duration = Number(durationMs) || 4000;
+      const simId = `sim-typing-${Date.now()}`;
+
+      const typers = typingManager.setTyping(
+        id,
+        { agentId: simId, name: targetName, role: targetRole },
+        true
+      );
+      const startEvent = { type: 'typing:update', dialogId: id, typers };
+      broadcastWs(startEvent);
+      chatManager.emit('change', startEvent);
+
+      setTimeout(() => {
+        const afterTypers = typingManager.setTyping(
+          id,
+          { agentId: simId, name: targetName, role: targetRole },
+          false
+        );
+        const stopEvent = { type: 'typing:update', dialogId: id, typers: afterTypers };
+        broadcastWs(stopEvent);
+        chatManager.emit('change', stopEvent);
+      }, duration);
+
+      res.json({ success: true, message: `${targetName} бичиж эхэллээ... (${duration / 1000}с)` });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -961,19 +1081,296 @@ async function startServer() {
   /**
    * POST /api/chats/:id/close
    * Асуудлыг шийдвэрлэж чатыг хаах, шалтгааны хураангуйг тэмдэглэх.
+   * Мөн Bitrix24 дээрх CRM Lead-ийг хаах (CONVERTED эсвэл JUNK) болон Deal үүсгэх үйлдлийг хамт гүйцэтгэнэ.
    */
   app.post('/api/chats/:id/close', async (req, res) => {
     try {
-      const { resolutionSummary, closedByAgentId, closedByAgentName, closedByAgentAvatar } = req.body;
-      const dialog = chatManager.closeDialog(req.params.id, resolutionSummary, closedByAgentId, closedByAgentName, closedByAgentAvatar);
+      const {
+        resolutionSummary,
+        closedByAgentId,
+        closedByAgentName,
+        closedByAgentAvatar,
+        leadAction, // 'keep_open' | 'close_converted' | 'close_junk' | 'create_deal'
+        dealData, // { title: string; amount?: number; currency?: string; stageId?: string; comments?: string }
+      } = req.body;
+
+      let dialog = chatManager.closeDialog(
+        req.params.id,
+        resolutionSummary,
+        closedByAgentId,
+        closedByAgentName,
+        closedByAgentAvatar
+      );
       worktimeManager.incrementResolvedChat();
+
+      // 1. Bitrix24 Openlines чатын сессийг дуусгах
       if (dialog.dialogId?.startsWith('chat')) {
         const numId = parseInt(dialog.dialogId.replace('chat', ''), 10);
         if (!isNaN(numId)) {
           await bitrixOpenlinesSync.finishOperatorChat(numId);
         }
       }
+
+      // 2. Lead ID-г илрүүлэх (Харилцагчийн crmLeadId эсвэл холбогдох дугаараас)
+      let numericLeadId: number | null = null;
+      if (dialog.customer?.crmLeadId) {
+        const match = dialog.customer.crmLeadId.match(/LEAD[-_]?(\d+)/i);
+        if (match) {
+          numericLeadId = parseInt(match[1], 10);
+        }
+      }
+
+      // 3. CRM Lead болон Deal үйлдлүүд
+      if (leadAction === 'close_converted' && numericLeadId) {
+        try {
+          await crmUpdateLead(numericLeadId, {
+            stageId: 'CONVERTED',
+            comments: `Чатын шийдвэрлэлт: ${resolutionSummary || 'Амжилттай хаагдсан'}. Оператор: ${closedByAgentName || 'Ажилтан'}`,
+          });
+          dialog = chatManager.updateCustomerCrm(
+            dialog.id,
+            `LEAD-${numericLeadId}`,
+            'Lead амжилттай',
+            `Систем: Bitrix24 дээрх Сэжим (LEAD-${numericLeadId})-ийн төлөв "Амжилттай / Converted" болж хаагдлаа.`
+          );
+        } catch (crmErr: any) {
+          console.warn('[CRM] Failed to convert lead:', crmErr.message);
+        }
+      } else if (leadAction === 'close_junk' && numericLeadId) {
+        try {
+          await crmUpdateLead(numericLeadId, {
+            stageId: 'JUNK',
+            comments: `Цуцалсан шалтгаан: ${resolutionSummary || 'Хэрэггүй сэжим'}. Оператор: ${closedByAgentName || 'Ажилтан'}`,
+          });
+          dialog = chatManager.updateCustomerCrm(
+            dialog.id,
+            `LEAD-${numericLeadId}`,
+            'Lead цуцалсан',
+            `Систем: Bitrix24 дээрх Сэжим (LEAD-${numericLeadId}) "Хэрэггүй сэжим / Junk" төлөвт шилжиж хаагдлаа.`
+          );
+        } catch (crmErr: any) {
+          console.warn('[CRM] Failed to junk lead:', crmErr.message);
+        }
+      } else if (leadAction === 'create_deal') {
+        try {
+          const dealTitle = dealData?.title || `Хэлцэл: ${dialog.customer.name || 'Харилцагч'}`;
+          const dealAmount = Number(dealData?.amount) || 0;
+          const dealCurrency = dealData?.currency || 'MNT';
+          const dealStage = dealData?.stageId || 'NEW';
+
+          const dealRes = await crmCreateDeal({
+            title: dealTitle,
+            amount: dealAmount,
+            currency: dealCurrency,
+            stageId: dealStage,
+            leadId: numericLeadId || null,
+            comments: `Чатаас хаах үед үүсгэсэн хэлцэл. Оператор: ${closedByAgentName || 'Ажилтан'}. Шийдвэрлэлт: ${resolutionSummary || 'Шийдвэрлэсэн'}.`,
+          });
+
+          // Lead-ийг давхар Converted болгох
+          if (numericLeadId) {
+            await crmUpdateLead(numericLeadId, {
+              stageId: 'CONVERTED',
+              comments: `Хэлцэл үүсгэж хаасан: ${dealTitle}`,
+            });
+          }
+
+          if (dealRes?.data?.id) {
+            const newDealId = dealRes.data.id;
+            dialog = chatManager.updateCustomerCrm(
+              dialog.id,
+              `DEAL-${newDealId}`,
+              'Deal үүссэн',
+              `Систем: Bitrix24 CRM дээр шинэ хэлцэл (DEAL-${newDealId} - "${dealTitle}", ${dealAmount.toLocaleString()} ${dealCurrency}) амжилттай үүслээ.`
+            );
+          }
+        } catch (crmErr: any) {
+          console.warn('[CRM] Failed to create deal on chat close:', crmErr.message);
+        }
+      }
+
       res.json({ success: true, data: dialog });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/create-deal
+   * Чат явагдаж байх дундуур эсвэл дууссаны дараа Bitrix24 CRM дээр шинэ хэлцэл (Deal) шууд үүсгэх.
+   */
+  app.post('/api/chats/:id/create-deal', async (req, res) => {
+    try {
+      const dialog = chatManager.getDialogById(req.params.id);
+      if (!dialog) {
+        return res.status(404).json({ success: false, error: { message: 'Dialog not found' } });
+      }
+
+      const {
+        title,
+        amount,
+        currency = 'MNT',
+        stageId = 'NEW',
+        comments,
+        convertLead = true,
+        operatorName,
+      } = req.body;
+
+      if (!title) {
+        return res.status(400).json({ success: false, error: { message: 'Deal title is required' } });
+      }
+
+      // 1. Lead ID-г илрүүлэх
+      let numericLeadId: number | null = null;
+      if (dialog.customer?.crmLeadId) {
+        const match = dialog.customer.crmLeadId.match(/LEAD[-_]?(\d+)/i);
+        if (match) {
+          numericLeadId = parseInt(match[1], 10);
+        }
+      }
+
+      // 2. Bitrix24 дээр Deal үүсгэх
+      const dealRes = await crmCreateDeal({
+        title,
+        amount: Number(amount) || 0,
+        currency,
+        stageId,
+        leadId: numericLeadId || null,
+        comments: comments || `Чатын ажлын талбараас үүсгэсэн хэлцэл. Оператор: ${operatorName || dialog.assignedAgentName || 'Оператор'}`,
+      });
+
+      if (!dealRes?.data?.id) {
+        return res.status(500).json({
+          success: false,
+          error: { message: dealRes?.error?.message || 'Failed to create deal in Bitrix24' },
+        });
+      }
+
+      const createdDeal = dealRes.data;
+
+      // 3. Хэрэв сонгосон бол холбогдох Lead-ийг "CONVERTED" болгож төлөвийг ахиулах
+      if (convertLead && numericLeadId) {
+        try {
+          await crmUpdateLead(numericLeadId, {
+            stageId: 'CONVERTED',
+            comments: `Хэлцэл үүсгэсэн: DEAL-${createdDeal.id} - ${title}`,
+          });
+        } catch (err: any) {
+          console.warn('[CRM] Lead convert failed:', err.message);
+        }
+      }
+
+      // 4. Диалогийн харилцагчийн CRM холбоос болон чатын мессежийг шинэчлэх
+      const updatedDialog = chatManager.updateCustomerCrm(
+        dialog.id,
+        `DEAL-${createdDeal.id}`,
+        'Deal үүссэн',
+        `Систем: Bitrix24 CRM дээр шинэ хэлцэл (DEAL-${createdDeal.id} - "${title}", ${(Number(amount) || 0).toLocaleString()} ${currency}) амжилттай үүслээ.`
+      );
+
+      res.json({
+        success: true,
+        data: {
+          deal: createdDeal,
+          dialog: updatedDialog,
+          portalUrl: `https://${BITRIX_PORTAL_DOMAIN}/crm/deal/details/${createdDeal.id}/`,
+        },
+      });
+    } catch (e: any) {
+      console.error('[CRM] Error creating deal:', e);
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * PATCH /api/chats/:id/lead-status
+   * Харилцагчийн холбогдох Bitrix24 Lead-ийн төлөвийг (Status) шууд шинэчлэх.
+   */
+  app.patch('/api/chats/:id/lead-status', async (req, res) => {
+    try {
+      const dialog = chatManager.getDialogById(req.params.id);
+      if (!dialog) {
+        return res.status(404).json({ success: false, error: { message: 'Dialog not found' } });
+      }
+
+      const { stageId, comment, operatorName } = req.body;
+      if (!stageId) {
+        return res.status(400).json({ success: false, error: { message: 'stageId is required' } });
+      }
+
+      let numericLeadId: number | null = null;
+      if (dialog.customer?.crmLeadId) {
+        const match = dialog.customer.crmLeadId.match(/LEAD[-_]?(\d+)/i);
+        if (match) {
+          numericLeadId = parseInt(match[1], 10);
+        }
+      }
+
+      if (!numericLeadId) {
+        return res.status(400).json({
+          success: false,
+          error: { message: 'Энэ харилцагч дээр холбогдсон Bitrix Lead дугаар олдсонгүй.' },
+        });
+      }
+
+      const updateRes = await crmUpdateLead(numericLeadId, {
+        stageId,
+        comments: comment || `Төлөв өөрчилсөн: ${stageId}. Оператор: ${operatorName || 'Оператор'}`,
+      });
+
+      const updatedDialog = chatManager.updateCustomerCrm(
+        dialog.id,
+        `LEAD-${numericLeadId}`,
+        `Lead ${stageId}`,
+        `Систем: Bitrix24 дээрх Сэжим (LEAD-${numericLeadId})-ийн төлөв "${stageId}" болж шинэчлэгдлээ.`
+      );
+
+      res.json({
+        success: true,
+        data: {
+          lead: updateRes.data,
+          dialog: updatedDialog,
+          portalUrl: `https://${BITRIX_PORTAL_DOMAIN}/crm/lead/details/${numericLeadId}/`,
+        },
+      });
+    } catch (e: any) {
+      console.error('[CRM] Error updating lead status:', e);
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/crm/options
+   * Bitrix24 CRM-ийн тохиргоо, Lead төлөвүүд болон Deal үе шатуудыг авах.
+   */
+  app.get('/api/crm/options', async (req, res) => {
+    try {
+      // Default standard Bitrix options
+      const defaultLeadStatuses = [
+        { statusId: 'NEW', name: 'Шинэ (New)', color: '#fff55a' },
+        { statusId: 'IN_PROCESS', name: 'Тодруулж буй (Inquiry)', color: '#2fc6f6' },
+        { statusId: 'UC_H2NTK9', name: 'Ангилсан / Шилжүүлсэн', color: '#a5de00' },
+        { statusId: 'CONVERTED', name: 'Амжилттай / Deal үүсгэх', color: '#00ff00' },
+        { statusId: 'JUNK', name: 'Ашиггүй / Цуцалсан (Junk)', color: '#ff5752' },
+      ];
+
+      const defaultDealStages = [
+        { statusId: 'NEW', name: 'Шинэ (New)', color: '#39a8ef' },
+        { statusId: 'PREPARATION', name: 'Санал бэлтгэх (Offer)', color: '#2fc6f6' },
+        { statusId: 'PREPAYMENT_INVOICE', name: 'Нэхэмжлэх илгээсэн', color: '#55d0e0' },
+        { statusId: 'EXECUTING', name: 'Гүйцэтгэж буй', color: '#47e4c2' },
+        { statusId: 'WON', name: 'Амжилттай (Deal Won)', color: '#7bd500' },
+        { statusId: 'LOSE', name: 'Цуцалсан (Deal Lost)', color: '#ff5752' },
+      ];
+
+      res.json({
+        success: true,
+        data: {
+          portalDomain: BITRIX_PORTAL_DOMAIN,
+          leadStatuses: defaultLeadStatuses,
+          dealStages: defaultDealStages,
+        },
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1661,10 +2058,85 @@ async function startServer() {
   }
 
   // ==========================================================================
-  // 10. Server Listener & Startup Background Services
+  // 10. HTTP & WebSocket Server Setup (Real-Time Messaging & Typing Indicator)
   // ==========================================================================
-  app.listen(PORT, '0.0.0.0', () => {
-    console.log(`AI Bot Server running on http://localhost:${PORT}`);
+  const server = http.createServer(app);
+
+  // WebSocket Server on /ws path
+  const wss = new WebSocketServer({ server, path: '/ws' });
+
+  broadcastWs = (data: any, excludeWs?: WebSocket) => {
+    try {
+      const payload = JSON.stringify(data);
+      for (const client of wss.clients) {
+        if (client.readyState === WebSocket.OPEN && client !== excludeWs) {
+          try {
+            client.send(payload);
+          } catch {
+            // ignore
+          }
+        }
+      }
+    } catch {}
+  };
+
+  wss.on('connection', (ws) => {
+    // Send active typers on connect
+    try {
+      ws.send(
+        JSON.stringify({
+          type: 'connected',
+          allTypers: typingManager.getAllActiveTypers(),
+          timestamp: Date.now(),
+        })
+      );
+    } catch {}
+
+    ws.on('message', (rawData) => {
+      try {
+        const msg = JSON.parse(rawData.toString());
+        if (msg.type === 'ping') {
+          ws.send(JSON.stringify({ type: 'pong', timestamp: Date.now() }));
+          return;
+        }
+
+        if (msg.type === 'typing') {
+          const { dialogId, isTyping, agentId, name, role, avatar } = msg;
+          if (dialogId) {
+            const typers = typingManager.setTyping(
+              dialogId,
+              {
+                agentId: agentId || name || 'user',
+                name: name || 'Оператор',
+                role: role || 'agent',
+                avatar,
+              },
+              Boolean(isTyping)
+            );
+
+            const typingEvent = { type: 'typing:update', dialogId, typers };
+            broadcastWs(typingEvent);
+            chatManager.emit('change', typingEvent);
+          }
+        }
+      } catch (e) {
+        console.warn('[WebSocket] Error processing message:', e);
+      }
+    });
+
+    ws.on('error', () => {});
+  });
+
+  // Forward chatManager's events (new messages, dialog updates) to all connected WebSocket clients
+  chatManager.on('change', (eventData: any) => {
+    broadcastWs(eventData);
+  });
+
+  // ==========================================================================
+  // 11. Server Listener & Startup Background Services
+  // ==========================================================================
+  server.listen(PORT, '0.0.0.0', () => {
+    console.log(`AI Bot Server & WebSocket running on http://localhost:${PORT}`);
 
     // Алхам 1: Bitrix24 порталаас бүх нээлттэй суваг ба хуваарилагдсан операторуудыг татах
     bitrixAgentsService

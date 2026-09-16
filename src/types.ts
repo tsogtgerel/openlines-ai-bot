@@ -292,6 +292,7 @@ export interface InquiryAnalyticsReport {
     recommendedArticleTitle: string;
     recommendedDraft: string;
   }[];
+  allInquiries?: CustomerInquiryItem[];
 }
 
 export interface DeployState {
@@ -309,4 +310,14 @@ export interface DeployState {
     status: string;
   } | null;
 }
+
+export interface TypingUser {
+  agentId: string;
+  name: string;
+  role: 'agent' | 'customer' | 'bot';
+  avatar?: string;
+  dialogId: string;
+  lastActive: number;
+}
+
 

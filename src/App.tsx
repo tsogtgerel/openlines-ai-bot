@@ -615,9 +615,9 @@ export default function App() {
     <div
       className={`${
         activeTab === 'chat'
-          ? 'h-screen overflow-hidden flex flex-col'
+          ? 'min-h-screen lg:h-screen lg:overflow-hidden flex flex-col'
           : 'min-h-screen flex flex-col'
-      } bg-slate-50 font-sans text-slate-900`}
+      } bg-slate-50 font-sans text-slate-900 overflow-x-hidden`}
     >
       {/* Top Application Header */}
       <Header

@@ -496,7 +496,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 316,
+      "activeSessions": 314,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 27,
+      "activeSessions": 24,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1303,12 +1303,13 @@
       "clockOutTime": null,
       "isClockedIn": true,
       "isOnBreak": false,
-      "totalBreakSeconds": 12,
+      "totalBreakSeconds": 22,
       "workedSeconds": 0,
-      "chatsResolved": 0,
+      "chatsResolved": 1,
       "bitrixWorkdayStatus": "OPENED",
       "bitrixWorkdayId": 1652,
-      "bitrixDuration": "00:00:00"
+      "bitrixDuration": "00:00:00",
+      "breakStartTime": "2026-09-16T04:22:33.490Z"
     },
     {
       "id": "shift-1",

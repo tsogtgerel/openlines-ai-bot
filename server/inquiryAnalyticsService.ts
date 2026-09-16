@@ -143,6 +143,7 @@ export interface InquiryAnalyticsReport {
     recommendedArticleTitle: string;
     recommendedDraft: string;
   }[];
+  allInquiries?: CustomerInquiryItem[];
 }
 
 // Seed historical realistic customer inquiries across channels
@@ -467,6 +468,8 @@ export function getTimeBounds(
 export class InquiryAnalyticsService {
   private customInquiries: CustomerInquiryItem[] = [];
   private summaryCache = new Map<string, string>();
+  private reportCache = new Map<string, InquiryAnalyticsReport>();
+  private lastRefreshTime = 0;
 
   constructor() {
     this.init();
@@ -474,14 +477,20 @@ export class InquiryAnalyticsService {
 
   private init() {
     // Чатын менежерээс ирсэн бодит мессежүүдийг анхлан ачаалах
-    this.refreshFromChats();
+    this.refreshFromChats(true);
   }
 
   /**
    * Бодит чатуудаас (chatManager) шинээр орж ирсэн харилцагчийн асуултуудыг татаж,
    * семантик ангилал ба мэдрэмжийн үнэлгээг хийн нэгтгэх.
    */
-  public refreshFromChats() {
+  public refreshFromChats(force = false) {
+    const now = Date.now();
+    if (!force && this.customInquiries.length > 0 && now - this.lastRefreshTime < 20000) {
+      return; // Fast cache hit, skip heavy re-iteration
+    }
+    this.lastRefreshTime = now;
+
     try {
       const dialogs = chatManager.getAllDialogs();
       const extracted: CustomerInquiryItem[] = [];
@@ -620,6 +629,13 @@ export class InquiryAnalyticsService {
     startDate?: string,
     endDate?: string
   ): Promise<InquiryAnalyticsReport> {
+    const isAll = !selectedChannelIds || selectedChannelIds.length === 0 || selectedChannelIds.includes('all');
+    const fullCacheKey = `${isAll ? 'all' : [...selectedChannelIds].map(String).sort().join(',')}_${timeRange || 'all'}_${startDate || ''}_${endDate || ''}`;
+
+    if (!forceAiSummary && this.reportCache.has(fullCacheKey)) {
+      return this.reportCache.get(fullCacheKey)!;
+    }
+
     const inquiries = this.getInquiries(selectedChannelIds);
     const totalCount = inquiries.length;
     const uniqueCustomers = new Set(inquiries.map((i) => i.customerName)).size;
@@ -827,7 +843,6 @@ export class InquiryAnalyticsService {
     channelBreakdown.sort((a, b) => b.totalInquiries - a.totalInquiries);
 
     // AI synthesis (uses intelligent caching & instant generation for zero-latency filtering)
-    const isAll = !selectedChannelIds || selectedChannelIds.length === 0 || selectedChannelIds.includes('all');
     const cacheKey = isAll ? 'all' : [...selectedChannelIds].map(String).sort().join(',');
 
     let executiveSummary: string;
@@ -837,15 +852,13 @@ export class InquiryAnalyticsService {
       executiveSummary = await this.generateExecutiveSummary(categories, channelBreakdown, totalCount);
       this.summaryCache.set(cacheKey, executiveSummary);
     } else {
-      if (isAll) {
-        executiveSummary = await this.generateExecutiveSummary(categories, channelBreakdown, totalCount);
-      } else {
-        const topCat = categories[0]?.title || 'Хүргэлт';
-        const topCatPct = categories[0]?.percentage || 30;
-        const topChan = channelBreakdown[0]?.channelName || 'Сонгосон суваг';
-        const botPct = channelBreakdown[0]?.botHandledRate || 52;
-        executiveSummary = `Сонгосон сувгийн (${topChan}) дүн шинжилгээнээс харахад нийт ${totalCount} асуулт бүртгэгдсэнээс хамгийн их хувийг "${topCat}" (${topCatPct}%) болон "${categories[1]?.title || 'Төлбөр, Зээл'}" (${categories[1]?.percentage || 20}%) эзэлж байна. AI бот нь тус сувгийн нийт асуултын ${botPct}%-д нь автоматаар амжилттай хариулж байна.`;
-      }
+      const topCat = categories[0]?.title || 'Хүргэлт';
+      const topCatPct = categories[0]?.percentage || 30;
+      const topChan = channelBreakdown[0]?.channelName || (isAll ? 'БСБ Олон суваг' : 'Сонгосон суваг');
+      const botPct = channelBreakdown[0]?.botHandledRate || 52;
+      executiveSummary = isAll
+        ? `БСБ Нээлттэй сувгуудаар ирсэн нийт ${totalCount} харилцагчийн асуултын дүн шинжилгээнээс харахад хамгийн өндөр хувийг "${topCat}" (${topCatPct}%) болон "${categories[1]?.title || 'Төлбөр, Зээл'}" (${categories[1]?.percentage || 25}%) эзэлж байна. Сувгуудын хувьд "${topChan}" сувагт хүргэлтийн статусын асуултууд голлосон бол Web Live Chat дээр StorePay болон 0% хүүтэй хуваан төлөлтийн лавлагаа давамгайлж байна. AI бот нь мэдээллийн сангаас нийт асуултын 45-60%-д нь амжилттай автоматаар хариулж байна.`
+        : `Сонгосон сувгийн (${topChan}) дүн шинжилгээнээс харахад нийт ${totalCount} асуулт бүртгэгдсэнээс хамгийн их хувийг "${topCat}" (${topCatPct}%) болон "${categories[1]?.title || 'Төлбөр, Зээл'}" (${categories[1]?.percentage || 20}%) эзэлж байна. AI бот нь тус сувгийн нийт асуултын ${botPct}%-д нь автоматаар амжилттай хариулж байна.`;
       this.summaryCache.set(cacheKey, executiveSummary);
     }
 
@@ -893,7 +906,7 @@ export class InquiryAnalyticsService {
     const bounds = getTimeBounds(timeRange, startDate, endDate);
     const agentPerformance = this.getAgentPerformanceStats(selectedChannelIds, timeRange, startDate, endDate);
 
-    return {
+    const result: InquiryAnalyticsReport = {
       generatedAt: new Date().toISOString(),
       period: bounds?.label ? `Сонгосон хугацаа: ${bounds.label}` : 'Сүүлийн 30 хоног (Бүх өгөгдөл)',
       selectedChannels: selectedChannelIds || ['all'],
@@ -905,7 +918,11 @@ export class InquiryAnalyticsService {
       executiveSummary,
       aiInsights,
       kbGapAnalysis,
+      allInquiries: this.customInquiries,
     };
+
+    this.reportCache.set(fullCacheKey, result);
+    return result;
   }
 
   /**

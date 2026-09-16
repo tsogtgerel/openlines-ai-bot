@@ -87,6 +87,11 @@ export async function vibeRequest<T = any>(
         res.on('data', (chunk) => (rawData += chunk));
         res.on('end', () => {
           try {
+            // Handle 204 No Content or empty success response
+            if (res.statusCode === 204 || (!rawData && res.statusCode && res.statusCode < 300)) {
+              return resolve({ success: true, data: null as any });
+            }
+
             const parsed = JSON.parse(rawData);
 
             // Check if rate limited
@@ -131,4 +136,52 @@ export async function vibeRequest<T = any>(
     }
     req.end();
   });
+}
+
+// -------------------------------------------------------------------------
+// Bitrix24 CRM Helpers
+// -------------------------------------------------------------------------
+
+export const BITRIX_PORTAL_DOMAIN = 'bsb.bitrix24.com';
+
+export interface BitrixDealPayload {
+  title: string;
+  amount?: number;
+  currency?: string;
+  stageId?: string;
+  leadId?: number | null;
+  contactId?: number | null;
+  companyId?: number | null;
+  comments?: string;
+  assignedById?: number | null;
+}
+
+export async function crmCreateDeal(payload: BitrixDealPayload) {
+  return await vibeRequest<any>('POST', '/v1/deals', {
+    title: payload.title,
+    amount: payload.amount ?? 0,
+    currency: payload.currency || 'MNT',
+    stageId: payload.stageId || 'NEW',
+    ...(payload.leadId ? { leadId: payload.leadId } : {}),
+    ...(payload.contactId ? { contactId: payload.contactId } : {}),
+    ...(payload.companyId ? { companyId: payload.companyId } : {}),
+    ...(payload.comments ? { comments: payload.comments } : {}),
+    ...(payload.assignedById ? { assignedById: payload.assignedById } : {}),
+  });
+}
+
+export async function crmUpdateLead(leadId: number, fields: { stageId?: string; comments?: string; title?: string }) {
+  return await vibeRequest<any>('PATCH', `/v1/leads/${leadId}`, fields);
+}
+
+export async function crmGetLead(leadId: number) {
+  return await vibeRequest<any>('GET', `/v1/leads/${leadId}`);
+}
+
+export async function crmGetDeal(dealId: number) {
+  return await vibeRequest<any>('GET', `/v1/deals/${dealId}`);
+}
+
+export async function crmGetStatuses(entityId: 'STATUS' | 'DEAL_STAGE') {
+  return await vibeRequest<any[]>('GET', `/v1/statuses?filter[entityId]=${entityId}`);
 }

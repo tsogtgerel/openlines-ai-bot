@@ -841,6 +841,39 @@ export class ChatManagerService extends EventEmitter {
     return dialog;
   }
 
+  updateCustomerCrm(
+    id: string,
+    newCrmId: string,
+    addedTag?: string,
+    systemNote?: string
+  ) {
+    const dialog = this.getDialogById(id);
+    if (!dialog) throw new Error(`Dialog not found: ${id}`);
+
+    if (!dialog.customer) {
+      dialog.customer = { name: 'Харилцагч', tags: [] };
+    }
+    dialog.customer.crmLeadId = newCrmId;
+    if (addedTag) {
+      if (!dialog.customer.tags) dialog.customer.tags = [];
+      if (!dialog.customer.tags.includes(addedTag)) {
+        dialog.customer.tags.push(addedTag);
+      }
+    }
+
+    if (systemNote) {
+      dialog.messages.push({
+        id: `sys-${Date.now()}`,
+        sender: 'system',
+        text: systemNote,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    this.saveDialogs(id, 'dialog:update');
+    return dialog;
+  }
+
   simulateIncomingCustomerMessage(
     customerName: string,
     messageText: string,

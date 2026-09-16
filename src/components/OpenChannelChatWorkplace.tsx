@@ -37,9 +37,25 @@ import {
   RotateCcw,
   Calendar,
   ArrowDown,
+  Volume2,
+  VolumeX,
+  Bell,
+  Keyboard,
+  Briefcase,
+  DollarSign,
+  ExternalLink,
 } from 'lucide-react';
-import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig } from '../types';
+import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig, TypingUser } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
+import {
+  playIncomingMessageSound,
+  playOutgoingMessageSound,
+  playTypingBlipSound,
+  isChatSoundEnabled,
+  setChatSoundEnabled,
+  testChatSound,
+  unlockAudioContext,
+} from '../utils/chatSound';
 
 interface OpenChannelChatWorkplaceProps {
   currentAgent: Agent | null;
@@ -110,6 +126,25 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [closeReason, setCloseReason] = useState('Амжилттай шийдвэрлэсэн');
 
+  // Bitrix24 CRM Lead / Deal actions on Close
+  const [closeLeadAction, setCloseLeadAction] = useState<'keep_open' | 'close_converted' | 'create_deal' | 'close_junk'>('close_converted');
+  const [closeDealTitle, setCloseDealTitle] = useState('');
+  const [closeDealAmount, setCloseDealAmount] = useState('');
+  const [closeDealStage, setCloseDealStage] = useState('NEW');
+
+  // Standalone Create Deal Modal
+  const [showCreateDealModal, setShowCreateDealModal] = useState(false);
+  const [createDealTitle, setCreateDealTitle] = useState('');
+  const [createDealAmount, setCreateDealAmount] = useState('');
+  const [createDealStage, setCreateDealStage] = useState('NEW');
+  const [createDealConvertLead, setCreateDealConvertLead] = useState(true);
+  const [createDealComments, setCreateDealComments] = useState('');
+  const [isSubmittingDeal, setIsSubmittingDeal] = useState(false);
+
+  // CRM notifications & inline status updates
+  const [isUpdatingLeadStatus, setIsUpdatingLeadStatus] = useState(false);
+  const [crmNotification, setCrmNotification] = useState<{ message: string; type: 'success' | 'error'; url?: string } | null>(null);
+
   // Single-click insert quick reply helper
   const handleInsertQuickReply = (text: string) => {
     setInputText((prev) => {
@@ -161,6 +196,14 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [isBotActionLoading, setIsBotActionLoading] = useState(false);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
   const lastSyncVersionRef = useRef<number>(0);
+
+  // Real-time Typing Indicator & Chat Sound state
+  const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isChatSoundEnabled());
+  const [activeTypers, setActiveTypers] = useState<Record<string, TypingUser[]>>({});
+  const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const typingHeartbeatTimeoutRef = useRef<any>(null);
+  const lastTypingSentRef = useRef<number>(0);
 
   // Simulation form state
   const [simCustomerName, setSimCustomerName] = useState('Баярмаа Энх');
@@ -356,6 +399,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           const { dialogId, message, dialog: updatedDialog } = payload;
           if (!dialogId && !updatedDialog) return;
 
+          // Sound alert on incoming customer or bot message
+          if (message && message.sender !== 'agent') {
+            playIncomingMessageSound();
+          }
+
           const targetId = dialogId || updatedDialog?.id;
 
           // Immediately update open conversation if it matches
@@ -449,6 +497,30 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         }
       });
 
+      // Real-time 'Agent is typing...' SSE event stream
+      eventSource.addEventListener('typing:update', (e: any) => {
+        try {
+          const payload = JSON.parse(e.data);
+          const { dialogId, typers } = payload;
+          if (dialogId) {
+            setActiveTypers((prev) => {
+              const prevTypers = prev[dialogId] || [];
+              const isNewlyTyping = prevTypers.length === 0 && Array.isArray(typers) && typers.length > 0;
+              if (isNewlyTyping && (selectedDialogId === dialogId || selectedDialog?.dialogId === dialogId)) {
+                const notMe = typers.some((t: TypingUser) => t.agentId !== currentAgent?.id && t.name !== currentAgent?.name);
+                if (notMe) playTypingBlipSound();
+              }
+              return {
+                ...prev,
+                [dialogId]: typers || [],
+              };
+            });
+          }
+        } catch (err) {
+          console.error('Failed to parse typing:update SSE event', err);
+        }
+      });
+
       eventSource.onerror = () => {
         if (!isCleanedUp) {
           setIsRealtimeConnected(false);
@@ -475,6 +547,195 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }, pollInterval);
     return () => clearInterval(timer);
   }, [channelFilter, sortBy, isRealtimeConnected]);
+
+  // 4. Real-time WebSocket connection for bi-directional typing indicators & live broadcast
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let isCleanedUp = false;
+    let reconnectTimeout: any = null;
+
+    const connectWebSocket = () => {
+      if (isCleanedUp) return;
+      try {
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws`;
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
+
+        ws.onopen = () => {
+          if (!isCleanedUp) {
+            setIsWsConnected(true);
+            try {
+              ws?.send(
+                JSON.stringify({
+                  type: 'join',
+                  agentId: currentAgent?.id,
+                  agentName: currentAgent?.name,
+                })
+              );
+            } catch {}
+          }
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.type === 'connected' && data.allTypers) {
+              setActiveTypers(data.allTypers);
+            } else if (data.type === 'typing:update') {
+              const { dialogId, typers } = data;
+              if (dialogId) {
+                setActiveTypers((prev) => {
+                  const prevTypers = prev[dialogId] || [];
+                  const isNewlyTyping = prevTypers.length === 0 && Array.isArray(typers) && typers.length > 0;
+                  if (isNewlyTyping && (selectedDialogId === dialogId || selectedDialog?.dialogId === dialogId)) {
+                    const notMe = typers.some((t: TypingUser) => t.agentId !== currentAgent?.id && t.name !== currentAgent?.name);
+                    if (notMe) playTypingBlipSound();
+                  }
+                  return {
+                    ...prev,
+                    [dialogId]: typers || [],
+                  };
+                });
+              }
+            } else if (data.type === 'message:new') {
+              const msg = data.message;
+              if (msg && msg.sender !== 'agent') {
+                playIncomingMessageSound();
+              }
+            }
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          if (!isCleanedUp) {
+            setIsWsConnected(false);
+            reconnectTimeout = setTimeout(connectWebSocket, 3500);
+          }
+        };
+
+        ws.onerror = () => {
+          try {
+            ws?.close();
+          } catch {}
+        };
+      } catch (err) {
+        if (!isCleanedUp) {
+          reconnectTimeout = setTimeout(connectWebSocket, 5000);
+        }
+      }
+    };
+
+    connectWebSocket();
+
+    // Periodic heartbeat to refresh typing states
+    const pollTypersTimer = setInterval(() => {
+      fetch('/api/chats/typing/all')
+        .then((r) => r.json())
+        .then((res) => {
+          if (res.success && res.data) {
+            setActiveTypers(res.data);
+          }
+        })
+        .catch(() => {});
+    }, 6000);
+
+    return () => {
+      isCleanedUp = true;
+      clearInterval(pollTypersTimer);
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      try {
+        ws?.close();
+      } catch {}
+    };
+  }, [selectedDialogId, selectedDialog, currentAgent?.id, currentAgent?.name]);
+
+  // Broadcast typing status
+  const sendTypingStatus = (isTyping: boolean) => {
+    if (!selectedDialogId || !currentAgent) return;
+
+    const payload = {
+      type: 'typing',
+      dialogId: selectedDialogId,
+      isTyping,
+      agentId: currentAgent.id,
+      name: currentAgent.name,
+      role: 'agent',
+      avatar: currentAgent.avatar,
+    };
+
+    // Send via WebSocket (instant <10ms)
+    if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+      try {
+        wsRef.current.send(JSON.stringify(payload));
+      } catch {}
+    }
+
+    // Also send via REST API for server-side persistence & SSE fallback
+    fetch(`/api/chats/${selectedDialogId}/typing`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    }).catch(() => {});
+  };
+
+  // Handle typing inside message input with throttled heartbeat
+  const handleInputTyping = (text: string) => {
+    setInputText(text);
+    unlockAudioContext();
+    if (sendErrorMessage) setSendErrorMessage(null);
+
+    if (!selectedDialogId || !currentAgent) return;
+
+    if (text.trim().length > 0) {
+      const now = Date.now();
+      if (now - lastTypingSentRef.current > 1800) {
+        lastTypingSentRef.current = now;
+        sendTypingStatus(true);
+      }
+
+      if (typingHeartbeatTimeoutRef.current) {
+        clearTimeout(typingHeartbeatTimeoutRef.current);
+      }
+      typingHeartbeatTimeoutRef.current = setTimeout(() => {
+        sendTypingStatus(false);
+      }, 2500);
+    } else {
+      if (typingHeartbeatTimeoutRef.current) {
+        clearTimeout(typingHeartbeatTimeoutRef.current);
+      }
+      sendTypingStatus(false);
+    }
+  };
+
+  // Toggle sound feedback
+  const handleToggleSound = () => {
+    const next = !soundEnabled;
+    setSoundEnabled(next);
+    setChatSoundEnabled(next);
+    if (next) {
+      testChatSound();
+    }
+  };
+
+  // Simulate customer typing for testing
+  const handleSimulateCustomerTyping = async () => {
+    if (!selectedDialog) return;
+    try {
+      unlockAudioContext();
+      await fetch(`/api/chats/${selectedDialog.id}/simulate-typing`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: selectedDialog.customer?.name || 'Харилцагч',
+          role: 'customer',
+          durationMs: 4500,
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to simulate customer typing:', e);
+    }
+  };
 
   // 4. Prioritize active chat on server and fetch immediate state once on chat switch
   useEffect(() => {
@@ -613,6 +874,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     setSendErrorMessage(null);
     setIsSending(true);
 
+    // Stop typing status immediately and play outgoing sound
+    if (typingHeartbeatTimeoutRef.current) {
+      clearTimeout(typingHeartbeatTimeoutRef.current);
+    }
+    sendTypingStatus(false);
+    playOutgoingMessageSound();
+
     try {
       const res = await fetch(`/api/chats/${selectedDialog.id}/messages`, {
         method: 'POST',
@@ -698,7 +966,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Close / Resolve dialog
+  // Close / Resolve dialog with CRM Lead/Deal actions
   const handleCloseDialog = async () => {
     if (!selectedDialog) return;
     try {
@@ -710,6 +978,17 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           closedByAgentId: currentAgent?.id,
           closedByAgentName: currentAgent?.name,
           closedByAgentAvatar: currentAgent?.avatar,
+          leadAction: closeLeadAction,
+          dealData:
+            closeLeadAction === 'create_deal'
+              ? {
+                  title: closeDealTitle.trim() || `Хэлцэл: ${selectedDialog.customer.name}`,
+                  amount: Number(closeDealAmount) || 0,
+                  currency: 'MNT',
+                  stageId: closeDealStage || 'NEW',
+                  comments: `Шийдвэрлэлт: ${closeReason}`,
+                }
+              : undefined,
         }),
       }).then((r) => r.json());
 
@@ -717,9 +996,99 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         setSelectedDialog(res.data);
         setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
         setShowCloseModal(false);
+
+        let actionMsg = 'Чат амжилттай хаагдлаа.';
+        if (closeLeadAction === 'close_converted') {
+          actionMsg = 'Чат хаагдаж, Bitrix Lead төлөв "Амжилттай / Converted" боллоо.';
+        } else if (closeLeadAction === 'create_deal') {
+          actionMsg = 'Чат хаагдаж, Bitrix24 CRM дээр шинэ хэлцэл амжилттай үүслээ.';
+        } else if (closeLeadAction === 'close_junk') {
+          actionMsg = 'Чат хаагдаж, Bitrix Lead "Хэрэггүй сэжим (Junk)" төлөвт шилжлээ.';
+        }
+
+        setCrmNotification({
+          type: 'success',
+          message: actionMsg,
+        });
       }
     } catch (e) {
       console.error('Failed to close dialog:', e);
+    }
+  };
+
+  // Standalone Deal creation
+  const handleCreateDeal = async () => {
+    if (!selectedDialog || !createDealTitle.trim()) return;
+    setIsSubmittingDeal(true);
+    try {
+      const res = await fetch(`/api/chats/${selectedDialog.id}/create-deal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: createDealTitle.trim(),
+          amount: Number(createDealAmount) || 0,
+          currency: 'MNT',
+          stageId: createDealStage,
+          comments: createDealComments,
+          convertLead: createDealConvertLead,
+          operatorName: currentAgent?.name || 'Оператор',
+        }),
+      }).then((r) => r.json());
+
+      if (res.success) {
+        if (res.data?.dialog) {
+          setSelectedDialog(res.data.dialog);
+          setDialogs((prev) => prev.map((d) => (d.id === res.data.dialog.id ? res.data.dialog : d)));
+        }
+        setShowCreateDealModal(false);
+        setCrmNotification({
+          type: 'success',
+          message: `Bitrix24 CRM дээр DEAL-${res.data?.deal?.id} (${createDealTitle}) амжилттай үүслээ!`,
+          url: res.data?.portalUrl,
+        });
+      } else {
+        alert(res.error?.message || 'Хэлцэл үүсгэхэд алдаа гарлаа');
+      }
+    } catch (e: any) {
+      console.error('Failed to create deal:', e);
+      alert('Хэлцэл үүсгэхэд алдаа гарлаа: ' + e.message);
+    } finally {
+      setIsSubmittingDeal(false);
+    }
+  };
+
+  // Quick Lead status update
+  const handleUpdateLeadStatus = async (stageId: string, label: string) => {
+    if (!selectedDialog) return;
+    setIsUpdatingLeadStatus(true);
+    try {
+      const res = await fetch(`/api/chats/${selectedDialog.id}/lead-status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          stageId,
+          comment: `Оператор төлөв шинэчилсэн: ${label}`,
+          operatorName: currentAgent?.name || 'Оператор',
+        }),
+      }).then((r) => r.json());
+
+      if (res.success) {
+        if (res.data?.dialog) {
+          setSelectedDialog(res.data.dialog);
+          setDialogs((prev) => prev.map((d) => (d.id === res.data.dialog.id ? res.data.dialog : d)));
+        }
+        setCrmNotification({
+          type: 'success',
+          message: `Bitrix Lead төлөв "${label}" болж амжилттай шинэчлэгдлээ!`,
+          url: res.data?.portalUrl,
+        });
+      } else {
+        alert(res.error?.message || 'Lead төлөв шинэчлэхэд алдаа гарлаа');
+      }
+    } catch (e: any) {
+      console.error('Failed to update lead status:', e);
+    } finally {
+      setIsUpdatingLeadStatus(false);
     }
   };
 
@@ -1103,6 +1472,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               </span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <button
+                type="button"
+                id="chat-sound-toggle-btn"
+                onClick={handleToggleSound}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition ${
+                  soundEnabled
+                    ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
+                }`}
+                title={soundEnabled ? 'Дуут мэдэгдэл асаалттай (Дарж унтраах)' : 'Дуут мэдэгдэл унтраалттай (Дарж асаах)'}
+              >
+                {soundEnabled ? (
+                  <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                ) : (
+                  <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+                )}
+                <span className="hidden sm:inline">{soundEnabled ? 'Дуу' : 'Чимээгүй'}</span>
+              </button>
               <button
                 id="sync-bitrix-chats-btn"
                 onClick={handleSyncBitrix}
@@ -1546,21 +1933,41 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       </div>
                     </div>
 
-                    {/* Last message preview */}
+                    {/* Last message preview or live typing indicator */}
                     <div className="mt-2 flex items-center justify-between gap-2">
-                      <p
-                        className={`text-xs truncate flex-1 ${
-                          d.unreadCount > 0 ? 'font-bold text-slate-900' : 'text-slate-500'
-                        }`}
-                      >
-                        {d.lastMessageSender === 'agent' && (
-                          <span className="text-blue-600 font-medium">Та: </span>
-                        )}
-                        {d.lastMessageSender === 'bot' && (
-                          <span className="text-purple-600 font-medium">Бот: </span>
-                        )}
-                        {d.lastMessageText}
-                      </p>
+                      {(() => {
+                        const typers = activeTypers[d.id] || (d.dialogId ? activeTypers[d.dialogId] : null) || [];
+                        if (typers.length > 0) {
+                          return (
+                            <p className="text-xs truncate flex-1 text-blue-600 font-semibold flex items-center gap-1.5">
+                              <span className="flex items-center gap-0.5">
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                                <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+                              </span>
+                              <span className="truncate">
+                                {typers[0].name} бичиж байна...
+                              </span>
+                            </p>
+                          );
+                        }
+
+                        return (
+                          <p
+                            className={`text-xs truncate flex-1 ${
+                              d.unreadCount > 0 ? 'font-bold text-slate-900' : 'text-slate-500'
+                            }`}
+                          >
+                            {d.lastMessageSender === 'agent' && (
+                              <span className="text-blue-600 font-medium">Та: </span>
+                            )}
+                            {d.lastMessageSender === 'bot' && (
+                              <span className="text-purple-600 font-medium">Бот: </span>
+                            )}
+                            {d.lastMessageText}
+                          </p>
+                        );
+                      })()}
 
                       {d.unreadCount > 0 && (
                         <span className="px-1.5 py-0.5 rounded-full bg-rose-600 text-white font-bold text-[10px]">
@@ -1788,6 +2195,25 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   </button>
                 )}
 
+                {/* Create Deal button */}
+                <button
+                  id="create-deal-header-btn"
+                  type="button"
+                  onClick={() => {
+                    setCreateDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                    setCreateDealAmount('');
+                    setCreateDealStage('NEW');
+                    setCreateDealComments('');
+                    setCreateDealConvertLead(true);
+                    setShowCreateDealModal(true);
+                  }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition shadow-2xs"
+                  title="Bitrix24 CRM дээр шинэ хэлцэл (Deal) үүсгэх"
+                >
+                  <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                  <span className="hidden sm:inline">Deal үүсгэх</span>
+                </button>
+
                 {/* Transfer button */}
                 <button
                   id="transfer-dialog-btn"
@@ -1803,7 +2229,17 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 {selectedDialog.status !== 'closed' ? (
                   <button
                     id="close-dialog-btn"
-                    onClick={() => setShowCloseModal(true)}
+                    onClick={() => {
+                      setCloseDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                      setCloseDealAmount('');
+                      setCloseDealStage('NEW');
+                      if (selectedDialog.customer?.crmLeadId) {
+                        setCloseLeadAction('close_converted');
+                      } else {
+                        setCloseLeadAction('keep_open');
+                      }
+                      setShowCloseModal(true);
+                    }}
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-200 text-xs font-medium transition"
                     title="Чатыг хаах, дуусгах"
                   >
@@ -2051,6 +2487,44 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   </div>
                 );
               })}
+
+              {/* Real-time Agent/Customer is typing... Indicator Bubble */}
+              {(() => {
+                const currentTypers = (
+                  activeTypers[selectedDialog.id] ||
+                  (selectedDialog.dialogId ? activeTypers[selectedDialog.dialogId] : null) ||
+                  []
+                ).filter((t: TypingUser) => t.agentId !== currentAgent?.id);
+
+                if (currentTypers.length === 0) return null;
+
+                return (
+                  <div id="realtime-typing-indicator-feed" className="flex items-end gap-2.5 justify-start animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <div className="w-8 h-8 rounded-full bg-blue-100 border border-blue-200 text-blue-700 flex items-center justify-center text-xs font-semibold shrink-0 shadow-2xs">
+                      {currentTypers[0].role === 'customer' ? (
+                        selectedDialog.customer?.avatar ? (
+                          <img src={selectedDialog.customer.avatar} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                        ) : (
+                          selectedDialog.customer?.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'
+                        )
+                      ) : (
+                        <UserCheck className="w-4 h-4 text-blue-600" />
+                      )}
+                    </div>
+                    <div className="bg-white border border-slate-200 text-slate-700 px-3.5 py-2.5 rounded-2xl rounded-bl-sm shadow-xs flex items-center gap-2.5">
+                      <div className="flex items-center gap-1">
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <span className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      <span className="text-xs font-medium text-slate-600">
+                        <span className="font-semibold text-slate-800">{currentTypers.map((t) => t.name).join(', ')}</span> бичиж байна...
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -2201,8 +2675,47 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     <span className="hidden sm:inline">Мэдээллийн сан</span>
                     <span className="sm:hidden">Сан</span>
                   </button>
+
+                  {/* Simulate customer typing for instant testing */}
+                  <button
+                    type="button"
+                    id="simulate-customer-typing-btn"
+                    onClick={handleSimulateCustomerTyping}
+                    className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium border border-blue-200 transition"
+                    title="Харилцагч бичиж буй бодит хөдөлгөөнийг турших (Real-time typing test)"
+                  >
+                    <Keyboard className="w-3.5 h-3.5 text-blue-600" />
+                    <span className="hidden sm:inline">Бичиж буйг турших</span>
+                  </button>
                 </div>
               </div>
+
+              {/* Real-time typing status bar above composer if active */}
+              {(() => {
+                const currentTypers = (
+                  activeTypers[selectedDialog.id] ||
+                  (selectedDialog.dialogId ? activeTypers[selectedDialog.dialogId] : null) ||
+                  []
+                ).filter((t: TypingUser) => t.agentId !== currentAgent?.id);
+
+                if (currentTypers.length === 0) return null;
+
+                return (
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-800 animate-in fade-in duration-150">
+                    <div className="flex items-center gap-2">
+                      <Keyboard className="w-3.5 h-3.5 text-blue-600 animate-pulse" />
+                      <span className="font-semibold text-[11px]">
+                        {currentTypers.map((t) => t.name).join(', ')} бичиж байна...
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-600 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Quick Replies Expanded Panel */}
               <QuickRepliesPanel
@@ -2254,8 +2767,10 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                         id="chat-message-input"
                         value={inputText}
                         onChange={(e) => {
-                          setInputText(e.target.value);
-                          if (sendErrorMessage) setSendErrorMessage(null);
+                          handleInputTyping(e.target.value);
+                        }}
+                        onBlur={() => {
+                          sendTypingStatus(false);
                         }}
                         onKeyDown={(e) => {
                           if (e.key === 'Enter' && !e.shiftKey) {
@@ -2405,20 +2920,103 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             </div>
 
             {/* CRM & Orders stats */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-slate-500">
-                <span>CRM Lead / Deal:</span>
-                {selectedDialog.customer.crmLeadId ? (
-                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs">
-                    {selectedDialog.customer.crmLeadId}
-                  </span>
-                ) : (
-                  <span className="text-slate-400 font-normal italic text-[11px]">
-                    Холбогдоогүй
-                  </span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                  Bitrix24 CRM
+                </span>
+                <button
+                  type="button"
+                  id="right-panel-create-deal-btn"
+                  onClick={() => {
+                    setCreateDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                    setCreateDealAmount('');
+                    setCreateDealStage('NEW');
+                    setCreateDealComments('');
+                    setCreateDealConvertLead(true);
+                    setShowCreateDealModal(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition shadow-2xs cursor-pointer"
+                  title="Энэ харилцагч дээр Deal (Хэлцэл) үүсгэх"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Deal үүсгэх</span>
+                </button>
+              </div>
+
+              {/* CRM Lead / Deal reference */}
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-[11px] font-medium">CRM Холболт:</span>
+                  {selectedDialog.customer.crmLeadId ? (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`font-mono font-bold px-2 py-0.5 rounded text-xs border ${
+                          selectedDialog.customer.crmLeadId.startsWith('DEAL-')
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}
+                      >
+                        {selectedDialog.customer.crmLeadId}
+                      </span>
+                      {(() => {
+                        const crmId = selectedDialog.customer.crmLeadId;
+                        const num = crmId.replace(/\D/g, '');
+                        if (!num) return null;
+                        const isDeal = crmId.startsWith('DEAL-');
+                        const url = isDeal
+                          ? `https://bsb.bitrix24.com/crm/deal/details/${num}/`
+                          : `https://bsb.bitrix24.com/crm/lead/details/${num}/`;
+                        return (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 transition"
+                            title={`Bitrix24 ${isDeal ? 'Хэлцэл' : 'Сэжим'} дээр нээх`}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 font-normal italic text-[11px]">
+                      Холбогдоогүй
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Lead status switch if customer has a Lead */}
+                {selectedDialog.customer.crmLeadId && selectedDialog.customer.crmLeadId.startsWith('LEAD-') && (
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                    <span className="text-[10px] text-slate-500 font-medium">Lead хаах:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={isUpdatingLeadStatus}
+                        onClick={() => handleUpdateLeadStatus('CONVERTED', 'Амжилттай')}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition disabled:opacity-50"
+                        title="Lead-ийг Амжилттай (Converted) болгох"
+                      >
+                        ✓ Амжилттай
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isUpdatingLeadStatus}
+                        onClick={() => handleUpdateLeadStatus('JUNK', 'Ашиггүй')}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition disabled:opacity-50"
+                        title="Lead-ийг Ашиггүй (Junk) болгох"
+                      >
+                        ✕ Цуцлах
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="flex justify-between items-center text-slate-500">
+
+              <div className="flex justify-between items-center text-slate-500 pt-0.5">
                 <span>Өмнөх захиалга:</span>
                 <span className="font-semibold text-slate-800">
                   {selectedDialog.customer.totalOrders ?? 1} удаа
@@ -2676,20 +3274,101 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             </div>
 
             {/* CRM & Orders stats */}
-            <div className="p-3 rounded-xl bg-slate-50 border border-slate-100 space-y-2 text-xs">
-              <div className="flex justify-between items-center text-slate-500">
-                <span>CRM Lead / Deal:</span>
-                {selectedDialog.customer.crmLeadId ? (
-                  <span className="font-mono font-semibold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 text-xs">
-                    {selectedDialog.customer.crmLeadId}
-                  </span>
-                ) : (
-                  <span className="text-slate-400 font-normal italic text-[11px]">
-                    Холбогдоогүй
-                  </span>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-semibold text-slate-700 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                  Bitrix24 CRM
+                </span>
+                <button
+                  type="button"
+                  id="mobile-drawer-create-deal-btn"
+                  onClick={() => {
+                    setCreateDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                    setCreateDealAmount('');
+                    setCreateDealStage('NEW');
+                    setCreateDealComments('');
+                    setCreateDealConvertLead(true);
+                    setShowCreateDealModal(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition shadow-2xs"
+                  title="Энэ харилцагч дээр Deal (Хэлцэл) үүсгэх"
+                >
+                  <Plus className="w-3 h-3" />
+                  <span>Deal үүсгэх</span>
+                </button>
+              </div>
+
+              {/* CRM Lead / Deal reference */}
+              <div className="p-2.5 rounded-lg bg-white border border-slate-200 flex flex-col gap-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-slate-500 text-[11px] font-medium">CRM Холболт:</span>
+                  {selectedDialog.customer.crmLeadId ? (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`font-mono font-bold px-2 py-0.5 rounded text-xs border ${
+                          selectedDialog.customer.crmLeadId.startsWith('DEAL-')
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}
+                      >
+                        {selectedDialog.customer.crmLeadId}
+                      </span>
+                      {(() => {
+                        const crmId = selectedDialog.customer.crmLeadId;
+                        const num = crmId.replace(/\D/g, '');
+                        if (!num) return null;
+                        const isDeal = crmId.startsWith('DEAL-');
+                        const url = isDeal
+                          ? `https://bsb.bitrix24.com/crm/deal/details/${num}/`
+                          : `https://bsb.bitrix24.com/crm/lead/details/${num}/`;
+                        return (
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-100 transition"
+                            title={`Bitrix24 ${isDeal ? 'Хэлцэл' : 'Сэжим'} дээр нээх`}
+                          >
+                            <ExternalLink className="w-3.5 h-3.5" />
+                          </a>
+                        );
+                      })()}
+                    </div>
+                  ) : (
+                    <span className="text-slate-400 font-normal italic text-[11px]">
+                      Холбогдоогүй
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Lead status switch if customer has a Lead */}
+                {selectedDialog.customer.crmLeadId && selectedDialog.customer.crmLeadId.startsWith('LEAD-') && (
+                  <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-1">
+                    <span className="text-[10px] text-slate-500 font-medium">Lead хаах:</span>
+                    <div className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        disabled={isUpdatingLeadStatus}
+                        onClick={() => handleUpdateLeadStatus('CONVERTED', 'Амжилттай')}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 transition disabled:opacity-50"
+                      >
+                        ✓ Амжилттай
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isUpdatingLeadStatus}
+                        onClick={() => handleUpdateLeadStatus('JUNK', 'Ашиггүй')}
+                        className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition disabled:opacity-50"
+                      >
+                        ✕ Цуцлах
+                      </button>
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="flex justify-between items-center text-slate-500">
+
+              <div className="flex justify-between items-center text-slate-500 pt-0.5">
                 <span>Өмнөх захиалга:</span>
                 <span className="font-semibold text-slate-800">
                   {selectedDialog.customer.totalOrders ?? 1} удаа
@@ -2953,29 +3632,214 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         </div>
       )}
 
-      {/* 4. Close Dialog Modal */}
+      {/* 4. Close Dialog Modal with Bitrix24 CRM Lead/Deal Action */}
       {showCloseModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-5 shadow-xl space-y-4">
-            <div className="flex items-center gap-2 text-rose-600 border-b border-slate-100 pb-3">
-              <CheckCircle2 className="w-5 h-5" />
-              <h3 className="font-bold text-sm text-slate-900">Харилцан яриаг дуусгах / Хаах</h3>
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-rose-600">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-5 h-5" />
+                <h3 className="font-bold text-sm text-slate-900">Харилцан яриаг дуусгах / Чатыг хаах</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCloseModal(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="space-y-2 text-xs">
-              <label className="font-medium text-slate-700 block">Шийдвэрлэлтийн үндсэн шалтгаан / Тэмдэглэл:</label>
+
+            {/* Chat resolution reason */}
+            <div className="space-y-1.5 text-xs">
+              <label className="font-semibold text-slate-700 block">Шийдвэрлэлтийн үндсэн шалтгаан / Тэмдэглэл:</label>
               <select
                 value={closeReason}
                 onChange={(e) => setCloseReason(e.target.value)}
-                className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:border-blue-500 focus:outline-none"
+                className="w-full p-2.5 rounded-xl border border-slate-300 text-xs font-medium focus:border-blue-500 focus:outline-none bg-white"
               >
                 <option value="Амжилттай шийдвэрлэсэн">Амжилттай шийдвэрлэсэн</option>
                 <option value="Барааны мэдээлэл & Үнэ өгсөн">Барааны мэдээлэл & Үнэ өгсөн</option>
                 <option value="Захиалга үүсгэсэн & Төлбөр хийгдсэн">Захиалга үүсгэсэн & Төлбөр хийгдсэн</option>
                 <option value="Сервис төв, баталгаа руу чиглүүлсэн">Сервис төв, баталгаа руу чиглүүлсэн</option>
                 <option value="Харилцагч хариу өгөөгүй">Харилцагч хариу өгөөгүй</option>
+                <option value="Буруу хандсан / Спам">Буруу хандсан / Спам</option>
               </select>
             </div>
-            <div className="flex justify-end gap-2 pt-2">
+
+            {/* Bitrix24 CRM Lead & Deal options */}
+            <div className="space-y-2 text-xs pt-1 border-t border-slate-100">
+              <div className="flex items-center justify-between">
+                <label className="font-bold text-slate-800 flex items-center gap-1.5">
+                  <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Bitrix24 CRM Lead & Deal үйлдэл:</span>
+                </label>
+                {selectedDialog.customer.crmLeadId && (
+                  <span className="font-mono text-[11px] font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                    {selectedDialog.customer.crmLeadId}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 gap-2">
+                {/* Option 1: Convert Lead */}
+                <label
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition ${
+                    closeLeadAction === 'close_converted'
+                      ? 'border-emerald-500 bg-emerald-50/50 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="leadAction"
+                    value="close_converted"
+                    checked={closeLeadAction === 'close_converted'}
+                    onChange={() => setCloseLeadAction('close_converted')}
+                    className="mt-0.5 text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+                      <span>Lead-ийг Амжилттай болгож хаах (Converted)</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Bitrix24 CRM дээрх сэжмийн төлөвийг "CONVERTED / Амжилттай" болгож хаана.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Option 2: Create Deal */}
+                <label
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition ${
+                    closeLeadAction === 'create_deal'
+                      ? 'border-blue-500 bg-blue-50/50 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="leadAction"
+                    value="create_deal"
+                    checked={closeLeadAction === 'create_deal'}
+                    onChange={() => setCloseLeadAction('create_deal')}
+                    className="mt-0.5 text-blue-600 focus:ring-blue-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                      <Briefcase className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Шинэ Deal (Хэлцэл) үүсгэж хаах</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Bitrix CRM дээр шинэ борлуулалтын хэлцэл үүсгэж, сэжмийг амжилттай болгон холбоно.
+                    </p>
+
+                    {/* Sub-inputs when create_deal is selected */}
+                    {closeLeadAction === 'create_deal' && (
+                      <div className="mt-3 pt-3 border-t border-blue-100 space-y-2.5 text-xs">
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                            Хэлцлийн нэр:
+                          </label>
+                          <input
+                            type="text"
+                            value={closeDealTitle}
+                            onChange={(e) => setCloseDealTitle(e.target.value)}
+                            placeholder="Жишээ: LG 55 инч ТВ худалдан авалт"
+                            className="w-full p-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none bg-white text-xs"
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                              Үнийн дүн (₮):
+                            </label>
+                            <input
+                              type="number"
+                              value={closeDealAmount}
+                              onChange={(e) => setCloseDealAmount(e.target.value)}
+                              placeholder="0"
+                              className="w-full p-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none bg-white text-xs"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                              Хэлцлийн үе шат:
+                            </label>
+                            <select
+                              value={closeDealStage}
+                              onChange={(e) => setCloseDealStage(e.target.value)}
+                              className="w-full p-2 rounded-lg border border-slate-300 focus:border-blue-500 focus:outline-none bg-white text-xs"
+                            >
+                              <option value="NEW">Шинэ (New)</option>
+                              <option value="PREPARATION">Санал бэлтгэх (Offer)</option>
+                              <option value="PREPAYMENT_INVOICE">Нэхэмжлэх илгээсэн</option>
+                              <option value="EXECUTING">Гүйцэтгэж буй</option>
+                              <option value="WON">Амжилттай (Deal Won)</option>
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </label>
+
+                {/* Option 3: Junk Lead */}
+                <label
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition ${
+                    closeLeadAction === 'close_junk'
+                      ? 'border-rose-500 bg-rose-50/50 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="leadAction"
+                    value="close_junk"
+                    checked={closeLeadAction === 'close_junk'}
+                    onChange={() => setCloseLeadAction('close_junk')}
+                    className="mt-0.5 text-rose-600 focus:ring-rose-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                      <span>Хэрэггүй сэжим (Junk) болгож хаах</span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      Bitrix24 CRM сэжмийг "JUNK / Ашиггүй, сонирхолгүй" төлөвт шилжүүлж хаана.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Option 4: Keep Open */}
+                <label
+                  className={`flex items-start gap-3 p-3 rounded-xl border text-left cursor-pointer transition ${
+                    closeLeadAction === 'keep_open'
+                      ? 'border-slate-500 bg-slate-100 shadow-2xs'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="leadAction"
+                    value="keep_open"
+                    checked={closeLeadAction === 'keep_open'}
+                    onChange={() => setCloseLeadAction('keep_open')}
+                    className="mt-0.5 text-slate-600 focus:ring-slate-500"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-slate-900">
+                      Зөвхөн чатыг хаах (Lead-ийг хэвээр үлдээх)
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-0.5">
+                      CRM сэжмийн одоогийн төлөвийг өөрчлөхгүйгээр зөвхөн энэ харилцан яриаг дуусгана.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
               <button
                 type="button"
                 onClick={() => setShowCloseModal(false)}
@@ -2987,12 +3851,195 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 type="button"
                 id="confirm-close-chat-btn"
                 onClick={handleCloseDialog}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-sm"
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white shadow-sm flex items-center gap-1.5 cursor-pointer"
               >
-                Чатыг хаах
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Чатыг хаах & Хадгалах</span>
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Standalone Create Deal Modal */}
+      {showCreateDealModal && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3 text-blue-600">
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-5 h-5 text-blue-600" />
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">Bitrix24 CRM - Шинэ хэлцэл (Deal) үүсгэх</h3>
+                  <p className="text-[11px] text-slate-500 font-normal">
+                    Портал: bsb.bitrix24.com
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowCreateDealModal(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Customer Summary Bar */}
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between text-xs">
+              <div className="space-y-0.5">
+                <span className="font-semibold text-slate-900">{selectedDialog.customer.name}</span>
+                <div className="text-[11px] text-slate-500">
+                  {selectedDialog.customer.phone || selectedDialog.channelName}
+                </div>
+              </div>
+              {selectedDialog.customer.crmLeadId && (
+                <span className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-200">
+                  {selectedDialog.customer.crmLeadId}
+                </span>
+              )}
+            </div>
+
+            {/* Form Fields */}
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Хэлцлийн нэр <span className="text-rose-500">*</span>:
+                </label>
+                <input
+                  type="text"
+                  value={createDealTitle}
+                  onChange={(e) => setCreateDealTitle(e.target.value)}
+                  placeholder="Жишээ: LG OLED ТВ 65 инч худалдан авалт"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none text-xs font-medium"
+                />
+                {/* Quick title suggestions */}
+                <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                  <span className="text-[10px] text-slate-400">Шуурхай:</span>
+                  {[
+                    'Электрон бараа захиалга',
+                    'Тавилга захиалга',
+                    'Компьютер / Ноотбүүк',
+                    'Гэр ахуйн цахилгаан бараа',
+                  ].map((sug) => (
+                    <button
+                      key={sug}
+                      type="button"
+                      onClick={() => setCreateDealTitle(`${selectedDialog.customer.name} - ${sug}`)}
+                      className="px-2 py-0.5 rounded-full text-[10px] bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200 transition"
+                    >
+                      {sug}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Үнийн дүн (₮ MNT):</label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      value={createDealAmount}
+                      onChange={(e) => setCreateDealAmount(e.target.value)}
+                      placeholder="0"
+                      className="w-full p-2.5 pl-7 rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none text-xs font-medium"
+                    />
+                    <span className="absolute left-2.5 top-2.5 text-slate-400 text-xs font-bold">₮</span>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Хэлцлийн үе шат (Pipeline stage):</label>
+                  <select
+                    value={createDealStage}
+                    onChange={(e) => setCreateDealStage(e.target.value)}
+                    className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none text-xs font-medium bg-white"
+                  >
+                    <option value="NEW">Шинэ (New deal)</option>
+                    <option value="PREPARATION">Санал бэлтгэх (Offer preparation)</option>
+                    <option value="PREPAYMENT_INVOICE">Нэхэмжлэх илгээсэн (Invoice)</option>
+                    <option value="EXECUTING">Гүйцэтгэж буй (In execution)</option>
+                    <option value="WON">Амжилттай хаагдсан (Won)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Lead convert checkbox */}
+              {selectedDialog.customer.crmLeadId && selectedDialog.customer.crmLeadId.startsWith('LEAD-') && (
+                <label className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-50/70 border border-emerald-200 text-emerald-900 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={createDealConvertLead}
+                    onChange={(e) => setCreateDealConvertLead(e.target.checked)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500"
+                  />
+                  <span className="text-[11px] font-semibold">
+                    Холбогдох {selectedDialog.customer.crmLeadId} сэжмийг "Амжилттай / Converted" болгож хаах
+                  </span>
+                </label>
+              )}
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Нэмэлт тайлбар, тэмдэглэл:</label>
+                <textarea
+                  value={createDealComments}
+                  onChange={(e) => setCreateDealComments(e.target.value)}
+                  placeholder="Захиалгын барааны код, хүргэлтийн хаяг гэх мэт..."
+                  rows={2}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 focus:border-blue-500 focus:outline-none text-xs"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+              <button
+                type="button"
+                onClick={() => setShowCreateDealModal(false)}
+                disabled={isSubmittingDeal}
+                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50"
+              >
+                Цуцлах
+              </button>
+              <button
+                type="button"
+                id="submit-create-deal-btn"
+                disabled={isSubmittingDeal || !createDealTitle.trim()}
+                onClick={handleCreateDeal}
+                className="px-5 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+              >
+                <Briefcase className="w-3.5 h-3.5" />
+                <span>{isSubmittingDeal ? 'Үүсгэж байна...' : 'Bitrix дээр Deal үүсгэх'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating CRM Action Toast */}
+      {crmNotification && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm bg-slate-900 text-white p-4 rounded-2xl shadow-2xl border border-slate-700 flex items-start gap-3">
+          <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+          <div className="flex-1 text-xs">
+            <p className="font-semibold text-slate-100">{crmNotification.message}</p>
+            {crmNotification.url && (
+              <a
+                href={crmNotification.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 font-medium underline mt-1.5"
+              >
+                <span>Bitrix24 CRM дээр нээх</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={() => setCrmNotification(null)}
+            className="text-slate-400 hover:text-slate-200 p-0.5 rounded cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
