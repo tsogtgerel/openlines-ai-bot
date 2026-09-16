@@ -412,73 +412,78 @@ export class BitrixOpenlinesSyncService {
         }
       }
 
-      // Зөвхөн шинэчлэгдсэн цөөн сешнийг ээлжлэн татах (Rate-limit хязгаарыг бүрэн хамгаална)
-      for (const s of sessionsToFetch) {
-        try {
-          const channelName = this.getLineName(s.configId);
+      // Зөвхөн шинэчлэгдсэн сешнүүдийг зэрэгцээ (parallel) хурдтайгаар татаж боловсруулах
+      const chunkSize = 4;
+      for (let i = 0; i < sessionsToFetch.length; i += chunkSize) {
+        const chunk = sessionsToFetch.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (s) => {
+            try {
+              const channelName = this.getLineName(s.configId);
 
-          // 1. Эхлээд хурдан GET /v1/chats/:dialogId/messages ашиглах
-          let rawData: any = null;
-          const msgRes = await vibeRequest<any>('GET', `/v1/chats/chat${s.chatId}/messages`);
-          if (msgRes.success && msgRes.data?.messages) {
-            rawData = msgRes.data;
-          } else {
-            // 2. Шаардлагатай бол POST /v1/openlines/sessions/history
-            const histRes = await vibeRequest<any>('POST', '/v1/openlines/sessions/history', {
-              chatId: s.chatId,
-            });
-            if (histRes.success && histRes.data?.messages) {
-              rawData = histRes.data;
-            }
-          }
-
-          if (!rawData) {
-            continue;
-          }
-
-          const chatDialog = this.mapRawToChatDialog(s, rawData, channelName);
-          if (!chatDialog) continue;
-
-          chatManager.upsertBitrixDialog(chatDialog);
-          this.knownSessionCounts.set(s.chatId, s.messageCount || chatDialog.messages.length);
-          this.knownSessionStatuses.set(s.chatId, s.status);
-          updatedCount++;
-
-          // Бот идэвхтэй бөгөөд харилцагч хамгийн сүүлд бичсэн бол AI хариулт илгээх
-          const botCfg = botWorker.getConfig();
-          const isThisLineBotBound =
-            Boolean(botCfg.isPollingActive) &&
-            Boolean(botCfg.selectedLineId) &&
-            Number(botCfg.selectedLineId) === Number(s.configId);
-
-          const visibleMsgs = chatDialog.messages.filter((m) => m.sender !== 'system');
-          const lastMsg = visibleMsgs[visibleMsgs.length - 1];
-
-          if (isThisLineBotBound && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
-            const hasBotReplied = visibleMsgs.some(
-              (m) =>
-                m.sender === 'bot' &&
-                new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
-            );
-
-            if (!hasBotReplied) {
-              botWorker
-                .processOpenlineCustomerMessage({
+              // 1. Эхлээд хурдан GET /v1/chats/:dialogId/messages ашиглах
+              let rawData: any = null;
+              const msgRes = await vibeRequest<any>('GET', `/v1/chats/chat${s.chatId}/messages`);
+              if (msgRes.success && msgRes.data?.messages) {
+                rawData = msgRes.data;
+              } else {
+                // 2. Шаардлагатай бол POST /v1/openlines/sessions/history
+                const histRes = await vibeRequest<any>('POST', '/v1/openlines/sessions/history', {
                   chatId: s.chatId,
-                  dialogId: `chat${s.chatId}`,
-                  messageId: Number(lastMsg.id.replace('bx-', '')) || 0,
-                  text: lastMsg.text,
-                  customerName: chatDialog.customer.name,
-                  channelId: s.configId,
-                  channelName,
-                  channelType: chatDialog.channelType,
-                })
-                .catch((err) => console.error('[OpenlinesSync] AI Bot processing error:', err));
+                });
+                if (histRes.success && histRes.data?.messages) {
+                  rawData = histRes.data;
+                }
+              }
+
+              if (!rawData) {
+                return;
+              }
+
+              const chatDialog = this.mapRawToChatDialog(s, rawData, channelName);
+              if (!chatDialog) return;
+
+              chatManager.upsertBitrixDialog(chatDialog);
+              this.knownSessionCounts.set(s.chatId, s.messageCount || chatDialog.messages.length);
+              this.knownSessionStatuses.set(s.chatId, s.status);
+              updatedCount++;
+
+              // Бот идэвхтэй бөгөөд харилцагч хамгийн сүүлд бичсэн бол AI хариулт илгээх
+              const isThisLineBotBound =
+                Boolean(botCfg.isPollingActive) &&
+                Boolean(botCfg.selectedLineId) &&
+                Number(botCfg.selectedLineId) === Number(s.configId);
+
+              const visibleMsgs = chatDialog.messages.filter((m) => m.sender !== 'system');
+              const lastMsg = visibleMsgs[visibleMsgs.length - 1];
+
+              if (isThisLineBotBound && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
+                const hasBotReplied = visibleMsgs.some(
+                  (m) =>
+                    m.sender === 'bot' &&
+                    new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+                );
+
+                if (!hasBotReplied) {
+                  botWorker
+                    .processOpenlineCustomerMessage({
+                      chatId: s.chatId,
+                      dialogId: `chat${s.chatId}`,
+                      messageId: Number(lastMsg.id.replace('bx-', '')) || 0,
+                      text: lastMsg.text,
+                      customerName: chatDialog.customer.name,
+                      channelId: s.configId,
+                      channelName,
+                      channelType: chatDialog.channelType,
+                    })
+                    .catch((err) => console.error('[OpenlinesSync] AI Bot processing error:', err));
+                }
+              }
+            } catch (err: any) {
+              console.warn(`[OpenlinesSync] Error processing session ${s.chatId}:`, err.message);
             }
-          }
-        } catch (err: any) {
-          console.warn(`[OpenlinesSync] Error processing session ${s.chatId}:`, err.message);
-        }
+          })
+        );
       }
 
       this.lastSyncTime = new Date().toISOString();
@@ -541,7 +546,7 @@ export class BitrixOpenlinesSyncService {
     this.knownSessionStatuses.set(chatId, 'closed');
   }
 
-  startAutoSync(intervalMs = 3000) {
+  startAutoSync(intervalMs = 1800) {
     if (this.timer) {
       clearInterval(this.timer);
     }
@@ -554,14 +559,14 @@ export class BitrixOpenlinesSyncService {
       console.warn('[OpenlinesSync] Initial sync error:', err.message);
     });
 
-    // 1. Periodic background sync for all open sessions
+    // 1. Periodic background sync for all open sessions (1.8s for rapid chat delivery)
     this.timer = setInterval(() => {
       this.syncOpenlineSessions(25).catch((err) => {
         console.warn('[OpenlinesSync] Interval sync error:', err.message);
       });
     }, intervalMs);
 
-    // 2. High-frequency sync for the active chat currently open on the operator screen (1.2s interval)
+    // 2. Ultra high-frequency sync for the active chat currently open on the operator screen (800ms interval)
     this.activeChatTimer = setInterval(() => {
       if (this.activeChatId && !this.isSingleSyncing) {
         this.isSingleSyncing = true;
@@ -573,7 +578,7 @@ export class BitrixOpenlinesSyncService {
             this.isSingleSyncing = false;
           });
       }
-    }, 1200);
+    }, 800);
   }
 
   stopAutoSync() {

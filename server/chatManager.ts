@@ -1121,9 +1121,18 @@ export class ChatManagerService extends EventEmitter {
         (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
       );
 
-      hasNewMessages = combinedMessages.length > prevMsgCount;
-      if (hasNewMessages) {
-        latestMsg = combinedMessages[combinedMessages.length - 1];
+      const prevLastMsg = existing.messages[existing.messages.length - 1];
+      const newLastMsg = combinedMessages[combinedMessages.length - 1];
+      const lastMsgChanged =
+        !prevLastMsg ||
+        !newLastMsg ||
+        prevLastMsg.id !== newLastMsg.id ||
+        prevLastMsg.text !== newLastMsg.text ||
+        prevLastMsg.timestamp !== newLastMsg.timestamp;
+
+      hasNewMessages = combinedMessages.length > prevMsgCount || (lastMsgChanged && newLastMsg?.sender === 'customer');
+      if (hasNewMessages && newLastMsg) {
+        latestMsg = newLastMsg;
       }
 
       // Check whether a fresh incoming customer message arrived

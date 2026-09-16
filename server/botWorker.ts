@@ -217,10 +217,10 @@ export class BotWorkerService {
     // Run first cycle immediately
     this.pollCycle().catch((err) => console.error('Immediate poll error:', err));
 
-    // Poll every 3 seconds
+    // Poll every 1.2 seconds for low-latency customer event capture
     this.pollTimer = setInterval(() => {
       this.pollCycle().catch((err) => console.error('Poll error:', err));
-    }, 3000);
+    }, 1200);
     console.log(`[BotWorker] Polling started for bot ${this.config.botId} with offset ${this.config.currentOffset}`);
   }
 

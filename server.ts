@@ -2247,8 +2247,8 @@ async function startServer() {
       botWorker.stopPolling();
     }
 
-    // Алхам 3: Bitrix24 Open Lines-ийн бодит сесс, чатуудыг 5 секунд тутамд татах auto-sync-г асаах
-    bitrixOpenlinesSync.startAutoSync(5000);
+    // Алхам 3: Bitrix24 Open Lines-ийн бодит сесс, чатуудыг түргэн хугацаанд татах auto-sync-г асаах (1.8 секунд)
+    bitrixOpenlinesSync.startAutoSync(1800);
   });
 }
 

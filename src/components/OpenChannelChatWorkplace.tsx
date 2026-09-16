@@ -634,9 +634,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   }, [currentAgent?.id, selectedDialogId, sortBy]);
 
   // 3. Adaptive Background Delta Sync
-  // Runs gently every 15s when SSE is active as reconciliation, or every 2.5s if SSE disconnects
+  // Runs rapidly every 2.5s when SSE is active as reconciliation, or every 1.2s if SSE disconnects
   useEffect(() => {
-    const pollInterval = isRealtimeConnected ? 15000 : 2500;
+    const pollInterval = isRealtimeConnected ? 2500 : 1200;
     const timer = setInterval(() => {
       loadDialogsDelta();
     }, pollInterval);
@@ -886,19 +886,41 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       body: JSON.stringify({ chatId: selectedDialogId }),
     }).catch(() => {});
 
-    // Instant one-off sync on opening a chat to ensure message freshness
-    fetch(`/api/chats/${selectedDialogId}/sync`, { method: 'POST' })
-      .then((r) => r.json())
-      .then((json) => {
-        if (json.success && json.data) {
-          const freshDialog: ChatDialog = json.data;
-          setSelectedDialog((prev) => (prev && prev.id === freshDialog.id ? freshDialog : prev));
-          setDialogs((prev) =>
-            prev.map((d) => (d.id === freshDialog.id ? { ...d, ...freshDialog } : d))
-          );
-        }
-      })
-      .catch(() => {});
+    // Instant sync on opening a chat, followed by periodic fast refresh (1000ms)
+    let isSubscribed = true;
+    const syncActive = () => {
+      fetch(`/api/chats/${selectedDialogId}/sync`, { method: 'POST' })
+        .then((r) => r.json())
+        .then((json) => {
+          if (!isSubscribed) return;
+          if (json.success && json.data) {
+            const freshDialog: ChatDialog = json.data;
+            setSelectedDialog((prev) => {
+              if (!prev || prev.id !== freshDialog.id) return prev;
+              if (
+                freshDialog.messages.length !== prev.messages.length ||
+                freshDialog.lastMessageTime !== prev.lastMessageTime ||
+                freshDialog.status !== prev.status
+              ) {
+                return { ...prev, ...freshDialog };
+              }
+              return prev;
+            });
+            setDialogs((prev) =>
+              prev.map((d) => (d.id === freshDialog.id ? { ...d, ...freshDialog } : d))
+            );
+          }
+        })
+        .catch(() => {});
+    };
+
+    syncActive();
+    const activePollTimer = setInterval(syncActive, 1000);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(activePollTimer);
+    };
   }, [selectedDialogId]);
 
   // Handle Search Debounce
