@@ -29,15 +29,15 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="max-w-7xl mx-auto px-2.5 sm:px-6 lg:px-8 py-2 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
         {/* Left Branding */}
-        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-md shadow-blue-500/20 shrink-0">
             <Bot className="h-4 w-4 sm:h-6 sm:w-6" />
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2">
-              <h1 className="text-sm sm:text-lg font-semibold tracking-tight text-white truncate">
+              <h1 className="text-xs sm:text-lg font-semibold tracking-tight text-white truncate">
                 Нээлттэй сувгийн AI Бот
               </h1>
               <span className="hidden sm:inline-block px-2 py-0.5 text-[11px] font-medium rounded-full bg-blue-950 text-blue-300 border border-blue-800 shrink-0">
@@ -45,15 +45,15 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </div>
             <div className="flex items-center gap-1 text-[10px] sm:text-xs text-slate-400 truncate">
-              <span className="truncate">{portalInfo?.portal || 'БСБ Битрикс24'}</span>
+              <span className="truncate max-w-[110px] sm:max-w-none">{portalInfo?.portal || 'БСБ Битрикс24'}</span>
               <span>•</span>
-              <span className="shrink-0">{botConfig?.selectedLineName ? `Суваг: ${botConfig.selectedLineName}` : (portalInfo?.tariffName || 'Enterprise')}</span>
+              <span className="truncate max-w-[120px] sm:max-w-none">{botConfig?.selectedLineName ? `Суваг: ${botConfig.selectedLineName}` : (portalInfo?.tariffName || 'Enterprise')}</span>
             </div>
           </div>
         </div>
 
         {/* Right Status Indicators & Polling Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           {/* Bot Registration Badge - desktop/tablet */}
           <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-xs text-slate-300">
             <span className="text-slate-400">Бот:</span>
@@ -92,16 +92,16 @@ export const Header: React.FC<HeaderProps> = ({
             ) : null}
           </div>
 
-          {/* Mobile Guide & QR Button */}
+          {/* Mobile Guide & QR Button (desktop/tablet only) */}
           {onOpenMobileGuide && (
             <button
               id="header-mobile-guide-btn"
               onClick={onOpenMobileGuide}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700/60 hover:border-indigo-600 transition shrink-0"
+              className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-950/70 hover:bg-indigo-900 text-indigo-200 border border-indigo-700/60 hover:border-indigo-600 transition shrink-0"
               title="Битрикс24 гар утасны апп-д нээх, QR код болон заавар"
             >
               <Smartphone className="w-3.5 h-3.5 text-indigo-400" />
-              <span className="hidden sm:inline">Гар утас</span>
+              <span>Гар утас</span>
             </button>
           )}
 
@@ -110,11 +110,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               id="header-redeploy-btn"
               onClick={onOpenRedeploy}
-              className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 transition shrink-0"
+              className="hidden sm:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-slate-600 transition shrink-0"
               title="Код шинэчлэгдсэн үед дахин Build & Deploy хийх"
             >
               <Rocket className="w-3.5 h-3.5 text-blue-400" />
-              <span className="hidden sm:inline">Redeploy</span>
+              <span>Redeploy</span>
             </button>
           )}
 
@@ -123,13 +123,13 @@ export const Header: React.FC<HeaderProps> = ({
             id="toggle-polling-btn"
             onClick={onTogglePolling}
             disabled={isToggling || !botConfig?.botId}
-            className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shadow-sm ${
+            className={`inline-flex items-center gap-1.5 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs font-semibold tracking-wide transition-all shadow-sm shrink-0 ${
               isPolling
                 ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
                 : 'bg-slate-700 hover:bg-slate-600 text-slate-200'
             } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            <span className="relative flex h-2 w-2">
+            <span className="relative flex h-2 w-2 shrink-0">
               {isPolling && (
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75"></span>
               )}

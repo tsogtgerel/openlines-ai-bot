@@ -662,17 +662,28 @@ ${kbContext}
   private async sendReply(dialogId: string, message: string, includeKeyboard = false) {
     if (!this.config.botId || dialogId.startsWith('sim-')) return;
 
-    // Ensure bot is in chat if it is a real Bitrix chat (e.g. chat75386)
     const match = dialogId.match(/\d+/);
-    if (match) {
-      const numericChatId = parseInt(match[0], 10);
+    const numericChatId = match ? parseInt(match[0], 10) : null;
+    const bitrixDialogId = match ? `chat${match[0]}` : dialogId;
+
+    if (numericChatId && numericChatId > 0) {
+      // 1. Bitrix24 Openlines дээр мессеж илгээхийн тулд оператор эсвэл систем уг сешнийг "answer" хийсэн байх шаардлагатай
+      try {
+        await vibeRequest('POST', '/v1/openlines/operator/answer', {
+          chatId: numericChatId,
+        });
+      } catch (ansErr) {
+        // Аль хэдийн хариулагдсан байж болно
+      }
+
+      // Бот хэрэглэгчийг чатад урих
       await vibeRequest('POST', `/v1/chats/${numericChatId}/users`, {
         users: [this.config.botId],
       }).catch(() => {});
     }
 
     const body: any = {
-      dialogId,
+      dialogId: bitrixDialogId,
       fields: {
         message,
       },
@@ -688,24 +699,30 @@ ${kbContext}
       ];
     }
 
+    let sentViaBot = false;
     try {
       const res = await vibeRequest<any>('POST', `/v1/bots/${this.config.botId}/messages`, body);
       if (res && res.success) {
+        sentViaBot = true;
+        console.log(`[BotWorker] Sent reply via bot endpoint to ${bitrixDialogId}`);
         return;
       }
-      console.warn('[BotWorker] Bot message endpoint warning, falling back to chat message:', res?.error);
-    } catch (e) {
-      console.warn('[BotWorker] Bot message request error, falling back to chat message:', e);
+    } catch (e: any) {
+      // fallback-рүү үргэлжилнэ
     }
 
-    // Fallback: Send directly to chat
+    // 2. Fallback: Bitrix чат руу шууд мессеж илгээх (Openlines холбогчоор харилцагчид шууд хүрдэг)
     try {
-      await vibeRequest('POST', `/v1/chats/${dialogId}/messages`, {
-        message: `🤖 [${this.config.botName}]\n\n${message}`,
+      const chatRes = await vibeRequest<any>('POST', `/v1/chats/${bitrixDialogId}/messages`, {
+        message,
       });
-      console.log(`[BotWorker] Sent reply via fallback chat endpoint to ${dialogId}`);
-    } catch (err2) {
-      console.error('[BotWorker] Fallback chat message failed too:', err2);
+      if (chatRes && chatRes.success) {
+        console.log(`[BotWorker] Sent reply via chat endpoint to ${bitrixDialogId} (msgId: ${chatRes.data})`);
+      } else {
+        console.warn(`[BotWorker] Chat message warning for ${bitrixDialogId}:`, chatRes?.error);
+      }
+    } catch (err2: any) {
+      console.error(`[BotWorker] Chat message error for ${bitrixDialogId}:`, err2.message || err2);
     }
   }
 
@@ -716,9 +733,11 @@ ${kbContext}
     if (!this.config.botId || !dialogId || dialogId.startsWith('sim-')) return;
 
     try {
+      const match = dialogId.match(/\d+/);
+      const cleanId = match ? `chat${match[0]}` : dialogId;
       // In Bitrix24 Openlines, when welcome bot leaves the chat, the dialog transfers to the operator queue!
-      await vibeRequest('POST', `/v1/bots/${this.config.botId}/chats/${dialogId}/leave`);
-      console.log(`[BotWorker] Bot ${this.config.botId} left chat ${dialogId} (operator takeover / handoff)`);
+      await vibeRequest('POST', `/v1/bots/${this.config.botId}/chats/${cleanId}/leave`);
+      console.log(`[BotWorker] Bot ${this.config.botId} left chat ${cleanId} (operator takeover / handoff)`);
     } catch (e: any) {
       console.warn(`[BotWorker] Note on leaving chat ${dialogId}:`, e.message || e);
     }

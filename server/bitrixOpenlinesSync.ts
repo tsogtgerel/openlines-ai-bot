@@ -500,23 +500,25 @@ export class BitrixOpenlinesSyncService {
                   !chatDialog.assignedAgentId &&
                   (!botCfg.selectedLineId || Number(botCfg.selectedLineId) === Number(s.configId)));
 
-              const visibleMsgs = chatDialog.messages.filter((m) => m.sender !== 'system');
-              const lastMsg = visibleMsgs[visibleMsgs.length - 1];
+              const customerMsgs = chatDialog.messages.filter((m) => m.sender === 'customer');
+              const lastCustomerMsg = customerMsgs[customerMsgs.length - 1];
 
-              if (isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
-                const hasBotReplied = visibleMsgs.some(
-                  (m) =>
-                    m.sender === 'bot' &&
-                    new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+              if (isBotActiveForThisChat && lastCustomerMsg && s.status !== 'closed') {
+                const customerTime = new Date(lastCustomerMsg.timestamp).getTime();
+                const hasAgentReplied = chatDialog.messages.some(
+                  (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() > customerTime
+                );
+                const hasBotReplied = chatDialog.messages.some(
+                  (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= customerTime
                 );
 
-                if (!hasBotReplied) {
+                if (!hasBotReplied && !hasAgentReplied) {
                   botWorker
                     .processOpenlineCustomerMessage({
                       chatId: s.chatId,
                       dialogId: `chat${s.chatId}`,
-                      messageId: Number(lastMsg.id.replace('bx-', '')) || 0,
-                      text: lastMsg.text,
+                      messageId: Number(lastCustomerMsg.id.replace('bx-', '')) || 0,
+                      text: lastCustomerMsg.text,
                       customerName: chatDialog.customer.name,
                       channelId: s.configId,
                       channelName,
@@ -543,16 +545,23 @@ export class BitrixOpenlinesSyncService {
   }
 
   async sendMessageToBitrixChat(dialogIdOrChatId: string, message: string): Promise<any> {
-    const dialogId = dialogIdOrChatId.startsWith('chat')
-      ? dialogIdOrChatId
-      : `chat${dialogIdOrChatId}`;
+    const match = dialogIdOrChatId.match(/\d+/);
+    const num = match ? parseInt(match[0], 10) : NaN;
+    const dialogId = match ? `chat${match[0]}` : dialogIdOrChatId;
+
+    if (!isNaN(num) && num > 0) {
+      try {
+        await vibeRequest('POST', '/v1/openlines/operator/answer', { chatId: num });
+      } catch (err) {
+        // ignore
+      }
+    }
 
     const res = await vibeRequest('POST', `/v1/chats/${dialogId}/messages`, {
       message,
     });
 
     // Mark current session count as increased so next sync will refresh smoothly
-    const num = parseInt(dialogId.replace('chat', ''), 10);
     if (!isNaN(num)) {
       const prev = this.knownSessionCounts.get(num) || 0;
       this.knownSessionCounts.set(num, prev + 1);

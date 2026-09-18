@@ -1,5 +1,645 @@
 [
   {
+    "id": "chat-77288",
+    "dialogId": "chat77288",
+    "customer": {
+      "name": "Tungalagtuul Kh",
+      "crmLeadId": "LEAD-59252",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 11,
+    "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Үнэ",
+    "lastMessageTime": "2026-09-18T07:22:08+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-18T07:21:57+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1117826",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20976 started",
+        "timestamp": "2026-09-18T07:21:57+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117828",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-18T07:21:57+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117830",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-18T07:21:59+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117832",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-18T07:21:59+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117834",
+        "sender": "customer",
+        "senderName": "Tungalagtuul Kh",
+        "text": "Get started",
+        "timestamp": "2026-09-18T07:21:59+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117836",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-18T07:21:59+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117838",
+        "sender": "customer",
+        "senderName": "Tungalagtuul Kh",
+        "text": "",
+        "timestamp": "2026-09-18T07:22:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117840",
+        "sender": "customer",
+        "senderName": "Tungalagtuul Kh",
+        "text": "Үнэ",
+        "timestamp": "2026-09-18T07:22:08+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-77276",
+    "dialogId": "chat77276",
+    "customer": {
+      "name": "Guest",
+      "tags": [
+        "LIVECHAT",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 1,
+    "channelName": "Бидэнтэй чатлаарай! BSB.mn",
+    "channelType": "webchat",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "тест",
+    "lastMessageTime": "2026-09-18T07:10:18+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-18T07:08:50+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1117716",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20972 started",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117718",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Data received:",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117720",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117722",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "hi",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117724",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117728",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-18T07:08:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117732",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч picked conversation",
+        "timestamp": "2026-09-18T07:09:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117734",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:09:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117736",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу! Танд юугаар туслах вэ?",
+        "timestamp": "2026-09-18T07:09:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117740",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Танд хэрхэн туслах вэ?",
+        "timestamp": "2026-09-18T07:09:04+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117746",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "hurgelt",
+        "timestamp": "2026-09-18T07:09:17+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117748",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+        "timestamp": "2026-09-18T07:09:18+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117754",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T07:09:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117756",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:09:28+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117758",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Таны асуултад хариулъя. Манай үйлчилгээний цагийн хуваарь дараах байдалтай байна:\n\n* **Харилцагчийн үйлчилгээний төв болон төв оффис:** Даваа - Баасан гаригт 09:00 - 18:30 цагийн хооронд ажиллана.\n* **БСБ-гийн бүх салбар их дэлгүүрүүд:** Даваа-Ням гаригт 10:00 - 20:00 цаг хүртэл өдөр бүр ажиллана.\n* **Онлайн дэлгүүр:** Захиалгыг 24/7 цагийн турш хүлээн авна.",
+        "timestamp": "2026-09-18T07:09:31+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117764",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "хуллү",
+        "timestamp": "2026-09-18T07:10:08+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117770",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "тест",
+        "timestamp": "2026-09-18T07:10:18+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117818",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation was removed from the agent because the agent has clocked out or not clocked in yet.",
+        "timestamp": "2026-09-18T07:19:28+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117820",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-18T07:19:28+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-77250",
+    "dialogId": "chat77250",
+    "customer": {
+      "name": "Sukh-Ochir Luvsandamdin",
+      "crmLeadId": "LEAD-59220",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 11,
+    "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "closed",
+    "priority": "normal",
+    "assignedAgentId": "6751",
+    "assignedAgentName": "Zultsetseg Erdene",
+    "assignedAgentAvatar": null,
+    "lastMessageText": "баярлалаа",
+    "lastMessageTime": "2026-09-18T06:37:13+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 0,
+    "createdAt": "2026-09-18T06:31:56+03:00",
+    "closedAt": "2026-09-18T06:37:32+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1117574",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20970 started",
+        "timestamp": "2026-09-18T06:31:56+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117576",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-18T06:31:56+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117578",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-18T06:31:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117580",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-18T06:31:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117582",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "сайн бну? mac air M1 ягаан gold өнгөтэй бгх юу? дэлгүүр дээр;",
+        "timestamp": "2026-09-18T06:31:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117584",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-18T06:31:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117586",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "сайн бну? mac air M1 ягаан gold өнгөтэй бгх юу? дэлгүүр дээр;",
+        "timestamp": "2026-09-18T06:32:14+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117590",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Zultsetseg Erdene picked conversation",
+        "timestamp": "2026-09-18T06:32:32+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117592",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "Сайн байна уу М1 macbook зарагдахгүй байгаа",
+        "timestamp": "2026-09-18T06:33:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117594",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "ямар нь бга бол?",
+        "timestamp": "2026-09-18T06:34:02+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117598",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "онлайн дээр харагдаад бсн бхгүй юу тн",
+        "timestamp": "2026-09-18T06:34:36+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117600",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "m2 chip-тэй starlight 15,3\" хороолол салбарт байна",
+        "timestamp": "2026-09-18T06:35:10+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117602",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "ямар үнэтэй вэ?",
+        "timestamp": "2026-09-18T06:35:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117604",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "75072002 дугаартай холбогдоод асуух боломжтой",
+        "timestamp": "2026-09-18T06:35:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117606",
+        "sender": "agent",
+        "senderName": "Zultsetseg Erdene",
+        "text": "99274161 худалдааны зөвлөхийн дугаар бас байна.",
+        "timestamp": "2026-09-18T06:36:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117608",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
+        "timestamp": "2026-09-18T06:37:00+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117610",
+        "sender": "customer",
+        "senderName": "Sukh-Ochir Luvsandamdin",
+        "text": "баярлалаа",
+        "timestamp": "2026-09-18T06:37:13+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117612",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
+        "timestamp": "2026-09-18T06:37:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117614",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation closed.",
+        "timestamp": "2026-09-18T06:37:32+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-71503",
+    "dialogId": "chat71503",
+    "customer": {
+      "name": "G Ka",
+      "crmLeadId": "DEAL-2337",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 31,
+    "channelName": "БСБ Мебель - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "4605",
+    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
+    "lastMessageText": "iim com hol bdgu",
+    "lastMessageTime": "2026-09-18T06:21:32+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 0,
+    "createdAt": "2026-09-18T06:19:26+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1080837",
+        "sender": "customer",
+        "senderName": "G Ka",
+        "text": "",
+        "timestamp": "2026-09-08T04:44:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1080839",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу? Та Монголын хамгийн том тавилгын их дэлгүүр БСБ Мебель-тэй холбогдлоо.",
+        "timestamp": "2026-09-08T04:44:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1080841",
+        "sender": "customer",
+        "senderName": "G Ka",
+        "text": "bnu",
+        "timestamp": "2026-09-08T04:44:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1080861",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, Бид танд удахгүй хариу илгээх болно.",
+        "timestamp": "2026-09-08T04:48:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1080907",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Энхзаяа А. picked conversation",
+        "timestamp": "2026-09-08T04:53:13+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1080909",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "hi",
+        "timestamp": "2026-09-08T04:53:15+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1081115",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "БСБ Мебель-тэй холбогдсонд баярлалаа. Өдрийг сайхан өнгөрүүлээрэй.",
+        "timestamp": "2026-09-08T05:25:22+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1081321",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation closed.",
+        "timestamp": "2026-09-08T05:36:12+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117436",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20968 started",
+        "timestamp": "2026-09-18T06:19:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117438",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-18T06:19:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117440",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Deal attached to conversation",
+        "timestamp": "2026-09-18T06:19:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117442",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the contact",
+        "timestamp": "2026-09-18T06:19:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117444",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-18T06:19:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117446",
+        "sender": "customer",
+        "senderName": "G Ka",
+        "text": "hi",
+        "timestamp": "2026-09-18T06:19:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117448",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу? Та Монголын хамгийн том тавилгын их дэлгүүр БСБ Мебель-тэй холбогдлоо.",
+        "timestamp": "2026-09-18T06:19:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117456",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Энхзаяа А. picked conversation",
+        "timestamp": "2026-09-18T06:19:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117458",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "hi",
+        "timestamp": "2026-09-18T06:19:45+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117462",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "Сайн байна уу? \nХотын төвд хамгийн өргөн сонголттой ТБД Андуудын замын эсрэг талд \"БСБ ЛАЙФСТАЙЛ\" салбар 99035283 дэлгэрэнгүй мэдээлэл аваарай \nСонголт их төв зам дагуу түгжрэл байхгүй том зогсоолтой урьдчилгаагүй хүүгүй лизингийн нөхцөлтэй. Манай салбарыг сонгон үйлчлүүлээрэй баярлалаа ☺️",
+        "timestamp": "2026-09-18T06:20:08+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117472",
+        "sender": "customer",
+        "senderName": "G Ka",
+        "text": "",
+        "timestamp": "2026-09-18T06:20:38+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117482",
+        "sender": "customer",
+        "senderName": "G Ka",
+        "text": "iim com hol bdgu",
+        "timestamp": "2026-09-18T06:21:32+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
     "id": "chat-76918",
     "dialogId": "chat76918",
     "customer": {
@@ -2586,7 +3226,7 @@
     "channelId": 9,
     "channelName": "Интернэт дэлгүүр - Instagram",
     "channelType": "instagram",
-    "status": "in_progress",
+    "status": "closed",
     "priority": "normal",
     "assignedAgentId": "3065",
     "assignedAgentName": "Номин Баттөмөр",
@@ -2596,6 +3236,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-18T04:15:02+03:00",
+    "closedAt": "2026-09-18T06:31:32+03:00",
     "botActive": false,
     "messages": [
       {
@@ -2692,6 +3333,14 @@
         "senderName": "Систем",
         "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
         "timestamp": "2026-09-18T06:01:17+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117570",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation closed.",
+        "timestamp": "2026-09-18T06:31:32+03:00",
         "status": "delivered"
       }
     ]
@@ -3750,7 +4399,7 @@
     "dialogId": "chat8049",
     "customer": {
       "name": "Linos Noto",
-      "crmLeadId": "DEAL-1719",
+      "crmLeadId": "DEAL-1727",
       "tags": [
         "FACEBOOK",
         "Битрикс24 Live"
@@ -3764,157 +4413,13 @@
     "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/2027/ff58db95aecdfa09ae61b51b5fd8f63f/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-    "lastMessageText": "4",
-    "lastMessageTime": "2026-09-16T11:11:27+03:00",
-    "lastMessageSender": "customer",
+    "lastMessageText": "test",
+    "lastMessageTime": "2026-09-18T07:13:32+03:00",
+    "lastMessageSender": "agent",
     "unreadCount": 0,
-    "createdAt": "2026-09-16T10:34:08+03:00",
+    "createdAt": "2026-09-18T07:10:33+03:00",
     "botActive": false,
     "messages": [
-      {
-        "id": "bx-1113236",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "ts",
-        "timestamp": "2026-09-16T11:06:06+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113238",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "dfsa",
-        "timestamp": "2026-09-16T11:06:12+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113256",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "хш",
-        "timestamp": "2026-09-16T11:09:01+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113270",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "№",
-        "timestamp": "2026-09-16T11:11:09+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113272",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "1",
-        "timestamp": "2026-09-16T11:11:11+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113274",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "2",
-        "timestamp": "2026-09-16T11:11:12+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113276",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "3",
-        "timestamp": "2026-09-16T11:11:13+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113278",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "4",
-        "timestamp": "2026-09-16T11:11:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113280",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "1",
-        "timestamp": "2026-09-16T11:11:22+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113282",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "2",
-        "timestamp": "2026-09-16T11:11:23+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113288",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "3",
-        "timestamp": "2026-09-16T11:11:26+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113290",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "4",
-        "timestamp": "2026-09-16T11:11:27+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113336",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation was removed from the agent because the agent has clocked out or not clocked in yet.",
-        "timestamp": "2026-09-16T11:16:02+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113338",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-16T11:16:02+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113366",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч picked conversation",
-        "timestamp": "2026-09-16T11:16:29+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113498",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation was removed from the agent because the agent has clocked out or not clocked in yet.",
-        "timestamp": "2026-09-16T11:46:03+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113500",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-16T11:46:03+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1114932",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Nomi N picked conversation",
-        "timestamp": "2026-09-17T06:59:02+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1114934",
         "sender": "system",
@@ -3929,6 +4434,150 @@
         "senderName": "Систем",
         "text": "Conversation closed.",
         "timestamp": "2026-09-17T06:59:55+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117774",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "хш",
+        "timestamp": "2026-09-18T07:10:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117776",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20974 started",
+        "timestamp": "2026-09-18T07:10:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117778",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч picked conversation",
+        "timestamp": "2026-09-18T07:10:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117780",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-18T07:10:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117782",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Deal attached to conversation",
+        "timestamp": "2026-09-18T07:10:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117784",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Order attached to chat",
+        "timestamp": "2026-09-18T07:10:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117786",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the contact",
+        "timestamp": "2026-09-18T07:10:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117788",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:10:53+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117790",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+        "timestamp": "2026-09-18T07:10:55+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117792",
+        "sender": "customer",
+        "senderName": "Linos Noto",
+        "text": "hi",
+        "timestamp": "2026-09-18T07:11:20+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117794",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:11:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117796",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу! Танд юугаар туслах вэ?",
+        "timestamp": "2026-09-18T07:11:23+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117800",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "hi",
+        "timestamp": "2026-09-18T07:11:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117802",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:12:01+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117804",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T07:12:31+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117806",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "linos",
+        "timestamp": "2026-09-18T07:13:12+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117810",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "linos",
+        "timestamp": "2026-09-18T07:13:30+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117812",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "test",
+        "timestamp": "2026-09-18T07:13:32+03:00",
         "status": "delivered"
       }
     ]
@@ -5577,98 +6226,19 @@
     "channelId": 1,
     "channelName": "Бидэнтэй чатлаарай! BSB.mn",
     "channelType": "webchat",
-    "status": "bot",
+    "status": "closed",
     "priority": "normal",
-    "assignedAgentId": null,
-    "assignedAgentName": null,
-    "assignedAgentAvatar": null,
-    "lastMessageText": "Сайн байна уу? Танд энэ өдрийн мэнд хүргэе.\n\nТанай хүргэлтийн нөхцөлийн талаар мэдээлэл өгөхөд:\n\n* **Улаанбаатар хот дотор:** 50,000₮-с дээш худалдан авалтад хүргэлт үнэгүй бөгөөд 24-48 цагийн дотор таны гэрийн хаягаар хүргэнэ. Мөн тавилга, цахилгаан барааг мэргэжлийн баг угсарч, суурилуулж өгөх үйлчилгээтэй.\n* **Орон нутагт:** Орон нутгийн унаанд 24 цагийн дотор найдвартай хүргэж өгнө.\n* **Захиалга хянах:** Та захиалгын явцыг мессежээр ирсэн линк болон утасны дугаараараа хянаж болно.\n\nТанд өөр асуух зүйл байвал би туслахад бэлэн байна.",
-    "lastMessageTime": "2026-09-18T03:09:36.484Z",
+    "assignedAgentId": "15",
+    "assignedAgentName": "Цогтгэрэл Ч",
+    "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/2027/ff58db95aecdfa09ae61b51b5fd8f63f/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
+    "lastMessageText": "Улаанбаатар хот дотор 50,000₮-с дээш худалдан авалт хийсэн тохиолдолд хүргэлт ҮНЭГҮЙ байна. Түүнээс доош худалдан авалт хийсэн эсвэл бусад нөхцөл болох эсэхийг мэдэх бол бидэнтэй холбогдоно уу.",
+    "lastMessageTime": "2026-09-18T06:28:39+03:00",
     "lastMessageSender": "bot",
-    "unreadCount": 1,
+    "unreadCount": 0,
     "createdAt": "2026-09-18T05:21:42+03:00",
+    "closedAt": "2026-09-18T07:28:40+03:00",
     "botActive": true,
     "messages": [
-      {
-        "id": "bx-1112170",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "hi test",
-        "timestamp": "2026-09-16T07:19:19+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112174",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "jkfdasjklfdsa",
-        "timestamp": "2026-09-16T07:19:25+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112180",
-        "sender": "customer",
-        "senderName": "Guest",
-        "text": "jkdflas",
-        "timestamp": "2026-09-16T07:19:28+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112182",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "fdsa",
-        "timestamp": "2026-09-16T07:19:46+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112188",
-        "sender": "customer",
-        "senderName": "Guest",
-        "text": "fdsa",
-        "timestamp": "2026-09-16T07:19:50+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112196",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
-        "timestamp": "2026-09-16T07:22:04+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112320",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation closed.",
-        "timestamp": "2026-09-16T07:52:58+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1117036",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation #20964 started",
-        "timestamp": "2026-09-18T05:21:42+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1117038",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Data received:",
-        "timestamp": "2026-09-18T05:21:42+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1117040",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-18T05:21:42+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1117042",
         "sender": "customer",
@@ -5758,46 +6328,75 @@
         "status": "delivered"
       },
       {
-        "id": "bot-msg-1789700956367",
-        "sender": "bot",
-        "senderName": "BSB AI Туслах",
-        "text": "Таны асуултад хариулж, манай компанийн ажлын цагийн хуваарийг хүргэж байна:\n\n*   **Харилцагчийн үйлчилгээний төв болон төв оффис:** Даваа - Баасан гаригт 09:00 - 18:30 цагийн хооронд ажиллана.\n*   **БСБ-гийн бүх салбар их дэлгүүрүүд:** Даваа - Ням гаригт 10:00 - 20:00 цаг хүртэл өдөр бүр ажиллана.\n*   **Онлайн дэлгүүр:** Захиалгыг 24/7 цагийн турш хүлээн авна.",
-        "timestamp": "2026-09-18T03:09:16.367Z",
-        "keyboard": [
-          {
-            "text": "Оператор дуудах",
-            "action": "/operator"
-          }
-        ],
+        "id": "bx-1117470",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T06:20:11+03:00",
         "status": "delivered"
       },
       {
-        "id": "sys-1789700967200-353",
-        "sender": "system",
-        "text": "🤖 Энэ чатад BSB AI Туслах амжилттай холбогдлоо. Харилцагчийн асуултад бот хариулна.",
-        "timestamp": "2026-09-18T03:09:27.200Z"
-      },
-      {
-        "id": "msg-1789700972223-350",
+        "id": "bx-1117480",
         "sender": "customer",
-        "senderName": "Хэрэглэгч",
-        "text": "Сайн байна уу, танай хүргэлтийн нөхцөл ямар байдаг вэ?",
-        "timestamp": "2026-09-18T03:09:32.223Z",
-        "isInternalNote": false,
-        "status": "sent"
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T06:21:12+03:00",
+        "status": "delivered"
       },
       {
-        "id": "bot-msg-1789700976484",
+        "id": "bx-1117490",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "хариу",
+        "timestamp": "2026-09-18T06:22:18+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117506",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч picked conversation",
+        "timestamp": "2026-09-18T06:24:47+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117508",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "Сайн байна уу? БСБ харилцагчийн үйлчилгээ.",
+        "timestamp": "2026-09-18T06:24:55+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117514",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T06:25:19+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117518",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "Сайн байна уу? Манай харилцагчийн үйлчилгээний төв Даваа - Баасан гаригт 09:00 - 18:30 цаг хүртэл, БСБ-гийн салбар их дэлгүүрүүд өдөр бүр 10:00 - 20:00 цагийн хооронд ажиллаж байна. Онлайн дэлгүүрийн захиалгыг 24/7 цагийн турш хүлээн авна.",
+        "timestamp": "2026-09-18T06:26:49+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117538",
         "sender": "bot",
         "senderName": "BSB AI Туслах",
-        "text": "Сайн байна уу? Танд энэ өдрийн мэнд хүргэе.\n\nТанай хүргэлтийн нөхцөлийн талаар мэдээлэл өгөхөд:\n\n* **Улаанбаатар хот дотор:** 50,000₮-с дээш худалдан авалтад хүргэлт үнэгүй бөгөөд 24-48 цагийн дотор таны гэрийн хаягаар хүргэнэ. Мөн тавилга, цахилгаан барааг мэргэжлийн баг угсарч, суурилуулж өгөх үйлчилгээтэй.\n* **Орон нутагт:** Орон нутгийн унаанд 24 цагийн дотор найдвартай хүргэж өгнө.\n* **Захиалга хянах:** Та захиалгын явцыг мессежээр ирсэн линк болон утасны дугаараараа хянаж болно.\n\nТанд өөр асуух зүйл байвал би туслахад бэлэн байна.",
-        "timestamp": "2026-09-18T03:09:36.484Z",
-        "keyboard": [
-          {
-            "text": "Оператор дуудах",
-            "action": "/operator"
-          }
-        ],
+        "text": "Улаанбаатар хот дотор 50,000₮-с дээш худалдан авалт хийсэн тохиолдолд хүргэлт ҮНЭГҮЙ байна. Түүнээс доош худалдан авалт хийсэн эсвэл бусад нөхцөл болох эсэхийг мэдэх бол бидэнтэй холбогдоно уу.",
+        "timestamp": "2026-09-18T06:28:39+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117870",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Session closed automatically",
+        "timestamp": "2026-09-18T07:28:40+03:00",
         "status": "delivered"
       }
     ]
@@ -6379,7 +6978,7 @@
     "dialogId": "chat76294",
     "customer": {
       "name": "Narmandakh Namkhainyambuu",
-      "crmLeadId": "LEAD-59158",
+      "crmLeadId": "LEAD-59196",
       "tags": [
         "FACEBOOK",
         "Битрикс24 Live"
@@ -6390,41 +6989,17 @@
     "channelType": "facebook",
     "status": "bot",
     "priority": "normal",
-    "assignedAgentId": "6751",
+    "assignedAgentId": "15",
     "assignedAgentName": "Zultsetseg Erdene",
     "assignedAgentAvatar": null,
-    "lastMessageText": "Бүх цахилгаан бараа, компьютер, тавилгад үйлдвэрийн албан ёсны 1-ээс 3 хүртэлх жилийн баталгаа олгогдоно. Баталгаат хугацаанд манай албан ёсны Сервис төв үнэ төлбөргүй үйлчилнэ.",
-    "lastMessageTime": "2026-09-18T03:10:15.705Z",
+    "lastMessageText": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+    "lastMessageTime": "2026-09-18T06:28:06+03:00",
     "lastMessageSender": "bot",
     "unreadCount": 0,
-    "createdAt": "2026-09-18T02:22:16+03:00",
+    "createdAt": "2026-09-18T05:48:49+03:00",
     "reopenedAt": "2026-09-18T02:49:21.697Z",
     "botActive": true,
     "messages": [
-      {
-        "id": "bx-1116752",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation #20956 started",
-        "timestamp": "2026-09-18T02:22:17+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1116754",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "This Open Channel limits agent's response time. Learn more in this article.",
-        "timestamp": "2026-09-18T02:22:17+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1116756",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "A new lead was created",
-        "timestamp": "2026-09-18T02:22:20+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1116758",
         "sender": "system",
@@ -6570,17 +7145,27 @@
         "status": "delivered"
       },
       {
-        "id": "bot-msg-1789701015705",
+        "id": "bx-1117532",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч picked conversation",
+        "timestamp": "2026-09-18T06:28:04+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117534",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
+        "timestamp": "2026-09-18T06:28:05+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117536",
         "sender": "bot",
         "senderName": "BSB AI Туслах",
-        "text": "Бүх цахилгаан бараа, компьютер, тавилгад үйлдвэрийн албан ёсны 1-ээс 3 хүртэлх жилийн баталгаа олгогдоно. Баталгаат хугацаанд манай албан ёсны Сервис төв үнэ төлбөргүй үйлчилнэ.",
-        "timestamp": "2026-09-18T03:10:15.705Z",
-        "keyboard": [
-          {
-            "text": "Оператор дуудах",
-            "action": "/operator"
-          }
-        ],
+        "text": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+        "timestamp": "2026-09-18T06:28:06+03:00",
         "status": "delivered"
       }
     ]

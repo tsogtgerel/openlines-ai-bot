@@ -914,15 +914,12 @@ async function startServer() {
 
       // Хэрэв оператор бодит харилцагчид бичиж байгаа бол Bitrix24 чат руу илгээнэ
       if (sender === 'agent' && !isInternalNote) {
-        const dialogId = outcome.dialog.dialogId;
-        // Жишээ: "chat75344" хэлбэрийн ID байвал бодит Bitrix чат мөн
-        if (dialogId && dialogId.startsWith('chat') && !dialogId.startsWith('chat-')) {
+        const dialogId = outcome.dialog.dialogId || outcome.dialog.id;
+        const match = dialogId ? dialogId.match(/\d+/) : null;
+        if (match) {
           try {
-            await bitrixOpenlinesSync.sendMessageToBitrixChat(dialogId, text.trim());
-            const numericChatId = parseInt(dialogId.replace('chat', ''), 10);
-            if (!isNaN(numericChatId)) {
-              await bitrixOpenlinesSync.answerOperatorChat(numericChatId);
-            }
+            const numericChatId = parseInt(match[0], 10);
+            await bitrixOpenlinesSync.sendMessageToBitrixChat(`chat${numericChatId}`, text.trim());
           } catch (sendErr: any) {
             console.warn('[Server] Could not send message to Bitrix Chat:', sendErr.message);
           }
@@ -944,11 +941,12 @@ async function startServer() {
         if (shouldBotReply && dialog.status !== 'closed') {
           setTimeout(async () => {
             try {
-              if (dialog.dialogId && dialog.dialogId.startsWith('chat') && !dialog.dialogId.startsWith('chat-')) {
-                const numericChatId = parseInt(dialog.dialogId.replace('chat', ''), 10);
+              const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
+              if (match) {
+                const numericChatId = parseInt(match[0], 10);
                 await botWorker.processOpenlineCustomerMessage({
                   chatId: numericChatId || 0,
-                  dialogId: dialog.dialogId,
+                  dialogId: `chat${numericChatId}`,
                   messageId: outcome.message.id,
                   text: text.trim(),
                   customerName: dialog.customer.name,
@@ -1087,17 +1085,19 @@ async function startServer() {
   app.patch('/api/chats/:id', async (req, res) => {
     try {
       const updated = chatManager.updateDialog(req.params.id, req.body);
-      if (req.body.status === 'in_progress' && updated.dialogId?.startsWith('chat')) {
-        const numId = parseInt(updated.dialogId.replace('chat', ''), 10);
-        if (!isNaN(numId)) {
+      const match = (updated.dialogId || updated.id)?.match(/\d+/);
+      if (req.body.status === 'in_progress' && match) {
+        const numId = parseInt(match[0], 10);
+        if (!isNaN(numId) && numId > 0) {
           await bitrixOpenlinesSync.answerOperatorChat(numId);
         }
       }
 
       // Хэрэв оператор өөртөө авсан эсвэл in_progress болсон бол ботыг чатнаас салгах (leave)
       if (req.body.assignedAgentId || req.body.status === 'in_progress') {
-        if (updated.dialogId) {
-          await botWorker.leaveChat(updated.dialogId);
+        const targetId = updated.dialogId || updated.id;
+        if (targetId) {
+          await botWorker.leaveChat(targetId);
         }
       }
 
@@ -1121,33 +1121,33 @@ async function startServer() {
         await botWorker.rejoinChat(dialog.dialogId);
       }
 
-      // Хэрэв харилцагчийн хамгийн сүүлийн мессеж хариултгүй хүлээгдэж байгаа бол шууд AI хариултыг дуудах
-      const visibleMsgs = dialog.messages.filter((m) => m.sender !== 'system');
-      const lastMsg = visibleMsgs[visibleMsgs.length - 1];
-      if (lastMsg && lastMsg.sender === 'customer' && dialog.status !== 'closed') {
-        const hasBotReplied = visibleMsgs.some(
-          (m) =>
-            m.sender === 'bot' &&
-            new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+      // Хэрэв харилцагчийн асуулт хариултгүй хүлээгдэж байгаа бол шууд AI хариултыг дуудах
+      const customerMsgs = dialog.messages.filter((m) => m.sender === 'customer');
+      const lastCustomerMsg = customerMsgs[customerMsgs.length - 1];
+      if (lastCustomerMsg && dialog.status !== 'closed') {
+        const customerTime = new Date(lastCustomerMsg.timestamp).getTime();
+        const hasBotReplied = dialog.messages.some(
+          (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= customerTime
         );
 
         if (!hasBotReplied) {
           setTimeout(async () => {
             try {
-              if (dialog.dialogId && dialog.dialogId.startsWith('chat') && !dialog.dialogId.startsWith('chat-')) {
-                const numericChatId = parseInt(dialog.dialogId.replace('chat', ''), 10);
+              const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
+              if (match) {
+                const numericChatId = parseInt(match[0], 10);
                 await botWorker.processOpenlineCustomerMessage({
                   chatId: numericChatId || 0,
-                  dialogId: dialog.dialogId,
-                  messageId: lastMsg.id,
-                  text: lastMsg.text,
+                  dialogId: `chat${numericChatId}`,
+                  messageId: lastCustomerMsg.id,
+                  text: lastCustomerMsg.text,
                   customerName: dialog.customer.name,
                   channelId: Number(dialog.channelId) || 0,
                   channelName: dialog.channelName || 'Суваг',
                   channelType: dialog.channelType,
                 });
               } else {
-                await botWorker.processMessage(dialog.id, lastMsg.text);
+                await botWorker.processMessage(dialog.id, lastCustomerMsg.text);
               }
             } catch (err: any) {
               console.error('[Server] Bot response error upon connect-bot:', err.message);

@@ -635,8 +635,13 @@ export default function App() {
   ];
 
   // User requirement: "Agent-ууд Live chat-с бусад цэсийг харах шаардлагагүй"
+  // "agent, ахлахад тест чат товч хэрэггүй ... шаардлагагүй илүү товч эсвэл мэдээллүүд"
+  const isSupervisorRole = currentAgent?.accessRole === 'supervisor';
+  const isAdminRole = currentAgent?.accessRole === 'admin';
   const navItems = isAgentRole
     ? allNavItems.filter((item) => item.id === 'chat')
+    : isSupervisorRole
+    ? allNavItems.filter((item) => item.id !== 'sandbox' && item.id !== 'deploy')
     : allNavItems;
 
   return (
@@ -657,7 +662,7 @@ export default function App() {
           onUnbindLine={handleUnbindLine}
           onNavigateToChannels={() => setActiveTab('channels')}
           isAgentRole={isAgentRole}
-          onOpenRedeploy={() => setShowRedeployModal(true)}
+          onOpenRedeploy={isAdminRole ? () => setShowRedeployModal(true) : undefined}
           onOpenMobileGuide={() => setShowMobileModal(true)}
         />
       )}
@@ -726,15 +731,15 @@ export default function App() {
             </nav>
 
             {/* Right quick actions: Mobile guide, View switcher, Permissions, Redeploy */}
-            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 py-1 pl-2">
+            <div className="flex items-center gap-1 sm:gap-2 shrink-0 py-1 pl-1 sm:pl-2">
               <button
                 id="subnav-mobile-btn"
                 onClick={() => setShowMobileModal(true)}
-                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                className="hidden md:inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 sm:py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
                 title="Битрикс24 гар утасны апп-д нээх заавар & QR код"
               >
                 <Smartphone className="w-3.5 h-3.5 text-indigo-600" />
-                <span className="hidden sm:inline">Гар утас</span>
+                <span>Гар утас</span>
               </button>
               <button
                 id="subnav-agent-view-btn"
@@ -742,28 +747,31 @@ export default function App() {
                   const opAgent = team.find((a) => a.accessRole === 'agent');
                   if (opAgent) handleSwitchAgent(opAgent.id);
                 }}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition shrink-0 shadow-xs"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 transition shrink-0 shadow-xs"
                 title="Шууд операторын ажлын байр (Live Chat) харагдац руу шилжих"
               >
-                <Headphones className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Операторын харагдац (Agent View)</span>
+                <Headphones className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span className="hidden sm:inline">Операторын харагдац (Agent View)</span>
+                <span className="sm:hidden">Оператор</span>
               </button>
-              <button
-                id="subnav-redeploy-btn"
-                onClick={() => setShowRedeployModal(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
-                title="Код өөрчлөгдсөн тохиолдолд дахин Build & Deploy хийх"
-              >
-                <Rocket className="w-3.5 h-3.5 text-blue-600" />
-                <span className="hidden sm:inline">Redeploy</span>
-              </button>
+              {isAdminRole && (
+                <button
+                  id="subnav-redeploy-btn"
+                  onClick={() => setShowRedeployModal(true)}
+                  className="hidden md:inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 transition shrink-0"
+                  title="Код өөрчлөгдсөн тохиолдолд дахин Build & Deploy хийх"
+                >
+                  <Rocket className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Redeploy</span>
+                </button>
+              )}
               <button
                 id="subnav-permissions-btn"
                 onClick={() => setShowPermissionsModal(true)}
-                className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
+                className="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 text-xs font-semibold rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition shrink-0"
                 title="Операторуудын хандах эрх, хариуцсан сувгийн тохиргоо"
               >
-                <Shield className="w-3.5 h-3.5 text-indigo-600" />
+                <Shield className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
                 <span className="hidden sm:inline">Эрхийн тохиргоо</span>
               </button>
             </div>

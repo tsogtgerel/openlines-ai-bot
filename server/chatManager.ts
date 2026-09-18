@@ -674,7 +674,15 @@ export class ChatManagerService extends EventEmitter {
   }
 
   getDialogById(id: string): ChatDialog | undefined {
-    return this.dialogs.find((d) => d.id === id || d.dialogId === id);
+    if (!id) return undefined;
+    const match = id.match(/\d+/);
+    const num = match ? match[0] : null;
+    return this.dialogs.find(
+      (d) =>
+        d.id === id ||
+        d.dialogId === id ||
+        (num && (d.id === `chat-${num}` || d.dialogId === `chat${num}`))
+    );
   }
 
   sendMessage(

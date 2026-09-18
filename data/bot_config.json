@@ -5,7 +5,7 @@
   "selectedLineId": null,
   "selectedLineName": "",
   "isPollingActive": true,
-  "currentOffset": 21,
+  "currentOffset": 23,
   "tone": "professional",
   "language": "mn",
   "handoffThreshold": 0.2,
@@ -29,5 +29,5 @@
   ],
   "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.",
   "model": "bitrix/bitrixgpt-5.5",
-  "botAssignmentMode": "manual_only"
+  "botAssignmentMode": "all_chats"
 }

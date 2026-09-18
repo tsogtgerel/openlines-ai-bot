@@ -258,7 +258,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                 </div>
                 <div className="text-left min-w-0">
                   <div className="font-semibold text-white leading-tight flex items-center gap-1">
-                    <span className="truncate max-w-[85px] sm:max-w-[130px]">{currentAgent.name}</span>
+                    <span className="truncate max-w-[70px] sm:max-w-[130px]">{currentAgent.name}</span>
                     <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                   </div>
                 </div>
@@ -325,7 +325,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                 className="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/70 hover:bg-slate-800 border border-slate-700 font-medium transition text-[11px]"
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${statusConfig[currentAgent.status]?.color || 'bg-emerald-500'}`} />
-                <span className="text-slate-200">
+                <span className="text-slate-200 truncate max-w-[55px] sm:max-w-none">
                   {(statusConfig[currentAgent.status]?.label || 'Ажиллаж буй').split(' ')[0]}
                 </span>
                 <ChevronDown className="w-3 h-3 text-slate-400 ml-0.5 shrink-0" />
@@ -428,15 +428,6 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
 
           {/* Right: Actions, Presence, Mobile guide & Admin Switcher */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Mobile Personal Performance Summary for compact view */}
-            <div className="flex md:hidden items-center shrink-0">
-              <AgentPersonalPerformanceSummary
-                currentAgent={currentAgent}
-                performance={effectivePerformance}
-                isClockedIn={isClockedIn}
-              />
-            </div>
-
             {/* Mobile timer if screen is smaller than md */}
             <div className="flex sm:hidden items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 font-mono text-[10px] text-emerald-400">
               <Clock className="w-3 h-3" />
@@ -536,8 +527,8 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
         /* ============================================================
            ADMIN / SUPERVISOR VIEW: Standard WorktimeBar
            ============================================================ */
-        <div className="bg-slate-900 border-b border-slate-800 text-xs text-slate-200 px-3 sm:px-5 py-2">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-3">
+        <div className="bg-slate-900 border-b border-slate-800 text-xs text-slate-200 px-2.5 sm:px-5 py-1.5 sm:py-2">
+          <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-1.5 sm:gap-3">
             {/* Top / Left Section: Agent info, status */}
             <div className="flex items-center justify-between md:justify-start gap-2 sm:gap-3">
               <div className="relative">

@@ -139,7 +139,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [showKBModal, setShowKBModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
-  const [showSimulateModal, setShowSimulateModal] = useState(false);
   const [closeReason, setCloseReason] = useState('Амжилттай шийдвэрлэсэн');
 
   // Bitrix24 CRM Lead / Deal actions on Close
@@ -221,13 +220,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const typingHeartbeatTimeoutRef = useRef<any>(null);
   const lastTypingSentRef = useRef<number>(0);
 
-  // Simulation form state
-  const [simCustomerName, setSimCustomerName] = useState('Баярмаа Энх');
-  const [simMessage, setSimMessage] = useState('Танайд 65 инчийн Samsung зурагт бэлэн байгаа юу, үнэ нь хэд вэ?');
-  const [simChannelType, setSimChannelType] = useState<ChatDialog['channelType']>('facebook');
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
   const prevMessageCountRef = useRef<number>(0);
   const prevLastMessageKeyRef = useRef<string | null>(null);
   const prevDialogIdRef = useRef<string | null>(null);
@@ -872,25 +867,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Simulate customer typing for testing
-  const handleSimulateCustomerTyping = async () => {
-    if (!selectedDialog) return;
-    try {
-      unlockAudioContext();
-      await fetch(`/api/chats/${selectedDialog.id}/simulate-typing`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: selectedDialog.customer?.name || 'Харилцагч',
-          role: 'customer',
-          durationMs: 4500,
-        }),
-      });
-    } catch (e) {
-      console.error('Failed to simulate customer typing:', e);
-    }
-  };
-
   // 4. Prioritize active chat on server and fetch immediate state once on chat switch
   useEffect(() => {
     if (!selectedDialogId) return;
@@ -1075,16 +1051,35 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   // Assign to current agent
   const handleTakeDialog = async () => {
-    if (!selectedDialog || !currentAgent) return;
+    if (!selectedDialog) return;
     setSendErrorMessage(null);
+
+    // Fallback if currentAgent is not yet available in props
+    let agent = currentAgent;
+    if (!agent) {
+      try {
+        const wt = await fetch('/api/worktime/status').then((r) => r.json());
+        if (wt.success && wt.data?.currentAgent) {
+          agent = wt.data.currentAgent;
+        }
+      } catch (err) {
+        console.error('Failed to get currentAgent:', err);
+      }
+    }
+
+    if (!agent) {
+      setSendErrorMessage('Операторын мэдээлэл олдсонгүй. Дахин нэвтэрнэ үү.');
+      return;
+    }
+
     try {
       const res = await fetch(`/api/chats/${selectedDialog.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          assignedAgentId: currentAgent.id,
-          assignedAgentName: currentAgent.name,
-          assignedAgentAvatar: currentAgent.avatar,
+          assignedAgentId: agent.id,
+          assignedAgentName: agent.name,
+          assignedAgentAvatar: agent.avatar,
           status: 'in_progress',
         }),
       }).then((r) => r.json());
@@ -1092,6 +1087,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (res.success) {
         setSelectedDialog(res.data);
         setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+        setTimeout(() => {
+          chatInputRef.current?.focus();
+        }, 100);
       }
     } catch (e) {
       console.error('Failed to take dialog:', e);
@@ -1349,34 +1347,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       console.error('Failed to get AI suggestion:', err);
     } finally {
       setIsSuggestingAI(false);
-    }
-  };
-
-  // Simulate Incoming Customer Query
-  const handleSimulateIncoming = async () => {
-    if (!simCustomerName || !simMessage) return;
-    try {
-      const lineObj = openLines?.find((l) => l.name.toLowerCase().includes(simChannelType)) || openLines?.[0];
-      const res = await fetch('/api/chats/simulate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          customerName: simCustomerName,
-          message: simMessage,
-          channelType: simChannelType,
-          channelName: lineObj ? lineObj.name : `БСБ - ${simChannelType.toUpperCase()}`,
-          channelId: lineObj ? lineObj.id : 39,
-        }),
-      }).then((r) => r.json());
-
-      if (res.success && res.data) {
-        setDialogs((prev) => [res.data, ...prev]);
-        setSelectedDialogId(res.data.id);
-        setSelectedDialog(res.data);
-        setShowSimulateModal(false);
-      }
-    } catch (err) {
-      console.error('Failed to simulate customer message:', err);
     }
   };
 
@@ -1649,16 +1619,16 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             COLUMN 1: CHATS LIST & FILTERS (Left)
            ======================================================== */}
         <div className={`${mobileView === 'list' ? 'flex' : 'hidden'} lg:flex w-full lg:w-80 xl:w-96 border-r border-slate-200 flex-col bg-slate-50/50 shrink-0 min-h-0 h-full overflow-hidden`}>
-          {/* Top Bar: Title & New Simulation */}
-          <div className="p-2.5 sm:p-3.5 border-b border-slate-200 bg-white flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+          {/* Top Bar: Title & Controls */}
+          <div className="p-2.5 sm:p-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2 min-w-0">
+            <div className="flex items-center gap-1.5 min-w-0">
               <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
-              <h2 className="font-bold text-slate-900 text-xs sm:text-sm truncate">Бүх сувгийн чат</h2>
-              <span className="px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-semibold shrink-0">
+              <h2 className="font-bold text-slate-900 text-xs sm:text-sm truncate">Бүх чат</h2>
+              <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-semibold shrink-0">
                 {dialogs.length}
               </span>
               <span
-                className={`flex items-center gap-1 text-[10px] sm:text-[11px] font-medium px-1.5 sm:px-2 py-0.5 rounded-full border shrink-0 transition-colors ${
+                className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border shrink-0 transition-colors ${
                   isRealtimeConnected
                     ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
                     : 'text-amber-700 bg-amber-50 border-amber-200'
@@ -1670,7 +1640,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 }
               >
                 <span className={`w-1.5 h-1.5 rounded-full ${isRealtimeConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
-                {isRealtimeConnected ? 'Real-time' : 'Delta sync'}
+                <span className="hidden sm:inline">{isRealtimeConnected ? 'Real-time' : 'Delta'}</span>
               </span>
             </div>
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
@@ -1702,16 +1672,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 <RefreshCw className={`w-3.5 h-3.5 ${isSyncingBitrix ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">{isSyncingBitrix ? 'Синк...' : 'Битрикс24 синк'}</span>
                 <span className="sm:hidden">{isSyncingBitrix ? '...' : 'Синк'}</span>
-              </button>
-              <button
-                id="simulate-customer-chat-btn"
-                onClick={() => setShowSimulateModal(true)}
-                className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200 transition"
-                title="Туршилтын шинэ хэрэглэгчийн чат илгээх"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Шинэ тест чат</span>
-                <span className="sm:hidden">Тест</span>
               </button>
             </div>
           </div>
@@ -2240,13 +2200,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         {selectedDialog ? (
           <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0 bg-slate-50 min-h-0 h-full overflow-hidden`}>
             {/* Header */}
-            <div className="p-2.5 sm:p-3.5 px-3 sm:px-5 border-b border-slate-200 bg-white flex flex-wrap items-center justify-between gap-2 sm:gap-3 shadow-xs shrink-0">
-              <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="p-2 sm:p-3.5 px-2.5 sm:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-1.5 sm:gap-3 shadow-xs shrink-0">
+              <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
                 {/* Back button for mobile view */}
                 <button
                   type="button"
                   onClick={() => setMobileView('list')}
-                  className="lg:hidden p-1.5 -ml-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
+                  className="lg:hidden p-1.5 -ml-0.5 sm:-ml-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
                   title="Чатын жагсаалт руу буцах"
                 >
                   <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -2272,13 +2232,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
                   </div>
                   <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-white ${getChannelBadge(selectedDialog.channelType).dot}`}
+                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-white ${getChannelBadge(selectedDialog.channelType).dot}`}
                   />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate">{selectedDialog.customer.name}</h3>
-                    <span className={`px-1.5 sm:px-2 py-0.5 text-[9px] sm:text-[10px] font-semibold rounded-full border shrink-0 ${getStatusBadge(selectedDialog.status).color}`}>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[100px] xs:max-w-[140px] sm:max-w-none">
+                      {selectedDialog.customer.name}
+                    </h3>
+                    <span className={`px-1.5 sm:px-2 py-0.2 sm:py-0.5 text-[8px] sm:text-[10px] font-semibold rounded-full border shrink-0 ${getStatusBadge(selectedDialog.status).color}`}>
                       {getStatusBadge(selectedDialog.status).label}
                     </span>
                     {selectedDialog.status === 'in_progress' && (
@@ -2287,14 +2249,14 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                         title="Оператор чатыг өөртөө авсан тул бот салсан"
                       >
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span>Бот салсан (Оператор хариуцаж буй)</span>
+                        <span>Бот салсан</span>
                       </span>
                     )}
                   </div>
-                  <div className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1.5 sm:gap-2 flex-wrap truncate">
-                    <span className="truncate">{selectedDialog.channelName}</span>
+                  <div className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1 sm:gap-2 truncate">
+                    <span className="truncate max-w-[90px] sm:max-w-none">{selectedDialog.channelName}</span>
                     <span>•</span>
-                    <span className="font-mono text-[10px] sm:text-[11px] text-slate-400">ID: {selectedDialog.dialogId}</span>
+                    <span className="font-mono text-[9px] sm:text-[11px] text-slate-400">ID: {selectedDialog.dialogId}</span>
                     {(() => {
                       const line = openLines.find(
                         (l) => String(l.id) === selectedDialog.channelId || l.name === selectedDialog.channelName
@@ -2303,7 +2265,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       if (agents.length === 0) return null;
                       return (
                         <>
-                          <span>•</span>
+                          <span className="hidden sm:inline">•</span>
                           <span
                             className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200"
                             title={`Битрикс24 дээр энэ сувагт оноогдсон операторууд:\n${agents.map((a) => `• ${a.fullName} (${a.workPosition}) - ${a.status}`).join('\n')}`}
@@ -2318,88 +2280,48 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 </div>
               </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {/* Mobile / Tablet CRM details trigger button */}
+              {/* Mobile Quick Actions (Single row, compact) */}
+              <div className="flex sm:hidden items-center gap-1 shrink-0">
+                {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
+                  <button
+                    id="mobile-quick-take-btn"
+                    onClick={handleTakeDialog}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95"
+                    title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
+                  >
+                    <UserCheck className="w-3 h-3" />
+                    <span>Авах</span>
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowMobileDetails(true)}
-                  className="xl:hidden inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 sm:py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition"
-                  title="Харилцагчийн CRM дэлгэрэнгүй мэдээлэл харах"
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition"
+                  title="Харилцагчийн CRM мэдээлэл харах"
                 >
                   <User className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">CRM мэдээлэл</span>
-                  <span className="sm:hidden">CRM</span>
+                  <span>CRM</span>
                 </button>
-                {/* Channel-level Bot Bind/Disconnect (only when in all_chats mode) */}
-                {botConfig?.botAssignmentMode === 'all_chats' && (() => {
-                  const channelLine = openLines.find(
-                    (l) => String(l.id) === selectedDialog.channelId || l.name === selectedDialog.channelName
-                  );
-                  const hasWelcomeBot =
-                    channelLine &&
-                    (channelLine.welcomeBotEnable === true ||
-                      channelLine.welcomeBotEnable === 'Y' ||
-                      (channelLine.welcomeBotId && Number(channelLine.welcomeBotId) > 0));
-                  const isBoundToOurBot =
-                    (hasWelcomeBot && String(channelLine?.welcomeBotId) === String(botConfig?.botId)) ||
-                    botConfig?.selectedLineId === Number(selectedDialog.channelId);
+                <button
+                  onClick={() => handleToggleStar(selectedDialog.id, Boolean(selectedDialog.isStarred))}
+                  className={`p-1 rounded-lg border transition ${
+                    selectedDialog.isStarred
+                      ? 'bg-amber-50 border-amber-300 text-amber-500'
+                      : 'bg-white border-slate-200 text-slate-400'
+                  }`}
+                >
+                  <Star className={`w-3.5 h-3.5 ${selectedDialog.isStarred ? 'fill-current' : ''}`} />
+                </button>
+              </div>
 
-                  if (isBoundToOurBot) {
-                    return (
-                      onUnbindLine && (
-                        <button
-                          id="chat-header-unbind-bot-btn"
-                          type="button"
-                          onClick={async () => {
-                            setIsBotActionLoading(true);
-                            try {
-                              await onUnbindLine(Number(selectedDialog.channelId));
-                            } finally {
-                              setIsBotActionLoading(false);
-                            }
-                          }}
-                          disabled={isBotActionLoading}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
-                          title={`'${selectedDialog.channelName}' сувгаас BSB AI ботыг салгах`}
-                        >
-                          <Unlink className="w-3.5 h-3.5 text-rose-600" />
-                          <span>{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
-                        </button>
-                      )
-                    );
-                  }
-
-                  return (
-                    onBindLine && (
-                      <button
-                        id="chat-header-bind-bot-btn"
-                        type="button"
-                        onClick={async () => {
-                          setIsBotActionLoading(true);
-                          try {
-                            await onBindLine(Number(selectedDialog.channelId), selectedDialog.channelName);
-                          } finally {
-                            setIsBotActionLoading(false);
-                          }
-                        }}
-                        disabled={isBotActionLoading}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
-                        title={`'${selectedDialog.channelName}' сувагт BSB AI ботыг холбох`}
-                      >
-                        <Bot className="w-3.5 h-3.5 text-purple-600" />
-                        <span>{isBotActionLoading ? 'Холбож байна...' : 'Боттой холбох'}</span>
-                      </button>
-                    )
-                  );
-                })()}
-
-                {/* Take Dialog button */}
+              {/* Desktop Action Buttons */}
+              <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                {/* Take Dialog button (Single primary button for claiming the chat) */}
                 {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
                   <button
                     id="take-dialog-btn"
                     onClick={handleTakeDialog}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-sm"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-sm active:scale-95 cursor-pointer"
                     title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
@@ -2414,7 +2336,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       <div className="inline-flex items-center gap-1.5">
                         <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold shadow-2xs">
                           <Bot className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-                          <span className="hidden sm:inline">Бот холбогдсон</span>
+                          <span>Бот холбогдсон</span>
                         </span>
                         <button
                           id="detach-bot-btn"
@@ -2424,7 +2346,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                           className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
                           title="Ботыг энэ чатнаас салгаж, операторын дараалалд шилжүүлэх"
                         >
-                          <span className="hidden sm:inline">{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
+                          <span>{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
                         </button>
                       </div>
                     ) : (
@@ -2437,7 +2359,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                         title="Энэ тухайлсан чатад AI Туслах Бот холбох (Бот автоматаар хариулж эхэлнэ)"
                       >
                         <Bot className="w-3.5 h-3.5 text-purple-600" />
-                        <span className="hidden sm:inline">{isBotActionLoading ? 'Холбож байна...' : '🤖 Бот холбох'}</span>
+                        <span>{isBotActionLoading ? 'Холбож байна...' : '🤖 Бот холбох'}</span>
                       </button>
                     )}
                   </>
@@ -2459,7 +2381,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   title="Bitrix24 CRM дээр шинэ хэлцэл (Deal) үүсгэх"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="hidden sm:inline">Deal үүсгэх</span>
+                  <span>Deal үүсгэх</span>
                 </button>
 
                 {/* Transfer button */}
@@ -2470,7 +2392,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   title="Өөр операторт шилжүүлэх"
                 >
                   <Share2 className="w-3.5 h-3.5 text-slate-500" />
-                  <span className="hidden sm:inline">Шилжүүлэх</span>
+                  <span>Шилжүүлэх</span>
                 </button>
 
                 {/* Close Dialog button */}
@@ -2492,7 +2414,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     title="Чатыг хаах, дуусгах"
                   >
                     <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Хаах</span>
+                    <span>Хаах</span>
                   </button>
                 ) : (
                   <button
@@ -2516,6 +2438,102 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   <Star className={`w-4 h-4 ${selectedDialog.isStarred ? 'fill-current' : ''}`} />
                 </button>
               </div>
+            </div>
+
+            {/* Mobile Secondary Action Toolbar (Horizontal scrollable, compact) */}
+            <div className="sm:hidden flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border-b border-slate-200 overflow-x-auto scrollbar-none whitespace-nowrap text-xs">
+              {/* Take Dialog if not claimed */}
+              {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
+                <button
+                  onClick={handleTakeDialog}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-600 text-white font-medium text-[11px] shrink-0"
+                >
+                  <UserCheck className="w-3 h-3" />
+                  <span>Өөртөө авах</span>
+                </button>
+              )}
+
+              {/* Bot connect/detach */}
+              {selectedDialog.status !== 'closed' && (
+                (selectedDialog.status === 'bot' || selectedDialog.botActive) ? (
+                  <button
+                    type="button"
+                    onClick={handleDetachBot}
+                    disabled={isBotActionLoading}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-medium shrink-0"
+                  >
+                    <Bot className="w-3 h-3 text-rose-600" />
+                    <span>Бот салгах</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectBot}
+                    disabled={isBotActionLoading}
+                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-medium shrink-0"
+                  >
+                    <Bot className="w-3 h-3 text-purple-600" />
+                    <span>🤖 Бот холбох</span>
+                  </button>
+                )
+              )}
+
+              {/* Create Deal */}
+              <button
+                type="button"
+                onClick={() => {
+                  setCreateDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                  setCreateDealAmount('');
+                  setCreateDealStage('NEW');
+                  setCreateDealComments('');
+                  setCreateDealConvertLead(true);
+                  setShowCreateDealModal(true);
+                }}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium shrink-0"
+              >
+                <Briefcase className="w-3 h-3 text-blue-600" />
+                <span>Deal</span>
+              </button>
+
+              {/* Transfer */}
+              <button
+                type="button"
+                onClick={() => setShowTransferModal(true)}
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white text-slate-700 border border-slate-200 text-[11px] font-medium shrink-0"
+              >
+                <Share2 className="w-3 h-3 text-slate-500" />
+                <span>Шилжүүлэх</span>
+              </button>
+
+              {/* Close / Reopen */}
+              {selectedDialog.status !== 'closed' ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCloseDealTitle(`${selectedDialog.customer.name} - Захиалга`);
+                    setCloseDealAmount('');
+                    setCloseDealStage('NEW');
+                    if (selectedDialog.customer?.crmLeadId) {
+                      setCloseLeadAction('close_converted');
+                    } else {
+                      setCloseLeadAction('keep_open');
+                    }
+                    setShowCloseModal(true);
+                  }}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-medium shrink-0"
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  <span>Хаах</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleReopenDialog}
+                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium shrink-0"
+                >
+                  <span>Дахин нээх</span>
+                </button>
+              )}
             </div>
 
             {/* Live Bot Awareness Banner */}
@@ -2553,18 +2571,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {selectedDialog.status === 'bot' && (
-                      <button
-                        type="button"
-                        id="banner-takeover-btn"
-                        onClick={handleTakeDialog}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white font-semibold text-xs transition shadow-2xs"
-                        title="Чат руу өөрөө орж, оператор биечлэн хариуцах"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Өөртөө авах (Оператор хариуцах)</span>
-                      </button>
-                    )}
+                    <span className="hidden sm:inline-block text-[11px] text-purple-700 bg-purple-100/60 px-2.5 py-1 rounded-md border border-purple-200/80">
+                      Хүссэн үедээ дээр байрлах "Өөртөө авах" товчоор чатыг хариуцаж болно
+                    </span>
                   </div>
                 </div>
               );
@@ -2817,29 +2826,18 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 const isAssignedToMe = isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent);
                 if (!isAssignedToMe && selectedDialog.status !== 'closed') {
                   return (
-                    <div id="unassigned-chat-warning-banner" className="flex items-center justify-between gap-2 p-2.5 sm:p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 shadow-2xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
-                        <div className="min-w-0">
-                          <p className="font-semibold text-amber-950 truncate">
-                            {selectedDialog.status === 'new' || !selectedDialog.assignedAgentId
-                              ? 'Энэ чат операторт оноогдоогүй байна'
-                              : `Чат өөр операторт оноогдсон байна (${selectedDialog.assignedAgentName || 'Оператор'})`}
-                          </p>
-                          <p className="text-[11px] text-amber-700 hidden sm:block">
-                            Харилцагчид хариу бичих эсвэл дотоод тэмдэглэл үлдээхийн тулд чатыг өөртөө авна уу.
-                          </p>
-                        </div>
+                    <div id="unassigned-chat-warning-banner" className="flex items-center gap-2.5 p-2.5 sm:p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 shadow-2xs">
+                      <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-semibold text-amber-950 truncate">
+                          {selectedDialog.status === 'new' || !selectedDialog.assignedAgentId
+                            ? 'Энэ чат операторт оноогдоогүй байна'
+                            : `Чат өөр операторт оноогдсон байна (${selectedDialog.assignedAgentName || 'Оператор'})`}
+                        </p>
+                        <p className="text-[11px] text-amber-700">
+                          Харилцагчид хариу бичихийн тулд дээд талын <span className="font-semibold text-emerald-800">"Өөртөө авах"</span> товчийг дарна уу.
+                        </p>
                       </div>
-                      <button
-                        type="button"
-                        id="take-dialog-banner-btn"
-                        onClick={handleTakeDialog}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shrink-0 transition shadow-sm active:scale-95"
-                      >
-                        <UserCheck className="w-3.5 h-3.5" />
-                        <span>Өөртөө авах</span>
-                      </button>
                     </div>
                   );
                 }
@@ -2936,18 +2934,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     <span className="hidden sm:inline">Мэдээллийн сан</span>
                     <span className="sm:hidden">Сан</span>
                   </button>
-
-                  {/* Simulate customer typing for instant testing */}
-                  <button
-                    type="button"
-                    id="simulate-customer-typing-btn"
-                    onClick={handleSimulateCustomerTyping}
-                    className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium border border-blue-200 transition"
-                    title="Харилцагч бичиж буй бодит хөдөлгөөнийг турших (Real-time typing test)"
-                  >
-                    <Keyboard className="w-3.5 h-3.5 text-blue-600" />
-                    <span className="hidden sm:inline">Бичиж буйг турших</span>
-                  </button>
                 </div>
               </div>
 
@@ -3025,6 +3011,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   <form onSubmit={handleSendMessage} className="space-y-2">
                     <div className="relative">
                       <textarea
+                        ref={chatInputRef}
                         id="chat-message-input"
                         value={inputText}
                         onChange={(e) => {
@@ -3042,7 +3029,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                         disabled={isUnassignedChat}
                         placeholder={
                           isUnassignedChat
-                            ? 'Хариу бичихийн тулд эхлээд "Өөртөө авах" товчийг дарна уу...'
+                            ? 'Хариу бичихийн тулд эхлээд дээд талын "Өөртөө авах" товчийг дарна уу...'
                             : isInternalNote
                             ? 'Дотоод тэмдэглэл бичих...'
                             : 'Хэрэглэгчид илгээх хариултаа бичнэ үү (Enter илгээх, Shift+Enter шинэ мөр)...'
@@ -3061,12 +3048,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                           <button
                             type="button"
                             id="take-dialog-inline-btn"
-                            onClick={handleTakeDialog}
-                            className="inline-flex items-center gap-1 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-sm transition active:scale-95"
-                            title="Чатыг өөртөө авах"
+                            disabled
+                            className="inline-flex items-center gap-1 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium text-slate-400 bg-slate-200 cursor-not-allowed"
+                            title="Дээр байрлах 'Өөртөө авах' товчоор эхлээд чатыг өөртөө онооно уу"
                           >
-                            <UserCheck className="w-3.5 h-3.5" />
-                            <span>Өөртөө авах</span>
+                            <Send className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline">Илгээх</span>
+                            <span className="sm:hidden">Илгээх</span>
                           </button>
                         ) : (
                           <button
@@ -3096,7 +3084,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             <MessageSquare className="w-12 h-12 text-slate-300 mb-3" />
             <p className="font-semibold text-slate-700 text-sm">Чат сонгоогүй байна</p>
             <p className="text-xs text-slate-500 max-w-sm mt-1">
-              Зүүн талын жагсаалтаас нэг харилцан яриаг сонгож хариу бичих эсвэл шинэ чатын симуляци хийнэ үү.
+              Зүүн талын жагсаалтаас харилцан яриаг сонгож харилцагчид хариу бичнэ үү.
             </p>
             <button
               type="button"
@@ -3291,7 +3279,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               )}
             </div>
 
-            {/* Channel origin & Bot Binding */}
+            {/* Channel origin */}
             <div className="pt-2 border-t border-slate-100 space-y-2 text-xs">
               <h5 className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">
                 Сувгийн холболт
@@ -3308,112 +3296,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 <div className="text-[10px] text-slate-500 font-mono">
                   Төрөл: {selectedDialog.channelType.toUpperCase()}
                 </div>
-
-                {/* Live Welcome Bot info & Controls */}
-                {(() => {
-                  const channelLine = openLines.find(
-                    (l) => String(l.id) === String(selectedDialog.channelId)
-                  );
-                  const hasWelcomeBot = channelLine?.welcomeBotEnable === 'Y';
-                  const isBoundToOurBot =
-                    (hasWelcomeBot && String(channelLine?.welcomeBotId) === String(botConfig?.botId)) ||
-                    botConfig?.selectedLineId === Number(selectedDialog.channelId);
-
-                  return (
-                    <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] text-slate-500 font-medium">Угтах бот:</span>
-                        {isBoundToOurBot ? (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                            <Check className="w-3 h-3 text-emerald-600" />
-                            <span>Манай бот холбогдсон</span>
-                          </span>
-                        ) : hasWelcomeBot ? (
-                          <span
-                            className="text-[10px] font-medium text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200"
-                            title={`Бот ID: ${channelLine?.welcomeBotId}`}
-                          >
-                            Бот #{channelLine?.welcomeBotId}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] text-slate-400">Бот залгаагүй</span>
-                        )}
-                      </div>
-
-                      {/* Bot Action Buttons */}
-                      <div className="flex items-center gap-1.5 pt-1">
-                        {isBoundToOurBot ? (
-                          onUnbindLine && (
-                            <button
-                              id={`workplace-unbind-btn-${selectedDialog.channelId}`}
-                              type="button"
-                              onClick={async () => {
-                                setIsBotActionLoading(true);
-                                try {
-                                  await onUnbindLine(Number(selectedDialog.channelId));
-                                } finally {
-                                  setIsBotActionLoading(false);
-                                }
-                              }}
-                              disabled={isBotActionLoading}
-                              className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition shadow-xs disabled:opacity-50"
-                              title="Энэ сувгаас BSB AI ботыг салгах"
-                            >
-                              <Unlink className="w-3.5 h-3.5 text-rose-600" />
-                              <span>{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
-                            </button>
-                          )
-                        ) : (
-                          <>
-                            {onBindLine && (
-                              <button
-                                id={`workplace-bind-btn-${selectedDialog.channelId}`}
-                                type="button"
-                                onClick={async () => {
-                                  setIsBotActionLoading(true);
-                                  try {
-                                    await onBindLine(
-                                      Number(selectedDialog.channelId),
-                                      selectedDialog.channelName
-                                    );
-                                  } finally {
-                                    setIsBotActionLoading(false);
-                                  }
-                                }}
-                                disabled={isBotActionLoading}
-                                className="flex-1 inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md transition shadow-xs disabled:opacity-50"
-                                title="Энэ сувагт BSB AI ботыг холбох"
-                              >
-                                <Link2 className="w-3.5 h-3.5" />
-                                <span>{isBotActionLoading ? 'Холбож байна...' : 'Боттой холбох'}</span>
-                              </button>
-                            )}
-                            {hasWelcomeBot && onUnbindLine && (
-                              <button
-                                id={`workplace-unbind-other-btn-${selectedDialog.channelId}`}
-                                type="button"
-                                onClick={async () => {
-                                  setIsBotActionLoading(true);
-                                  try {
-                                    await onUnbindLine(Number(selectedDialog.channelId));
-                                  } finally {
-                                    setIsBotActionLoading(false);
-                                  }
-                                }}
-                                disabled={isBotActionLoading}
-                                className="inline-flex items-center justify-center gap-1 px-2 py-1 text-xs font-semibold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-md transition shadow-xs disabled:opacity-50"
-                                title="Суваг дээрх одоогийн угтах ботыг салгах"
-                              >
-                                <Unlink className="w-3.5 h-3.5 text-rose-600" />
-                                <span>Бот салгах</span>
-                              </button>
-                            )}
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })()}
               </div>
             </div>
 
@@ -4301,78 +4183,6 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           >
             <X className="w-4 h-4" />
           </button>
-        </div>
-      )}
-
-      {/* 5. Simulate Incoming Customer Message Modal */}
-      {showSimulateModal && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <div className="flex items-center gap-2">
-                <Plus className="w-5 h-5 text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900">Шинэ хэрэглэгчийн чат симуляци хийх</h3>
-              </div>
-              <button onClick={() => setShowSimulateModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Хэрэглэгчийн нэр:</label>
-                <input
-                  type="text"
-                  value={simCustomerName}
-                  onChange={(e) => setSimCustomerName(e.target.value)}
-                  className="w-full p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Ирсэн суваг:</label>
-                <select
-                  value={simChannelType}
-                  onChange={(e) => setSimChannelType(e.target.value as any)}
-                  className="w-full p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 text-xs font-medium"
-                >
-                  <option value="facebook">Facebook Comments & Messenger</option>
-                  <option value="webchat">БСБ Онлайн Их Дэлгүүр (Web Live Chat)</option>
-                  <option value="instagram">Instagram Direct (@bsb_mongolia)</option>
-                  <option value="telegram">Telegram Support Bot</option>
-                  <option value="whatsapp">WhatsApp Business</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-slate-700 font-semibold mb-1">Хэрэглэгчийн мессеж:</label>
-                <textarea
-                  value={simMessage}
-                  onChange={(e) => setSimMessage(e.target.value)}
-                  rows={3}
-                  className="w-full p-2 rounded-lg border border-slate-300 focus:outline-none focus:border-blue-500 text-xs"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowSimulateModal(false)}
-                className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100"
-              >
-                Цуцлах
-              </button>
-              <button
-                type="button"
-                id="submit-sim-chat-btn"
-                onClick={handleSimulateIncoming}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm"
-              >
-                Чат үүсгэж илгээх
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
