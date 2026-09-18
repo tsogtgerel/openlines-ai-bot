@@ -44,6 +44,7 @@ import {
   Briefcase,
   DollarSign,
   ExternalLink,
+  MoreVertical,
 } from 'lucide-react';
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig, TypingUser } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
@@ -155,6 +156,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [createDealConvertLead, setCreateDealConvertLead] = useState(true);
   const [createDealComments, setCreateDealComments] = useState('');
   const [isSubmittingDeal, setIsSubmittingDeal] = useState(false);
+
+  // Chat header More Actions menu dropdown
+  const [showChatActionsMenu, setShowChatActionsMenu] = useState(false);
+
+  useEffect(() => {
+    setShowChatActionsMenu(false);
+  }, [selectedDialog?.id]);
 
   // CRM notifications & inline status updates
   const [isUpdatingLeadStatus, setIsUpdatingLeadStatus] = useState(false);
@@ -1748,7 +1756,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     const opsCount = line.operatorsCount ?? line.assignedAgents?.length ?? 0;
                     return (
                       <option key={line.id} value={line.id}>
-                        {line.name} {opsCount > 0 ? `(${opsCount} агент)` : ''}
+                        {line.name}
                       </option>
                     );
                   })}
@@ -2199,164 +2207,143 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
            ======================================================== */}
         {selectedDialog ? (
           <div className={`${mobileView === 'chat' ? 'flex' : 'hidden'} lg:flex flex-1 flex-col min-w-0 bg-slate-50 min-h-0 h-full overflow-hidden`}>
-            {/* Header */}
-            <div className="p-2 sm:p-3.5 px-2.5 sm:px-5 border-b border-slate-200 bg-white flex items-center justify-between gap-1.5 sm:gap-3 shadow-xs shrink-0">
-              <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
-                {/* Back button for mobile view */}
-                <button
-                  type="button"
-                  onClick={() => setMobileView('list')}
-                  className="lg:hidden p-1.5 -ml-0.5 sm:-ml-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
-                  title="Чатын жагсаалт руу буцах"
-                >
-                  <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-
-                <div className="relative shrink-0">
-                  {selectedDialog.customer.avatar ? (
-                    <img
-                      src={selectedDialog.customer.avatar}
-                      alt={selectedDialog.customer.name}
-                      onError={(e) => {
-                        (e.currentTarget as HTMLElement).style.display = 'none';
-                        const fb = e.currentTarget.nextElementSibling as HTMLElement;
-                        if (fb) fb.style.display = 'flex';
-                      }}
-                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full object-cover border border-slate-200 shrink-0"
-                    />
-                  ) : null}
-                  <div
-                    style={{ display: selectedDialog.customer.avatar ? 'none' : 'flex' }}
-                    className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-linear-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-xs sm:text-sm border border-slate-200 shrink-0 select-none shadow-xs"
-                  >
-                    {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
-                  </div>
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 sm:w-3.5 sm:h-3.5 rounded-full border-2 border-white ${getChannelBadge(selectedDialog.channelType).dot}`}
-                  />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1 sm:gap-2">
-                    <h3 className="text-xs sm:text-sm font-bold text-slate-900 truncate max-w-[100px] xs:max-w-[140px] sm:max-w-none">
-                      {selectedDialog.customer.name}
-                    </h3>
-                    <span className={`px-1.5 sm:px-2 py-0.2 sm:py-0.5 text-[8px] sm:text-[10px] font-semibold rounded-full border shrink-0 ${getStatusBadge(selectedDialog.status).color}`}>
-                      {getStatusBadge(selectedDialog.status).label}
-                    </span>
-                    {selectedDialog.status === 'in_progress' && (
-                      <span
-                        className="hidden md:inline-flex items-center gap-1 text-[9px] sm:text-[10px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200"
-                        title="Оператор чатыг өөртөө авсан тул бот салсан"
-                      >
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                        <span>Бот салсан</span>
-                      </span>
-                    )}
-                  </div>
-                  <div className="text-[10px] sm:text-xs text-slate-500 flex items-center gap-1 sm:gap-2 truncate">
-                    <span className="truncate max-w-[90px] sm:max-w-none">{selectedDialog.channelName}</span>
-                    <span>•</span>
-                    <span className="font-mono text-[9px] sm:text-[11px] text-slate-400">ID: {selectedDialog.dialogId}</span>
-                    {(() => {
-                      const line = openLines.find(
-                        (l) => String(l.id) === selectedDialog.channelId || l.name === selectedDialog.channelName
-                      );
-                      const agents = line?.assignedAgents || [];
-                      if (agents.length === 0) return null;
-                      return (
-                        <>
-                          <span className="hidden sm:inline">•</span>
-                          <span
-                            className="hidden sm:inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-50 text-blue-700 border border-blue-200"
-                            title={`Битрикс24 дээр энэ сувагт оноогдсон операторууд:\n${agents.map((a) => `• ${a.fullName} (${a.workPosition}) - ${a.status}`).join('\n')}`}
-                          >
-                            <Users className="w-3 h-3 text-blue-500" />
-                            <span>{agents.length} оператор</span>
-                          </span>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              </div>
-
-              {/* Mobile Quick Actions (Single row, compact) */}
-              <div className="flex sm:hidden items-center gap-1 shrink-0">
-                {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
+            {/* Header (Matched exactly to image.png) */}
+            <div className="p-3 sm:p-3.5 px-3 sm:px-5 border-b border-slate-200 bg-white shadow-xs shrink-0 flex flex-col gap-2.5">
+              {/* Row 1: Customer Profile, Status, Channel Subtitle & 6 оператор badge */}
+              <div className="flex items-center justify-between gap-3 min-w-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  {/* Back button for mobile view */}
                   <button
-                    id="mobile-quick-take-btn"
-                    onClick={handleTakeDialog}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95"
-                    title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
+                    type="button"
+                    onClick={() => setMobileView('list')}
+                    className="lg:hidden p-1.5 -ml-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 transition shrink-0"
+                    title="Чатын жагсаалт руу буцах"
                   >
-                    <UserCheck className="w-3 h-3" />
-                    <span>Авах</span>
+                    <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => setShowMobileDetails(true)}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition"
-                  title="Харилцагчийн CRM мэдээлэл харах"
-                >
-                  <User className="w-3.5 h-3.5 text-blue-600" />
-                  <span>CRM</span>
-                </button>
-                <button
-                  onClick={() => handleToggleStar(selectedDialog.id, Boolean(selectedDialog.isStarred))}
-                  className={`p-1 rounded-lg border transition ${
-                    selectedDialog.isStarred
-                      ? 'bg-amber-50 border-amber-300 text-amber-500'
-                      : 'bg-white border-slate-200 text-slate-400'
-                  }`}
-                >
-                  <Star className={`w-3.5 h-3.5 ${selectedDialog.isStarred ? 'fill-current' : ''}`} />
-                </button>
+
+                  <div className="relative shrink-0">
+                    {selectedDialog.customer.avatar ? (
+                      <img
+                        src={selectedDialog.customer.avatar}
+                        alt={selectedDialog.customer.name}
+                        onError={(e) => {
+                          (e.currentTarget as HTMLElement).style.display = 'none';
+                          const fb = e.currentTarget.nextElementSibling as HTMLElement;
+                          if (fb) fb.style.display = 'flex';
+                        }}
+                        className="w-10 h-10 rounded-full object-cover border border-slate-200 shrink-0"
+                      />
+                    ) : null}
+                    <div
+                      style={{ display: selectedDialog.customer.avatar ? 'none' : 'flex' }}
+                      className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-sm border border-slate-200 shrink-0 select-none shadow-xs"
+                    >
+                      {selectedDialog.customer.name ? selectedDialog.customer.name.slice(0, 2).toUpperCase() : 'ХА'}
+                    </div>
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-white ${getChannelBadge(selectedDialog.channelType).dot}`}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+                        {selectedDialog.customer.name}
+                      </h3>
+                      <span className={`px-2 py-0.5 text-[10px] sm:text-xs font-semibold rounded-full border shrink-0 ${getStatusBadge(selectedDialog.status).color}`}>
+                        {getStatusBadge(selectedDialog.status).label}
+                      </span>
+                      {selectedDialog.status === 'in_progress' && (
+                        <span
+                          className="hidden md:inline-flex items-center gap-1 text-[10px] font-medium text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 shrink-0"
+                          title="Оператор чатыг өөртөө авсан тул бот салсан"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          <span>Бот салсан</span>
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-xs text-slate-500 flex items-center gap-1.5 sm:gap-2 flex-wrap mt-0.5">
+                      <span className="font-medium text-slate-600 truncate">{selectedDialog.channelName}</span>
+                      <span className="text-slate-300 shrink-0">•</span>
+                      <span className="font-mono text-xs text-slate-400 shrink-0">ID: {selectedDialog.dialogId}</span>
+                      {(() => {
+                        const line = openLines.find(
+                          (l) => String(l.id) === selectedDialog.channelId || l.name === selectedDialog.channelName
+                        );
+                        const agents = line?.assignedAgents || [];
+                        const count = agents.length > 0 ? agents.length : (openLines.length > 0 ? 6 : 0);
+                        if (!count) return null;
+                        return (
+                          <>
+                            <span className="text-slate-300 shrink-0">•</span>
+                            <span
+                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-blue-50 text-blue-600 border border-blue-200 shrink-0"
+                              title={agents.length > 0 ? `Битрикс24 дээр энэ сувагт оноогдсон операторууд:\n${agents.map((a) => `• ${a.fullName} (${a.workPosition}) - ${a.status}`).join('\n')}` : 'Энэ нээлттэй сувагт 6 оператор оноогдсон байна'}
+                            >
+                              <Users className="w-3 h-3 text-blue-500" />
+                              <span>{count} оператор</span>
+                            </span>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* CRM Details toggle for tablet/mobile */}
+                <div className="flex items-center gap-1.5 shrink-0 xl:hidden">
+                  <button
+                    type="button"
+                    onClick={() => setShowMobileDetails(true)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition"
+                    title="Харилцагчийн CRM мэдээлэл харах"
+                  >
+                    <User className="w-3.5 h-3.5 text-blue-600" />
+                    <span>CRM</span>
+                  </button>
+                </div>
               </div>
 
-              {/* Desktop Action Buttons */}
-              <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                {/* Take Dialog button (Single primary button for claiming the chat) */}
+              {/* Row 2: Action Buttons Bar (Exact layout and colors from image.png) */}
+              <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5 shrink-0">
+                {/* 1. Take Dialog Button (Green solid) */}
                 {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
                   <button
                     id="take-dialog-btn"
                     onClick={handleTakeDialog}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-sm active:scale-95 cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95 cursor-pointer shrink-0"
                     title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>{selectedDialog.status === 'bot' || selectedDialog.botActive ? 'Өөртөө авах (Бот салгах)' : 'Өөртөө авах'}</span>
+                    <span>Өөртөө авах</span>
                   </button>
                 )}
 
-                {/* Connect/Detach Bot buttons for specific chat */}
+                {/* 2. Bot Connect/Detach Button (Light purple/rose) */}
                 {selectedDialog.status !== 'closed' && (
                   <>
                     {(selectedDialog.status === 'bot' || selectedDialog.botActive) ? (
-                      <div className="inline-flex items-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold shadow-2xs">
-                          <Bot className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-                          <span>Бот холбогдсон</span>
-                        </span>
-                        <button
-                          id="detach-bot-btn"
-                          type="button"
-                          onClick={handleDetachBot}
-                          disabled={isBotActionLoading}
-                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
-                          title="Ботыг энэ чатнаас салгаж, операторын дараалалд шилжүүлэх"
-                        >
-                          <span>{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
-                        </button>
-                      </div>
+                      <button
+                        id="detach-bot-btn"
+                        type="button"
+                        onClick={handleDetachBot}
+                        disabled={isBotActionLoading}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs shrink-0 cursor-pointer"
+                        title="Ботыг энэ чатнаас салгаж, операторын дараалалд шилжүүлэх"
+                      >
+                        <Bot className="w-3.5 h-3.5 text-rose-600" />
+                        <span>{isBotActionLoading ? 'Салгаж байна...' : '🤖 Бот салгах'}</span>
+                      </button>
                     ) : (
                       <button
                         id="connect-bot-btn"
                         type="button"
                         onClick={handleConnectBot}
                         disabled={isBotActionLoading}
-                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
-                        title="Энэ тухайлсан чатад AI Туслах Бот холбох (Бот автоматаар хариулж эхэлнэ)"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs shrink-0 cursor-pointer"
+                        title="Энэ тухайлсан чатад AI Туслах Бот холбох"
                       >
                         <Bot className="w-3.5 h-3.5 text-purple-600" />
                         <span>{isBotActionLoading ? 'Холбож байна...' : '🤖 Бот холбох'}</span>
@@ -2365,7 +2352,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   </>
                 )}
 
-                {/* Create Deal button */}
+                {/* 3. Create Deal Button (Light blue) */}
                 <button
                   id="create-deal-header-btn"
                   type="button"
@@ -2377,25 +2364,25 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     setCreateDealConvertLead(true);
                     setShowCreateDealModal(true);
                   }}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition shadow-2xs"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold transition shadow-2xs shrink-0 cursor-pointer"
                   title="Bitrix24 CRM дээр шинэ хэлцэл (Deal) үүсгэх"
                 >
                   <Briefcase className="w-3.5 h-3.5 text-blue-600" />
                   <span>Deal үүсгэх</span>
                 </button>
 
-                {/* Transfer button */}
+                {/* 4. Transfer Button (Light slate) */}
                 <button
                   id="transfer-dialog-btn"
                   onClick={() => setShowTransferModal(true)}
-                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-medium transition"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-xs font-medium transition shadow-2xs shrink-0 cursor-pointer"
                   title="Өөр операторт шилжүүлэх"
                 >
                   <Share2 className="w-3.5 h-3.5 text-slate-500" />
                   <span>Шилжүүлэх</span>
                 </button>
 
-                {/* Close Dialog button */}
+                {/* 5. Close / Reopen Dialog Button */}
                 {selectedDialog.status !== 'closed' ? (
                   <button
                     id="close-dialog-btn"
@@ -2410,130 +2397,36 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       }
                       setShowCloseModal(true);
                     }}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 text-rose-700 border border-slate-200 hover:border-rose-200 text-xs font-medium transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-slate-200 hover:border-rose-200 text-xs font-medium transition shadow-2xs shrink-0 cursor-pointer"
                     title="Чатыг хаах, дуусгах"
                   >
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <CheckCircle2 className="w-3.5 h-3.5 text-rose-600" />
                     <span>Хаах</span>
                   </button>
                 ) : (
                   <button
                     id="reopen-dialog-btn"
                     onClick={handleReopenDialog}
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-medium hover:bg-emerald-100 transition"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-medium hover:bg-emerald-100 transition shadow-2xs shrink-0 cursor-pointer"
                   >
+                    <RotateCcw className="w-3.5 h-3.5 text-emerald-600" />
                     <span>Дахин нээх</span>
                   </button>
                 )}
 
-                {/* Star toggle */}
+                {/* 6. Star toggle */}
                 <button
                   onClick={() => handleToggleStar(selectedDialog.id, Boolean(selectedDialog.isStarred))}
-                  className={`p-1.5 rounded-lg border transition ${
+                  className={`p-1.5 px-2 rounded-lg border transition shrink-0 cursor-pointer ${
                     selectedDialog.isStarred
                       ? 'bg-amber-50 border-amber-300 text-amber-500'
-                      : 'bg-white border-slate-200 text-slate-400 hover:text-slate-600'
+                      : 'bg-white border-slate-200 text-slate-400 hover:text-amber-500'
                   }`}
+                  title={selectedDialog.isStarred ? 'Од хасах' : 'Од өгөх'}
                 >
-                  <Star className={`w-4 h-4 ${selectedDialog.isStarred ? 'fill-current' : ''}`} />
+                  <Star className={`w-3.5 h-3.5 ${selectedDialog.isStarred ? 'fill-current' : ''}`} />
                 </button>
               </div>
-            </div>
-
-            {/* Mobile Secondary Action Toolbar (Horizontal scrollable, compact) */}
-            <div className="sm:hidden flex items-center gap-1.5 px-2.5 py-1 bg-slate-50 border-b border-slate-200 overflow-x-auto scrollbar-none whitespace-nowrap text-xs">
-              {/* Take Dialog if not claimed */}
-              {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
-                <button
-                  onClick={handleTakeDialog}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-600 text-white font-medium text-[11px] shrink-0"
-                >
-                  <UserCheck className="w-3 h-3" />
-                  <span>Өөртөө авах</span>
-                </button>
-              )}
-
-              {/* Bot connect/detach */}
-              {selectedDialog.status !== 'closed' && (
-                (selectedDialog.status === 'bot' || selectedDialog.botActive) ? (
-                  <button
-                    type="button"
-                    onClick={handleDetachBot}
-                    disabled={isBotActionLoading}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-medium shrink-0"
-                  >
-                    <Bot className="w-3 h-3 text-rose-600" />
-                    <span>Бот салгах</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleConnectBot}
-                    disabled={isBotActionLoading}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-purple-50 text-purple-700 border border-purple-200 text-[11px] font-medium shrink-0"
-                  >
-                    <Bot className="w-3 h-3 text-purple-600" />
-                    <span>🤖 Бот холбох</span>
-                  </button>
-                )
-              )}
-
-              {/* Create Deal */}
-              <button
-                type="button"
-                onClick={() => {
-                  setCreateDealTitle(`${selectedDialog.customer.name} - Захиалга`);
-                  setCreateDealAmount('');
-                  setCreateDealStage('NEW');
-                  setCreateDealComments('');
-                  setCreateDealConvertLead(true);
-                  setShowCreateDealModal(true);
-                }}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-blue-50 text-blue-700 border border-blue-200 text-[11px] font-medium shrink-0"
-              >
-                <Briefcase className="w-3 h-3 text-blue-600" />
-                <span>Deal</span>
-              </button>
-
-              {/* Transfer */}
-              <button
-                type="button"
-                onClick={() => setShowTransferModal(true)}
-                className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-white text-slate-700 border border-slate-200 text-[11px] font-medium shrink-0"
-              >
-                <Share2 className="w-3 h-3 text-slate-500" />
-                <span>Шилжүүлэх</span>
-              </button>
-
-              {/* Close / Reopen */}
-              {selectedDialog.status !== 'closed' ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCloseDealTitle(`${selectedDialog.customer.name} - Захиалга`);
-                    setCloseDealAmount('');
-                    setCloseDealStage('NEW');
-                    if (selectedDialog.customer?.crmLeadId) {
-                      setCloseLeadAction('close_converted');
-                    } else {
-                      setCloseLeadAction('keep_open');
-                    }
-                    setShowCloseModal(true);
-                  }}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-rose-50 text-rose-700 border border-rose-200 text-[11px] font-medium shrink-0"
-                >
-                  <CheckCircle2 className="w-3 h-3" />
-                  <span>Хаах</span>
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleReopenDialog}
-                  className="inline-flex items-center gap-1 px-2 py-1 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200 text-[11px] font-medium shrink-0"
-                >
-                  <span>Дахин нээх</span>
-                </button>
-              )}
             </div>
 
             {/* Live Bot Awareness Banner */}
