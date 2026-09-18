@@ -154,9 +154,51 @@ export function playTypingBlipSound(): void {
 }
 
 /**
- * 4. Test sound to verify volume and audio output
+ * 4. New Inquiry / New Chat Alert Sound:
+ * An elegant, subtle 3-tone ascending chime (F5 698Hz -> A5 880Hz -> C6 1046.5Hz)
+ * Specially synthesized for brand new incoming customer inquiries in assigned channels.
+ */
+export function playNewInquiryAlertSound(): void {
+  if (!isChatSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+
+    const notes = [
+      { freq: 698.46, delay: 0.00, gain: 0.18, dur: 0.38 }, // F5
+      { freq: 880.00, delay: 0.11, gain: 0.22, dur: 0.42 }, // A5
+      { freq: 1046.50, delay: 0.22, gain: 0.25, dur: 0.65 }, // C6
+    ];
+
+    for (const note of notes) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(note.freq, now + note.delay);
+
+      const startTime = now + note.delay;
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(note.gain, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + note.dur);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + note.dur);
+    }
+  } catch (err) {
+    console.debug('[ChatSound] New inquiry audio playback prevented:', err);
+  }
+}
+
+/**
+ * 5. Test sound to verify volume and audio output
  */
 export function testChatSound(): void {
   unlockAudioContext();
-  playIncomingMessageSound();
+  playNewInquiryAlertSound();
 }
+

@@ -40,6 +40,8 @@ import {
   Volume2,
   VolumeX,
   Bell,
+  BellRing,
+  BellOff,
   Keyboard,
   Briefcase,
   DollarSign,
@@ -52,11 +54,20 @@ import {
   playIncomingMessageSound,
   playOutgoingMessageSound,
   playTypingBlipSound,
+  playNewInquiryAlertSound,
   isChatSoundEnabled,
   setChatSoundEnabled,
   testChatSound,
   unlockAudioContext,
 } from '../utils/chatSound';
+import {
+  isBrowserNotificationSupported,
+  isBrowserNotificationEnabled,
+  setBrowserNotificationEnabled,
+  getNotificationPermission,
+  requestNotificationPermission,
+  sendNewChatNotification,
+} from '../utils/browserNotification';
 
 interface OpenChannelChatWorkplaceProps {
   currentAgent: Agent | null;
@@ -234,6 +245,121 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   // Real-time Typing Indicator & Chat Sound state
   const [soundEnabled, setSoundEnabled] = useState<boolean>(() => isChatSoundEnabled());
+  const [browserNotifEnabled, setBrowserNotifEnabled] = useState<boolean>(() => isBrowserNotificationEnabled());
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | 'unsupported'>(() => getNotificationPermission());
+  const [newInquiryBanner, setNewInquiryBanner] = useState<{
+    id: string;
+    customerName: string;
+    channelName: string;
+    text: string;
+    dialog: ChatDialog;
+  } | null>(null);
+  const knownDialogIdsRef = useRef<Set<string>>(new Set());
+  const isInitialLoadCompletedRef = useRef<boolean>(false);
+
+  // Helper to check if a channel is assigned to the current agent
+  const isChannelAssignedToCurrentAgent = (channelId: string | number): boolean => {
+    if (!currentAgent) return true;
+    if (currentAgent.accessRole !== 'agent' || currentAgent.canAccessAllChannels) return true;
+    if (!Array.isArray(currentAgent.assignedChannelIds) || currentAgent.assignedChannelIds.length === 0) {
+      return false;
+    }
+    return currentAgent.assignedChannelIds.some((id) => String(id) === String(channelId));
+  };
+
+  // Trigger alert when a brand-new chat inquiry arrives in an assigned channel
+  const triggerNewInquiryAlert = (dialog: ChatDialog, firstMessageText?: string) => {
+    // Check channel assignment permission
+    if (!isChannelAssignedToCurrentAgent(dialog.channelId)) {
+      return;
+    }
+
+    // 1. Subtle, distinct 3-tone arpeggio chime for new inquiries
+    playNewInquiryAlertSound();
+
+    // 2. Browser Desktop Notification (if enabled and granted)
+    const snippet = firstMessageText || dialog.lastMessageText || 'Шинэ харилцагчийн лавлагаа ирлээ';
+    sendNewChatNotification({
+      title: `🔔 Шинэ чат: ${dialog.customer.name}`,
+      body: `${dialog.channelName} • ${snippet}`,
+      tag: `chat-new-${dialog.id}`,
+      onClick: () => {
+        setSelectedDialogId(dialog.id);
+        setSelectedDialog(dialog);
+        setMobileView('chat');
+      },
+    });
+
+    // 3. Subtle floating in-app banner for 7 seconds
+    setNewInquiryBanner({
+      id: dialog.id,
+      customerName: dialog.customer.name,
+      channelName: dialog.channelName,
+      text: snippet,
+      dialog,
+    });
+  };
+
+  // Handle incoming message audio & alert dispatching
+  const handleIncomingMessageAlert = (dialogId?: string, updatedDialog?: ChatDialog, message?: ChatMessage) => {
+    const targetId = dialogId || updatedDialog?.id;
+    if (!targetId) return;
+
+    const isAlreadyKnown = knownDialogIdsRef.current.has(targetId);
+    if (!isAlreadyKnown) {
+      knownDialogIdsRef.current.add(targetId);
+      // If initial load already completed, this is a brand new incoming inquiry!
+      if (isInitialLoadCompletedRef.current) {
+        const dialogCandidate = updatedDialog || dialogs.find((d) => d.id === targetId);
+        if (dialogCandidate && (dialogCandidate.status === 'new' || !dialogCandidate.assignedAgentId)) {
+          triggerNewInquiryAlert(dialogCandidate, message?.text);
+          return;
+        }
+      }
+    }
+
+    // Standard incoming message sound for existing conversations
+    if (message && message.sender !== 'agent') {
+      playIncomingMessageSound();
+    }
+  };
+
+  const handleToggleBrowserNotif = async () => {
+    if (!isBrowserNotificationSupported()) {
+      return;
+    }
+    const currentPerm = getNotificationPermission();
+    if (currentPerm === 'default') {
+      const result = await requestNotificationPermission();
+      setNotifPermission(result);
+      if (result === 'granted') {
+        setBrowserNotifEnabled(true);
+        setBrowserNotificationEnabled(true);
+        sendNewChatNotification({
+          title: 'Шинэ чатын мэдэгдэл идэвхжлээ',
+          body: 'Таны хариуцсан сувгийн шинэ чатууд ирэх үед шууд мэдэгдэх болно.',
+        });
+        playNewInquiryAlertSound();
+      }
+    } else if (currentPerm === 'granted') {
+      const next = !browserNotifEnabled;
+      setBrowserNotifEnabled(next);
+      setBrowserNotificationEnabled(next);
+      if (next) {
+        playNewInquiryAlertSound();
+      }
+    }
+  };
+
+  // Auto-dismiss in-app floating banner after 7 seconds
+  useEffect(() => {
+    if (!newInquiryBanner) return;
+    const timer = setTimeout(() => {
+      setNewInquiryBanner(null);
+    }, 7000);
+    return () => clearTimeout(timer);
+  }, [newInquiryBanner]);
+
   const [activeTypers, setActiveTypers] = useState<Record<string, TypingUser[]>>({});
   const [isWsConnected, setIsWsConnected] = useState<boolean>(false);
   const wsRef = useRef<WebSocket | null>(null);
@@ -367,6 +493,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (res?.success && Array.isArray(res.data)) {
         setDialogs(res.data);
 
+        // Track known dialog IDs and alert only on new arrivals after initial load
+        if (!isInitialLoadCompletedRef.current) {
+          res.data.forEach((d: ChatDialog) => knownDialogIdsRef.current.add(d.id));
+          isInitialLoadCompletedRef.current = true;
+        } else {
+          for (const d of res.data) {
+            if (!knownDialogIdsRef.current.has(d.id)) {
+              knownDialogIdsRef.current.add(d.id);
+              if (d.status === 'new' || !d.assignedAgentId) {
+                triggerNewInquiryAlert(d);
+              }
+            }
+          }
+        }
+
         // Auto select first if none selected
         if (!selectedDialogId && res.data.length > 0) {
           setSelectedDialogId(res.data[0].id);
@@ -401,6 +542,18 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         }
 
         if (hasChanges && Array.isArray(changedDialogs) && changedDialogs.length > 0) {
+          // Detect brand-new incoming inquiries during delta sync
+          if (isInitialLoadCompletedRef.current) {
+            for (const d of changedDialogs) {
+              if (!knownDialogIdsRef.current.has(d.id)) {
+                knownDialogIdsRef.current.add(d.id);
+                if (d.status === 'new' || !d.assignedAgentId) {
+                  triggerNewInquiryAlert(d);
+                }
+              }
+            }
+          }
+
           setDialogs((prev) => {
             const map = new Map<string, ChatDialog>(prev.map((d) => [d.id, d]));
             for (const item of changedDialogs) {
@@ -447,6 +600,16 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (res.success && res.data) {
         if (Array.isArray(res.data.dialogs)) {
           setDialogs(res.data.dialogs);
+          if (isInitialLoadCompletedRef.current) {
+            for (const d of res.data.dialogs) {
+              if (!knownDialogIdsRef.current.has(d.id)) {
+                knownDialogIdsRef.current.add(d.id);
+                if (d.status === 'new' || !d.assignedAgentId) {
+                  triggerNewInquiryAlert(d);
+                }
+              }
+            }
+          }
           if (!selectedDialogId && res.data.dialogs.length > 0) {
             setSelectedDialogId(res.data.dialogs[0].id);
             setSelectedDialog(res.data.dialogs[0]);
@@ -505,10 +668,8 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           const { dialogId, message, dialog: updatedDialog } = payload;
           if (!dialogId && !updatedDialog) return;
 
-          // Sound alert on incoming customer or bot message
-          if (message && message.sender !== 'agent') {
-            playIncomingMessageSound();
-          }
+          // Sound & Notification alert for incoming message or new inquiry
+          handleIncomingMessageAlert(dialogId, updatedDialog, message);
 
           const targetId = dialogId || updatedDialog?.id;
           const isActiveChannel =
@@ -601,6 +762,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           if (!dialogId && !updatedDialog) return;
 
           const targetId = dialogId || updatedDialog?.id;
+
+          if (targetId && !knownDialogIdsRef.current.has(targetId)) {
+            knownDialogIdsRef.current.add(targetId);
+            if (isInitialLoadCompletedRef.current && updatedDialog && (updatedDialog.status === 'new' || !updatedDialog.assignedAgentId)) {
+              triggerNewInquiryAlert(updatedDialog);
+            }
+          }
 
           setSelectedDialog((prev) => {
             if (!prev) return prev;
@@ -726,9 +894,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               }
             } else if (data.type === 'message:new') {
               const msg = data.message;
-              if (msg && msg.sender !== 'agent') {
-                playIncomingMessageSound();
-              }
+              handleIncomingMessageAlert(data.dialogId, data.dialog, msg);
               const targetId = data.dialogId || data.dialog?.id;
               const isActiveChannel =
                 Boolean(targetId) &&
@@ -1651,7 +1817,57 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const starredCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => Boolean(d.isStarred)).length;
 
   return (
-    <div className={`flex-1 flex flex-col min-h-0 h-full bg-white border-0 ${isAgent ? 'sm:border-t sm:border-slate-200 rounded-none m-0' : 'sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm m-0 sm:m-3 lg:m-4'} overflow-hidden`}>
+    <div className={`relative flex-1 flex flex-col min-h-0 h-full bg-white border-0 ${isAgent ? 'sm:border-t sm:border-slate-200 rounded-none m-0' : 'sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm m-0 sm:m-3 lg:m-4'} overflow-hidden`}>
+      {/* Subtle In-App Floating Alert for New Inquiries in Assigned Channels */}
+      {newInquiryBanner && (
+        <div
+          id="new-inquiry-floating-alert"
+          role="alert"
+          className="absolute top-3 left-1/2 -translate-x-1/2 z-50 max-w-md w-[92%] sm:w-auto bg-slate-900/95 text-white backdrop-blur-md px-4 py-2.5 rounded-xl shadow-xl border border-slate-700/60 flex items-center gap-3 animate-in fade-in slide-in-from-top-4 duration-300 pointer-events-auto"
+        >
+          <div className="w-8 h-8 rounded-full bg-blue-600/30 text-blue-400 flex items-center justify-center shrink-0 border border-blue-500/40">
+            <BellRing className="w-4 h-4 animate-bounce" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-white truncate">
+                {newInquiryBanner.customerName}
+              </span>
+              <span className="text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded border border-blue-400/30 shrink-0 font-medium">
+                {newInquiryBanner.channelName}
+              </span>
+            </div>
+            <p className="text-[11px] text-slate-300 truncate max-w-xs mt-0.5">
+              {newInquiryBanner.text}
+            </p>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              type="button"
+              id="view-new-inquiry-btn"
+              onClick={() => {
+                setSelectedDialogId(newInquiryBanner.id);
+                setSelectedDialog(newInquiryBanner.dialog);
+                setMobileView('chat');
+                setNewInquiryBanner(null);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-xs transition cursor-pointer"
+            >
+              Харах
+            </button>
+            <button
+              type="button"
+              id="dismiss-new-inquiry-btn"
+              onClick={() => setNewInquiryBanner(null)}
+              className="p-1 rounded-md text-slate-400 hover:text-white transition cursor-pointer"
+              title="Хаах"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* 3-Column Workspace */}
       <div className="flex-1 flex flex-col lg:flex-row min-h-0 h-full overflow-hidden">
         {/* ========================================================
@@ -1689,7 +1905,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 type="button"
                 id="chat-sound-toggle-btn"
                 onClick={handleToggleSound}
-                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition ${
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
                   soundEnabled
                     ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
@@ -1702,6 +1918,32 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   <VolumeX className="w-3.5 h-3.5 text-slate-400" />
                 )}
                 <span className="hidden sm:inline">{soundEnabled ? 'Дуу' : 'Чимээгүй'}</span>
+              </button>
+              <button
+                type="button"
+                id="browser-notification-toggle-btn"
+                onClick={handleToggleBrowserNotif}
+                className={`inline-flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-semibold border transition cursor-pointer ${
+                  browserNotifEnabled && notifPermission === 'granted'
+                    ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200'
+                    : 'bg-slate-100 hover:bg-slate-200 text-slate-500 border-slate-200'
+                }`}
+                title={
+                  notifPermission === 'granted'
+                    ? browserNotifEnabled
+                      ? 'Шинэ чатын мэдэгдэл идэвхтэй (Дарж унтраах)'
+                      : 'Шинэ чатын мэдэгдэл унтраалттай (Дарж асаах)'
+                    : notifPermission === 'denied'
+                    ? 'Браузер мэдэгдэл хаагдсан байна'
+                    : 'Шинэ чат ирэх үед Браузер мэдэгдэл авах (Дарж зөвшөөрөх)'
+                }
+              >
+                {browserNotifEnabled && notifPermission === 'granted' ? (
+                  <BellRing className="w-3.5 h-3.5 text-blue-600" />
+                ) : (
+                  <Bell className="w-3.5 h-3.5 text-slate-400" />
+                )}
+                <span className="hidden sm:inline">Мэдэгдэл</span>
               </button>
               <button
                 id="sync-bitrix-chats-btn"
