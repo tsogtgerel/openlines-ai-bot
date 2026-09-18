@@ -69,6 +69,22 @@ interface OpenChannelChatWorkplaceProps {
   onUnbindLine?: (lineId: number) => Promise<void>;
 }
 
+/**
+ * Server/Vite HTML fallback үед JSON алдаа шидэхээс сэргийлэх аюулгүй fetch туслах
+ */
+async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const res = await fetch(url, init);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || !contentType.includes('application/json')) {
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> = ({
   currentAgent,
   team,
@@ -332,8 +348,8 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
       if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
 
-      const res = await fetch(`/api/chats?${params.toString()}`).then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
+      const res = await apiFetch(`/api/chats?${params.toString()}`);
+      if (res?.success && Array.isArray(res.data)) {
         setDialogs(res.data);
 
         // Auto select first if none selected
@@ -362,8 +378,8 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       if (searchQuery.trim()) params.append('search', searchQuery.trim());
       if (currentAgent?.id) params.append('requestingAgentId', currentAgent.id);
 
-      const res = await fetch(`/api/chats/delta?${params.toString()}`).then((r) => r.json());
-      if (res.success && res.data) {
+      const res = await apiFetch(`/api/chats/delta?${params.toString()}`);
+      if (res?.success && res.data) {
         const { version, hasChanges, dialogs: changedDialogs } = res.data;
         if (typeof version === 'number') {
           lastSyncVersionRef.current = version;
@@ -1082,25 +1098,49 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Return dialog back to AI Bot (Re-activate bot)
-  const handleReturnToBot = async () => {
+  // Connect AI Bot to dialog (or Return dialog back to AI Bot)
+  const handleConnectBot = async () => {
     if (!selectedDialog) return;
     setIsBotActionLoading(true);
     try {
-      const res = await fetch(`/api/chats/${selectedDialog.id}/return-to-bot`, {
+      const res = await apiFetch(`/api/chats/${selectedDialog.id}/connect-bot`, {
         method: 'POST',
-      }).then((r) => r.json());
+      });
 
-      if (res.success) {
+      if (res?.success && res.data) {
         setSelectedDialog(res.data);
         setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
       }
     } catch (e) {
-      console.error('Failed to return dialog to bot:', e);
+      console.error('Failed to connect bot to dialog:', e);
     } finally {
       setIsBotActionLoading(false);
     }
   };
+
+  // Detach bot from dialog (Send to operator queue)
+  const handleDetachBot = async () => {
+    if (!selectedDialog) return;
+    setIsBotActionLoading(true);
+    try {
+      const res = await apiFetch(`/api/chats/${selectedDialog.id}/detach-bot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ operatorName: currentAgent?.name || 'Оператор' }),
+      });
+
+      if (res?.success && res.data) {
+        setSelectedDialog(res.data);
+        setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+      }
+    } catch (e) {
+      console.error('Failed to detach bot from dialog:', e);
+    } finally {
+      setIsBotActionLoading(false);
+    }
+  };
+
+  const handleReturnToBot = handleConnectBot;
 
   // Transfer to another agent
   const handleTransfer = async (targetAgent: Agent) => {
@@ -2157,13 +2197,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                             Миний хаасан
                           </span>
                         )}
-                        {(d.status === 'bot' || (d.status !== 'closed' && (d.lastMessageSender === 'customer' || d.status === 'new'))) && (
+                        {(d.status === 'bot' || d.botActive) && d.status !== 'closed' && (
                           <span
                             className="px-1.5 py-0.5 rounded-md bg-purple-50 text-purple-700 border border-purple-200 font-medium flex items-center gap-1 shrink-0"
-                            title="AI хариулах эсвэл үйлдэл хүлээгдэж буй"
+                            title="AI Туслах бот энэ чатад холбогдсон"
                           >
                             <Bot className="w-2.5 h-2.5 text-purple-600" />
-                            <span>AI Pending</span>
+                            <span>Бот идэвхтэй</span>
                           </span>
                         )}
                       </div>
@@ -2367,19 +2407,40 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   </button>
                 )}
 
-                {/* Return to Bot button (When chat is active with agent) */}
-                {selectedDialog.status !== 'closed' && isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
-                  <button
-                    id="return-to-bot-btn"
-                    type="button"
-                    onClick={handleReturnToBot}
-                    disabled={isBotActionLoading}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
-                    title="Харилцан яриаг эргүүлэн AI Туслах Бот руу шилжүүлэх (Бот автоматаар хариулж эхэлнэ)"
-                  >
-                    <Bot className="w-3.5 h-3.5 text-purple-600" />
-                    <span className="hidden sm:inline">{isBotActionLoading ? 'Шилжүүлж байна...' : 'Бот руу шилжүүлэх'}</span>
-                  </button>
+                {/* Connect/Detach Bot buttons for specific chat */}
+                {selectedDialog.status !== 'closed' && (
+                  <>
+                    {(selectedDialog.status === 'bot' || selectedDialog.botActive) ? (
+                      <div className="inline-flex items-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-purple-50 text-purple-700 border border-purple-200 text-xs font-semibold shadow-2xs">
+                          <Bot className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+                          <span className="hidden sm:inline">Бот холбогдсон</span>
+                        </span>
+                        <button
+                          id="detach-bot-btn"
+                          type="button"
+                          onClick={handleDetachBot}
+                          disabled={isBotActionLoading}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
+                          title="Ботыг энэ чатнаас салгаж, операторын дараалалд шилжүүлэх"
+                        >
+                          <span className="hidden sm:inline">{isBotActionLoading ? 'Салгаж байна...' : 'Бот салгах'}</span>
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        id="connect-bot-btn"
+                        type="button"
+                        onClick={handleConnectBot}
+                        disabled={isBotActionLoading}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 text-xs font-semibold transition disabled:opacity-50 shadow-2xs"
+                        title="Энэ тухайлсан чатад AI Туслах Бот холбох (Бот автоматаар хариулж эхэлнэ)"
+                      >
+                        <Bot className="w-3.5 h-3.5 text-purple-600" />
+                        <span className="hidden sm:inline">{isBotActionLoading ? 'Холбож байна...' : '🤖 Бот холбох'}</span>
+                      </button>
+                    )}
+                  </>
                 )}
 
                 {/* Create Deal button */}

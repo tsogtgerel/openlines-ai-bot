@@ -454,10 +454,18 @@ export class BitrixOpenlinesSyncService {
                 Boolean(botCfg.selectedLineId) &&
                 Number(botCfg.selectedLineId) === Number(s.configId);
 
+              const isBotActiveForThisChat =
+                botCfg.botAssignmentMode === 'all_chats'
+                  ? chatDialog.status !== 'in_progress' &&
+                    chatDialog.status !== 'assigned' &&
+                    chatDialog.botActive !== false &&
+                    !chatDialog.assignedAgentId
+                  : chatDialog.botActive === true;
+
               const visibleMsgs = chatDialog.messages.filter((m) => m.sender !== 'system');
               const lastMsg = visibleMsgs[visibleMsgs.length - 1];
 
-              if (isThisLineBotBound && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
+              if (isThisLineBotBound && isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
                 const hasBotReplied = visibleMsgs.some(
                   (m) =>
                     m.sender === 'bot' &&

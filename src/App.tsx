@@ -49,6 +49,23 @@ import {
 
 type ActiveTab = 'chat' | 'inquiries' | 'channels' | 'kb' | 'prompts' | 'logs' | 'sandbox' | 'deploy';
 
+/**
+ * Хариу нь JSON биш (HTML fallback эсвэл сервер түр ачааллаж байгаа) үед
+ * SyntaxError шидэхээс сэргийлж аюулгүй парс хийх туслах функц
+ */
+async function fetchJsonSafe<T = any>(url: string, init?: RequestInit): Promise<T | null> {
+  try {
+    const res = await fetch(url, init);
+    const contentType = res.headers.get('content-type') || '';
+    if (!res.ok || !contentType.includes('application/json')) {
+      return null;
+    }
+    return await res.json();
+  } catch (err) {
+    return null;
+  }
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
 
@@ -87,11 +104,11 @@ export default function App() {
     try {
       setIsLoadingPortal(true);
       const [meRes, botRes] = await Promise.all([
-        fetch('/api/me').then((r) => r.json()),
-        fetch('/api/bot/status').then((r) => r.json()),
+        fetchJsonSafe('/api/me'),
+        fetchJsonSafe('/api/bot/status'),
       ]);
 
-      if (meRes.success && meRes.data) {
+      if (meRes?.success && meRes.data) {
         setPortalInfo({
           portal: meRes.data.portal,
           portalId: meRes.data.portalId,
@@ -100,7 +117,7 @@ export default function App() {
         });
       }
 
-      if (botRes.success && botRes.data) {
+      if (botRes?.success && botRes.data) {
         setBotConfig(botRes.data.config);
       }
     } catch (e) {
@@ -114,8 +131,8 @@ export default function App() {
   const loadOpenLines = async () => {
     try {
       setIsLoadingChannels(true);
-      const res = await fetch('/api/openlines').then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
+      const res = await fetchJsonSafe('/api/openlines');
+      if (res?.success && Array.isArray(res.data)) {
         setOpenLines(res.data);
       }
     } catch (e) {
@@ -129,8 +146,8 @@ export default function App() {
   const loadKnowledgeBase = async () => {
     try {
       setIsLoadingKB(true);
-      const res = await fetch('/api/kb').then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
+      const res = await fetchJsonSafe('/api/kb');
+      if (res?.success && Array.isArray(res.data)) {
         setArticles(res.data);
       }
     } catch (e) {
@@ -144,8 +161,8 @@ export default function App() {
   const loadLogs = async () => {
     try {
       setIsLoadingLogs(true);
-      const res = await fetch('/api/logs?limit=100').then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
+      const res = await fetchJsonSafe('/api/logs?limit=100');
+      if (res?.success && Array.isArray(res.data)) {
         setLogs(res.data);
       }
     } catch (e) {
@@ -166,8 +183,8 @@ export default function App() {
   const loadServers = async () => {
     try {
       setIsLoadingServers(true);
-      const res = await fetch('/api/infra/servers').then((r) => r.json());
-      if (res.success && Array.isArray(res.data)) {
+      const res = await fetchJsonSafe('/api/infra/servers');
+      if (res?.success && Array.isArray(res.data)) {
         setServers(res.data);
       }
     } catch (e) {
@@ -185,9 +202,9 @@ export default function App() {
         ? `/api/worktime/status?agentId=${encodeURIComponent(activeAgentId)}`
         : '/api/worktime/status';
 
-      const worktimeRes = await fetch(statusUrl).then((r) => r.json());
+      const worktimeRes = await fetchJsonSafe(statusUrl);
 
-      if (worktimeRes.success && worktimeRes.data) {
+      if (worktimeRes?.success && worktimeRes.data) {
         setCurrentAgent(worktimeRes.data.currentAgent);
         setCurrentShift(worktimeRes.data.currentShift);
         setTeam(worktimeRes.data.team || []);
@@ -199,9 +216,9 @@ export default function App() {
       const chatsUrl = activeAgentId
         ? `/api/chats?requestingAgentId=${encodeURIComponent(activeAgentId)}`
         : '/api/chats';
-      const chatsRes = await fetch(chatsUrl).then((r) => r.json());
+      const chatsRes = await fetchJsonSafe(chatsUrl);
 
-      if (chatsRes.success && Array.isArray(chatsRes.data)) {
+      if (chatsRes?.success && Array.isArray(chatsRes.data)) {
         setChatsCount(chatsRes.data.length);
         const unread = chatsRes.data.reduce((acc: number, d: any) => acc + (d.unreadCount || 0), 0);
         setUnreadCount(unread);

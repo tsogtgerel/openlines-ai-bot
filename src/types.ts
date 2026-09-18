@@ -22,6 +22,7 @@ export interface BotConfig {
   operatorKeywords: string[];
   systemPromptAddition: string;
   model: string;
+  botAssignmentMode?: 'manual_only' | 'all_chats';
 }
 
 export interface DialogLog {

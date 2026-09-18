@@ -1072,15 +1072,33 @@ async function startServer() {
 
   /**
    * POST /api/chats/:id/return-to-bot
-   * Оператор харилцан яриаг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate bot)
+   * POST /api/chats/:id/connect-bot
+   * Оператор харилцан яриаг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate/connect bot)
    */
-  app.post('/api/chats/:id/return-to-bot', async (req, res) => {
+  app.post(['/api/chats/:id/return-to-bot', '/api/chats/:id/connect-bot'], async (req, res) => {
     try {
       const config = botWorker.getConfig();
       const botName = config.botName || 'BSB AI Туслах';
-      const dialog = chatManager.handBackToBot(req.params.id, botName);
+      const dialog = chatManager.connectBotToChat(req.params.id, botName);
       if (dialog.dialogId) {
         await botWorker.rejoinChat(dialog.dialogId);
+      }
+      res.json({ success: true, data: dialog });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/chats/:id/detach-bot
+   * Бот-ыг тухайн чатнаас салгаж, операторын дараалалд шилжүүлэх
+   */
+  app.post('/api/chats/:id/detach-bot', async (req, res) => {
+    try {
+      const { operatorName } = req.body || {};
+      const dialog = chatManager.detachBotFromChat(req.params.id, operatorName || 'Оператор');
+      if (dialog.dialogId) {
+        await botWorker.leaveChat(dialog.dialogId);
       }
       res.json({ success: true, data: dialog });
     } catch (e: any) {
@@ -2126,6 +2144,14 @@ async function startServer() {
   // ==========================================================================
   // 9. Vite Dev Middleware & Production Static SPA Serving
   // ==========================================================================
+  // API хандалтууд Vite эсвэл SPA fallback руу унаж HTML буцаахаас сэргийлж 404 JSON буцаана
+  app.all('/api/*', (req, res) => {
+    res.status(404).json({
+      success: false,
+      error: { message: `API endpoint not found: ${req.method} ${req.originalUrl}` },
+    });
+  });
+
   // Development орчинд Vite HMR болон шууд TSX хөрвүүлэлтийг Express дээр ачааллана.
   // Production горимд dist/ хавтаснаас урьдчилан build хийгдсэн index.html болон assets-ийг өгнө.
   if (process.env.NODE_ENV !== 'production') {

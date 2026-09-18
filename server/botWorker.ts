@@ -50,6 +50,7 @@ export interface BotConfig {
   operatorKeywords: string[]; // Оператор дуудах монгол/англи түлхүүр үгс
   systemPromptAddition: string; // Системийн нэмэлт зааварчилгаа
   model: string; // Ашиглах AI загвар (ж: bitrix/bitrixgpt-5.5)
+  botAssignmentMode: 'manual_only' | 'all_chats'; // 'manual_only': зөвхөн операторын заасан чатад, 'all_chats': сувгийн бүх чатад
 }
 
 /**
@@ -98,6 +99,7 @@ const DEFAULT_CONFIG: BotConfig = {
   ],
   systemPromptAddition: 'Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.',
   model: 'bitrix/bitrixgpt-5.5',
+  botAssignmentMode: 'manual_only',
 };
 
 export class BotWorkerService {
@@ -408,6 +410,12 @@ export class BotWorkerService {
       return;
     }
 
+    // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
+    if (this.config.botAssignmentMode === 'manual_only' && !currentDialog?.botActive) {
+      console.log(`[BotWorker] Skipping bot auto-reply for ${dialogId}: Manual assignment mode is active and bot is not connected to this chat`);
+      return;
+    }
+
     await this.processMessage(dialogId, rawText);
   }
 
@@ -626,6 +634,12 @@ ${kbContext}
         currentDialog.botActive === false)
     ) {
       console.log(`[BotWorker] Skipping openline message processing for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId} (bot detached)`);
+      return null;
+    }
+
+    // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
+    if (this.config.botAssignmentMode === 'manual_only' && !currentDialog?.botActive) {
+      console.log(`[BotWorker] Skipping openline message processing for ${params.dialogId}: Manual assignment mode is active and bot is not connected to this chat`);
       return null;
     }
 

@@ -21,6 +21,9 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
     botConfig?.systemPromptAddition || ''
   );
   const [model, setModel] = useState(botConfig?.model || 'bitrix/bitrixgpt-5.5');
+  const [botAssignmentMode, setBotAssignmentMode] = useState<BotConfig['botAssignmentMode']>(
+    botConfig?.botAssignmentMode || 'manual_only'
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -38,6 +41,7 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
           .filter(Boolean),
         systemPromptAddition,
         model,
+        botAssignmentMode,
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
@@ -112,6 +116,65 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                 <span className="text-xs block font-semibold">openai/gpt-4o-mini</span>
                 <span className="text-[11px] text-slate-500">
                   Өндөр хурдтай авсаархан OpenAI модель
+                </span>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        {/* Bot Assignment Mode */}
+        <div>
+          <label className="block text-xs font-semibold text-slate-800 mb-1.5">
+            Бот чатад холбогдох горим (Chat Assignment Mode)
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <label
+              className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                botAssignmentMode === 'manual_only'
+                  ? 'border-purple-600 bg-purple-50/40 text-purple-950 font-medium'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="bot-assignment-mode"
+                value="manual_only"
+                checked={botAssignmentMode === 'manual_only'}
+                onChange={() => setBotAssignmentMode('manual_only')}
+                className="mt-0.5 text-purple-600"
+              />
+              <div>
+                <span className="text-xs block font-semibold flex items-center gap-1.5">
+                  🎯 Зөвхөн заасан тухайлсан чатад холбогдох
+                  <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded font-medium">Зөвлөмжит</span>
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block leading-normal">
+                  Бүх шинэ чат операторын дараалалд орно. Оператор шаардлагатай чат дээрээ "🤖 Бот холбох" товч дарж тухайн чатад ботыг даалгана.
+                </span>
+              </div>
+            </label>
+
+            <label
+              className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
+                botAssignmentMode === 'all_chats'
+                  ? 'border-blue-600 bg-blue-50/40 text-blue-950 font-medium'
+                  : 'border-slate-200 hover:border-slate-300 text-slate-700'
+              }`}
+            >
+              <input
+                type="radio"
+                name="bot-assignment-mode"
+                value="all_chats"
+                checked={botAssignmentMode === 'all_chats'}
+                onChange={() => setBotAssignmentMode('all_chats')}
+                className="mt-0.5 text-blue-600"
+              />
+              <div>
+                <span className="text-xs block font-semibold">
+                  🌐 Сувгийн бүх чатад автоматаар хариулах
+                </span>
+                <span className="text-[11px] text-slate-500 mt-1 block leading-normal">
+                  Харилцагч бичсэн бүх шинэ чатад бот шууд хариулж угтана. Боломжгүй үед операторт шилжүүлнэ.
                 </span>
               </div>
             </label>

@@ -49,7 +49,7 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 32,
+      "activeSessions": 16,
       "accessRole": "admin",
       "canAccessAllChannels": true,
       "bitrixWorkdayStatus": "OPENED"
@@ -120,10 +120,10 @@
       "name": "Nomi N",
       "role": "Электрон барааны борлуулалтын мэргэжилтэн ",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/916/91610f3cd8a9d1efa1f2b36ba0b7f4e1/488922801_680552734560338_3006429725501461024_n.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "nomin@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -184,10 +184,10 @@
       "name": "Номин Баттөмөр",
       "role": "Интернэт дэлгүүр мебелийн борлуулалтын мэргэжилтэн",
       "avatar": "https://ui-avatars.com/api/?name=%D0%9D%D0%BE%D0%BC%D0%B8%D0%BD%20%D0%91%D0%B0%D1%82%D1%82%D3%A9%D0%BC%D3%A9%D1%80&background=3b82f6&color=fff",
-      "status": "offline",
+      "status": "online",
       "email": "eshop_mebel@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -204,7 +204,7 @@
         "Интернэт дэлгүүр - Facebook - Messenger",
         "Интернэт дэлгүүр - Telegram"
       ],
-      "activeSessions": 0,
+      "activeSessions": 5,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -258,10 +258,10 @@
       "name": "Zultsetseg Erdene",
       "role": "Харилцагчийн үйлчилгээний ажилтан",
       "avatar": "https://ui-avatars.com/api/?name=Zultsetseg%20Erdene&background=3b82f6&color=fff",
-      "status": "offline",
+      "status": "online",
       "email": "eshop_it@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -272,7 +272,7 @@
         "Интернэт дэлгүүр - Instagram",
         "Интернэт дэлгүүр - Facebook - Messenger"
       ],
-      "activeSessions": 14,
+      "activeSessions": 0,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -496,7 +496,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 322,
+      "activeSessions": 298,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 30,
+      "activeSessions": 24,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1232,10 +1232,10 @@
       "name": "Чулуунбаатар Б",
       "role": "Харилцагчийн үйлчилгээний ажилтан",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/15a/15a80e45df0df3d90dbee21332aa7904/690033712_27135620512700134_2022237548310355747_n.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "whs.hfassembly@bsb.mn",
       "phone": "",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -1321,15 +1321,15 @@
       "agentId": "bx-15",
       "agentName": "Цогтгэрэл Ч",
       "date": "2026-09-16",
-      "clockInTime": "2026-09-16T11:08:20+08:00",
+      "clockInTime": "2026-09-18T10:28:18+08:00",
       "clockOutTime": null,
       "isClockedIn": true,
       "isOnBreak": false,
-      "totalBreakSeconds": 7203,
+      "totalBreakSeconds": 0,
       "workedSeconds": 9204,
       "chatsResolved": 1,
       "bitrixWorkdayStatus": "OPENED",
-      "bitrixWorkdayId": 1652,
+      "bitrixWorkdayId": 1682,
       "bitrixDuration": "00:00:00",
       "breakStartTime": "2026-09-16T04:22:33.490Z"
     },

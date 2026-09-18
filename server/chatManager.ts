@@ -812,23 +812,27 @@ export class ChatManagerService extends EventEmitter {
   }
 
   /**
-   * Оператор чатыг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate bot)
+   * Тухайлсан чатад AI Туслах Бот холбох (Connect bot to specific chat)
    */
-  handBackToBot(id: string, botName = 'BSB AI Туслах'): ChatDialog {
+  connectBotToChat(id: string, botName = 'BSB AI Туслах'): ChatDialog {
     const dialog = this.getDialogById(id);
     if (!dialog) throw new Error(`Dialog not found: ${id}`);
 
-    const prevAgentName = dialog.assignedAgentName || 'Оператор';
+    const prevAgentName = dialog.assignedAgentName;
     dialog.assignedAgentId = null;
     dialog.assignedAgentName = null;
     dialog.assignedAgentAvatar = null;
     dialog.status = 'bot';
     dialog.botActive = true;
 
+    const notice = prevAgentName
+      ? `🤖 Оператор ${prevAgentName} энэ чатад ${botName}-ыг холболоо. Бот автоматаар хариулж эхэлнэ.`
+      : `🤖 Энэ чатад ${botName} амжилттай холбогдлоо. Харилцагчийн асуултад бот хариулна.`;
+
     const sysMsg: ChatMessage = {
       id: `sys-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       sender: 'system',
-      text: `🔄 Оператор ${prevAgentName} чатыг эргүүлэн ${botName}-д шилжүүллээ. Бот автоматаар хариулж эхэлнэ.`,
+      text: notice,
       timestamp: new Date().toISOString(),
     };
     dialog.messages.push(sysMsg);
@@ -838,6 +842,40 @@ export class ChatManagerService extends EventEmitter {
 
     this.saveDialogs(id, 'dialog:update');
     return dialog;
+  }
+
+  /**
+   * Тухайлсан чатнаас ботыг салгаж операторын дараалалд шилжүүлэх
+   */
+  detachBotFromChat(id: string, operatorName = 'Оператор'): ChatDialog {
+    const dialog = this.getDialogById(id);
+    if (!dialog) throw new Error(`Dialog not found: ${id}`);
+
+    dialog.botActive = false;
+    if (dialog.status === 'bot') {
+      dialog.status = 'new';
+    }
+
+    const sysMsg: ChatMessage = {
+      id: `sys-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      sender: 'system',
+      text: `🛑 ${operatorName} ботыг энэ чатнаас салгалаа. Чатыг операторын дараалалд шилжүүллээ.`,
+      timestamp: new Date().toISOString(),
+    };
+    dialog.messages.push(sysMsg);
+    dialog.lastMessageText = sysMsg.text;
+    dialog.lastMessageTime = sysMsg.timestamp;
+    dialog.lastMessageSender = 'system';
+
+    this.saveDialogs(id, 'dialog:update');
+    return dialog;
+  }
+
+  /**
+   * Оператор чатыг эргүүлэн AI Туслах Бот руу шилжүүлэх (Re-activate bot)
+   */
+  handBackToBot(id: string, botName = 'BSB AI Туслах'): ChatDialog {
+    return this.connectBotToChat(id, botName);
   }
 
   transferDialog(id: string, targetAgentId: string, targetAgentName: string, targetAgentAvatar?: string) {
@@ -1208,6 +1246,7 @@ export class ChatManagerService extends EventEmitter {
         closedByAgentName: finalStatus === 'closed' ? finalClosedByAgentName : undefined,
         closedByAgentAvatar: finalStatus === 'closed' ? finalClosedByAgentAvatar : undefined,
         isStarred: existing.isStarred,
+        botActive: existing.botActive !== undefined ? existing.botActive : (newDialog.botActive ?? false),
         assignedAgentId: finalAssignedAgentId,
         assignedAgentName: finalAssignedAgentName,
         assignedAgentAvatar: finalAssignedAgentAvatar,
