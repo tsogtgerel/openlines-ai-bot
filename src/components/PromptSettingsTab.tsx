@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sliders, Save, Sparkles, AlertCircle, Check } from 'lucide-react';
+import { Sliders, Save, Sparkles, AlertCircle, Check, Database, Package, CheckCircle2 } from 'lucide-react';
 import { BotConfig } from '../types';
 
 interface PromptSettingsTabProps {
@@ -24,6 +24,12 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   const [botAssignmentMode, setBotAssignmentMode] = useState<BotConfig['botAssignmentMode']>(
     botConfig?.botAssignmentMode || 'manual_only'
   );
+  const [productSearchEnabled, setProductSearchEnabled] = useState<boolean>(
+    botConfig?.productSearchEnabled ?? true
+  );
+  const [productSearchLimit, setProductSearchLimit] = useState<number>(
+    botConfig?.productSearchLimit ?? 4
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -42,6 +48,8 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
         systemPromptAddition,
         model,
         botAssignmentMode,
+        productSearchEnabled,
+        productSearchLimit,
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
@@ -283,6 +291,62 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
             placeholder="Жишээ: Үргэлж Монгол хэлээр хариулж, барааны үнэ асуувал одоо явагдаж буй урамшууллыг дурдана уу."
             className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500 leading-relaxed"
           />
+        </div>
+
+        {/* MeiliSearch BSB Product Database Integration */}
+        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Database className="w-4 h-4" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900">
+                    БСБ Барааны Мэдээллийн Сан (MeiliSearch)
+                  </h4>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Идэвхтэй холбогдсон
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Сервер: https://meili.bsb.mn • Индекс: app_bsb_products (7,339+ бараа)
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={productSearchEnabled}
+                onChange={(e) => setProductSearchEnabled(e.target.checked)}
+                className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
+              />
+              <span className="text-xs font-semibold text-slate-800">
+                {productSearchEnabled ? 'Идэвхтэй' : 'Идэвхгүй'}
+              </span>
+            </label>
+          </div>
+
+          <p className="text-[11px] text-slate-600 leading-relaxed">
+            Хэрэглэгч барааны үнэ, загвар, нөөц (жишээ: iPhone 16, Panasonic ТВ, угаалгын машин)-ийн талаар лавлахад бот MeiliSearch-ээс бодит үнэ, хямдрал, бэлэн байгаа төлөвийг шалгаж хариултандаа тусгана.
+          </p>
+
+          <div className="flex items-center justify-between pt-2 border-t border-indigo-100/80 text-xs">
+            <span className="text-slate-600 font-medium">Хариултад хамгийн ихдээ хавсаргах барааны тоо:</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="number"
+                min="1"
+                max="8"
+                value={productSearchLimit}
+                onChange={(e) => setProductSearchLimit(Math.max(1, Math.min(8, parseInt(e.target.value) || 4)))}
+                className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-center font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              />
+              <span className="text-slate-400 text-[11px]">бараа</span>
+            </div>
+          </div>
         </div>
 
         <div className="pt-4 border-t border-slate-100 flex justify-end">

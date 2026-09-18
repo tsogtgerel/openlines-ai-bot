@@ -34,6 +34,7 @@ import { bitrixAgentsService } from './server/bitrixAgentsService';
 import { bitrixOpenlinesSync } from './server/bitrixOpenlinesSync';
 import { inquiryAnalyticsService } from './server/inquiryAnalyticsService';
 import { typingManager } from './server/typingManager';
+import { meiliProductService } from './server/meiliProductService';
 
 // .env файлын тохиргоог ачааллах
 dotenv.config();
@@ -346,6 +347,54 @@ async function startServer() {
     const q = (req.query.q as string) || '';
     const results = knowledgeBase.search(q);
     res.json({ success: true, data: results });
+  });
+
+  // ==========================================================================
+  // 4.1. BSB Products MeiliSearch Catalog API (https://meili.bsb.mn)
+  // ==========================================================================
+  /**
+   * GET /api/products/search?q=...&limit=...&inStockOnly=true
+   * MeiliSearch сангаас барааны нэр, бренд, үзүүлэлтээр хайх.
+   */
+  app.get('/api/products/search', async (req, res) => {
+    try {
+      const q = (req.query.q as string) || '';
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
+      const inStockOnly = req.query.inStockOnly === 'true';
+      const result = await meiliProductService.searchProducts(q, { limit, inStockOnly });
+      res.json({ success: true, data: result });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/products/stats
+   * MeiliSearch холболт болон нийт барааны статистик төлөв авах.
+   */
+  app.get('/api/products/stats', async (req, res) => {
+    try {
+      const stats = await meiliProductService.getStats();
+      res.json({ success: true, data: stats });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/products/:code
+   * Бүтээгдэхүүний кодоор дэлгэрэнгүй мэдээлэл авах.
+   */
+  app.get('/api/products/:code', async (req, res) => {
+    try {
+      const product = await meiliProductService.getProductByCode(req.params.code);
+      if (!product) {
+        return res.status(404).json({ success: false, error: { message: 'Бүтээгдэхүүн олдсонгүй' } });
+      }
+      res.json({ success: true, data: product });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
   });
 
   // ==========================================================================

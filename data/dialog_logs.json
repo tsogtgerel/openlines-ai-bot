@@ -1,5 +1,83 @@
 [
   {
+    "id": "log-1789722004032-n4pv",
+    "timestamp": "2026-09-18T09:00:04.032Z",
+    "dialogId": "sim-test-2",
+    "customerMessage": "65 инчийн зурагт сонирхож байна",
+    "botAnswer": "Сайн байна уу? Таны сонирхсон 65 инчийн ухаалаг зурагт БСБ-ын барааны санд дараах загвар байгаа бөгөөд танд санал болгож байна:\n\n**Panasonic TH-65NX900 Full Array Led 65 инчийн ухаалаг зурагт**\n*   **Үнэ:** 2,899,900₮ (Үндсэн үнээс 28% хямдарсан)\n*   **Төлөв:** БЭЛЭН БАЙГАА\n*   **Гол үзүүлэлтүүд:**\n    *   Дэлгэцийн хэмжээ: 65 инч (1448мм)\n    *   Дэлгэцийн нягтрал: 4K UHD (3840 x 2160)\n    *   Дэлгэцийн төрөл: Full Array Led, 4K HDR\n    *   Үйлдлийн систем: Google TV\n    *   Хурд: 120Hz\n\nТа энэхүү загварыг сонирхож байгаа бол эсвэл нэмэлт мэдээлэл авахыг хүсвэл бидэнд хандаарай. Таныг үйлчлэхэд таатай байх болно.",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "SAMS-F776B-B",
+        "name": "SAMSUNG Flip 8 4.5GHz 12GB, 256GB, 1080x2520 6.9\", 50MP 4300mAh Graphite",
+        "priceFormatted": "4,259,900₮",
+        "inStock": true
+      },
+      {
+        "code": "PANA-TH-65NX900M",
+        "name": "Panasonic TH-65NX900  Full Array Led 65 инчийн ухаалаг зурагт",
+        "priceFormatted": "2,899,900₮",
+        "inStock": true
+      },
+      {
+        "code": "SAMS-F974B-W",
+        "name": "Samsung Fold 8 Dynamic LTPO AMOLED 2X , 120Hz, 3000 nits 7.6\",  50MP, 4800mAh ,Cream",
+        "priceFormatted": "7,199,900₮",
+        "inStock": true
+      },
+      {
+        "code": "SAMS-F971B-V",
+        "name": "Samsung Fold 8 Dynamic LTPO AMOLED 2X , 120Hz, 3000 nits 7.6\",  50MP, 4800mAh Lavender",
+        "priceFormatted": "6,339,900₮",
+        "inStock": true
+      }
+    ],
+    "durationMs": 2212
+  },
+  {
+    "id": "log-1789722001819-ghz3",
+    "timestamp": "2026-09-18T09:00:01.819Z",
+    "dialogId": "sim-test-1",
+    "customerMessage": "iPhone 16 Plus үнэ хэд вэ, бэлэн байна уу?",
+    "botAnswer": "Сайн байна уу? Танд БСБ-ийн үйлчилгээний туслах болоод мэдэгдэж байна.\n\nТаны асуусан Apple iPhone 16 Plus загварын бараа болон тэдгээрийн үнэ, нөөц байдлын мэдээллийг хүргүүлж байна:\n\n1. **Apple IPHONE 16 Plus Black / 128GB**\n   * **Үнэ:** 3,799,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\n2. **Apple IPHONE 16 Plus Teal 128GB**\n   * **Үнэ:** 3,799,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\n3. **Apple IPHONE 16 PLUS Black 256GB**\n   * **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\n4. **Apple IPHONE 16 PLUS Pink 256GB**\n   * **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Одоогоор нөөц түр дууссан байна.\n\nТа өөрт хэрэгтэй загвар, багтаамжаа сонгоод захиалга хийх боломжтой. Танд өөр асуух зүйл байна уу?",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.17037037037037037
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXVU3X",
+        "name": "IPHONE 16 Plus Black / 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXVY3X",
+        "name": "IPHONE 16 Plus Teal 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false
+      }
+    ],
+    "durationMs": 3108
+  },
+  {
     "id": "log-1789701923812-hdju",
     "timestamp": "2026-09-18T03:25:23.812Z",
     "dialogId": "chat76396",

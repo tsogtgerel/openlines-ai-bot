@@ -1,5 +1,5 @@
 {
-  "currentAgentId": "bx-123",
+  "currentAgentId": "bx-15",
   "agents": [
     {
       "id": "bx-15",
@@ -7,12 +7,12 @@
       "name": "Цогтгэрэл Ч",
       "role": "Мэдээллийн технологийн захирал",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-      "status": "online",
+      "status": "offline",
       "email": "tsogtgerel@bsb.mn",
       "phone": "+976 75100272",
-      "isClockedIn": true,
+      "isClockedIn": false,
       "isOnBreak": false,
-      "activeShiftId": "shift-bx-1682",
+      "activeShiftId": null,
       "assignedChannelIds": [
         1,
         3,
@@ -49,10 +49,10 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 48,
+      "activeSessions": 16,
       "accessRole": "admin",
       "canAccessAllChannels": true,
-      "bitrixWorkdayStatus": "OPENED"
+      "bitrixWorkdayStatus": "CLOSED"
     },
     {
       "id": "bx-121",
@@ -497,7 +497,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 298,
+      "activeSessions": 296,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1323,13 +1323,13 @@
       "agentName": "Цогтгэрэл Ч",
       "date": "2026-09-18",
       "clockInTime": "2026-09-18T10:28:18+08:00",
-      "clockOutTime": null,
-      "isClockedIn": true,
+      "clockOutTime": "2026-09-18T16:56:13+08:00",
+      "isClockedIn": false,
       "isOnBreak": false,
       "totalBreakSeconds": 13,
-      "workedSeconds": 0,
+      "workedSeconds": 23262,
       "chatsResolved": 0,
-      "bitrixWorkdayStatus": "OPENED",
+      "bitrixWorkdayStatus": "CLOSED",
       "bitrixWorkdayId": 1682,
       "bitrixDuration": "00:00:00"
     },

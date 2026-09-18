@@ -27,6 +27,7 @@ import path from 'path';
 import { knowledgeBase, KnowledgeArticle } from './knowledgeBase';
 import { vibeRequest } from './vibeApi';
 import { chatManager } from './chatManager';
+import { meiliProductService, FormattedBsbProduct } from './meiliProductService';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'bot_config.json');
@@ -51,6 +52,9 @@ export interface BotConfig {
   systemPromptAddition: string; // Системийн нэмэлт зааварчилгаа
   model: string; // Ашиглах AI загвар (ж: bitrix/bitrixgpt-5.5)
   botAssignmentMode: 'manual_only' | 'all_chats'; // 'manual_only': зөвхөн операторын заасан чатад, 'all_chats': сувгийн бүх чатад
+  enableProductSearch?: boolean; // MeiliSearch барааны сангаас автоматаар хайх
+  meiliUrl?: string; // MeiliSearch URL
+  meiliIndex?: string; // MeiliSearch индекс
 }
 
 /**
@@ -65,6 +69,7 @@ export interface DialogLog {
   handedOff: boolean;
   handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined';
   matchedArticles: { id: string; title: string; score: number }[];
+  matchedProducts?: { code: string; name: string; priceFormatted: string; inStock: boolean }[];
   durationMs: number;
 }
 
@@ -100,6 +105,9 @@ const DEFAULT_CONFIG: BotConfig = {
   systemPromptAddition: 'Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.',
   model: 'bitrix/bitrixgpt-5.5',
   botAssignmentMode: 'manual_only',
+  enableProductSearch: true,
+  meiliUrl: 'https://meili.bsb.mn',
+  meiliIndex: 'app_bsb_products',
 };
 
 export class BotWorkerService {
@@ -469,19 +477,54 @@ export class BotWorkerService {
         handedOff: true,
         handoffReason: lowerText === '/operator' ? 'user_button' : 'keyword',
         matchedArticles: [],
+        matchedProducts: [],
         durationMs: Date.now() - startTime,
       });
 
       return { answer: handoffMsg, handedOff: true };
     }
 
-    // 2. Search Knowledge Base
-    const matched = knowledgeBase.search(sanitizedText, 3);
-    const topScore = matched.length > 0 ? matched[0].score : 0;
+    // 2. Check for polite greeting (e.g. "Сайн байна уу", "Өдрийн мэнд") to avoid immediate handoff
+    const isGreeting = /^(сайн байна уу|сайн уу|өдрийн мэнд|өглөөний мэнд|оройн мэнд|hi|hello|hey|sn bnu)[!.? ]*$/i.test(text.trim());
+    if (isGreeting) {
+      const greetingReply = "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.";
+      await this.sendReply(dialogId, greetingReply, true);
+      chatManager.recordBotReply(dialogId, greetingReply, false, this.config.botName);
+      this.addLog({
+        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        timestamp: new Date().toISOString(),
+        dialogId,
+        customerMessage: text,
+        botAnswer: greetingReply,
+        handedOff: false,
+        matchedArticles: [],
+        matchedProducts: [],
+        durationMs: Date.now() - startTime,
+      });
+      return { answer: greetingReply, handedOff: false };
+    }
 
-    // 3. If confidence is below threshold -> handoff to operator immediately without hallucinations
-    if (matched.length === 0 || topScore < this.config.handoffThreshold) {
-      const unsureMsg = "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!";
+    // 3. Search MeiliSearch Product Database (https://meili.bsb.mn)
+    let matchedProducts: FormattedBsbProduct[] = [];
+    if (this.config.enableProductSearch !== false) {
+      try {
+        const prodResult = await meiliProductService.searchProducts(sanitizedText, { limit: 4 });
+        matchedProducts = prodResult.hits;
+      } catch (prodErr) {
+        console.warn('[BotWorker] MeiliSearch query failed:', prodErr);
+      }
+    }
+
+    // 4. Search Knowledge Base
+    const matchedKb = knowledgeBase.search(sanitizedText, 3);
+    const topKbScore = matchedKb.length > 0 ? matchedKb[0].score : 0;
+
+    // 5. If confidence is below threshold and no products found -> handoff to operator immediately without hallucinations
+    const hasProductMatch = matchedProducts.length > 0;
+    const hasKbMatch = matchedKb.length > 0 && topKbScore >= this.config.handoffThreshold;
+
+    if (!hasProductMatch && !hasKbMatch) {
+      const unsureMsg = "Манай барааны болон мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!";
       await this.sendReply(dialogId, unsureMsg);
       await this.handoffToOperator(dialogId);
       chatManager.recordBotReply(dialogId, unsureMsg, true, this.config.botName);
@@ -494,29 +537,36 @@ export class BotWorkerService {
         botAnswer: unsureMsg,
         handedOff: true,
         handoffReason: 'low_confidence',
-        matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: [],
         durationMs: Date.now() - startTime,
       });
 
       return { answer: unsureMsg, handedOff: true };
     }
 
-    // 4. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
+    // 6. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
     try {
-      const kbContext = matched
+      const productContext = matchedProducts.length > 0
+        ? meiliProductService.formatForPrompt(matchedProducts)
+        : '';
+
+      const kbContext = matchedKb
         .map((m) => `### ${m.article.title} (Ангилал: ${m.article.category})\n${m.article.content}`)
         .join('\n\n');
 
-      const systemPrompt = `Та бол БСБ (BSB) компанийн нээлттэй сувгийн харилцагчийн үйлчилгээний туслах AI бот юм.
-Хэрэглэгчийн асуултад зөвхөн доорх Мэдээллийн Сангийн хэсгүүдэд үндэслэн Монгол хэлээр маш тодорхой, эелдэг, найрсаг хариулна уу.
-Мэдээллийн санд байхгүй зүйлийг зохиож хариулж БОЛОХГҮЙ.
-Өнгө аяс: ${this.config.tone}.
+      const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
+Хэрэглэгчийн асуултад БСБ Барааны мэдээллийн сан (MeiliSearch https://meili.bsb.mn) болон Мэдээллийн санд үндэслэн Монгол хэлээр маш тодорхой, эелдэг, найрсаг хариулна уу.
+
+ДҮРЭМ ЖУРАМ:
+1. Бараа, бүтээгдэхүүн, үнэ, загвар, техникийн үзүүлэлт, бэлэн байгаа эсэхийг асуусан бол "БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН"-аас олдсон бодит бүтээгдэхүүний брэнд, нэр, үнэ (₮-өөр), бэлэн байгаа эсэх төлөв, гол техникийн үзүүлэлтийг тодорхой дурдаж хариулна.
+2. Хэрэв барааны нөөц дууссан ("Одоогоор нөөц дууссан") байвал "Одоогоор нөөц түр дууссан байна" гэдгийг тодорхой мэдэгдэнэ.
+3. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), хүргэлт, салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
+4. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
+5. Өнгө аяс: ${this.config.tone}.
 ${this.config.systemPromptAddition}
 
---- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---
-${kbContext}
-
-Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
+${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---\n' + kbContext + '\n\n' : ''}Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
 
       const aiRes = await vibeRequest<any>('POST', '/v1/chat/completions', {
         model: this.config.model || 'bitrix/bitrixgpt-5.5',
@@ -543,7 +593,8 @@ ${kbContext}
           botAnswer: transferText,
           handedOff: true,
           handoffReason: 'model_declined',
-          matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+          matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+          matchedProducts: matchedProducts.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
           durationMs: Date.now() - startTime,
         });
 
@@ -561,7 +612,8 @@ ${kbContext}
         customerMessage: text,
         botAnswer: aiContent,
         handedOff: false,
-        matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: matchedProducts.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
         durationMs: Date.now() - startTime,
       });
 
@@ -582,7 +634,8 @@ ${kbContext}
         botAnswer: fallbackText,
         handedOff: true,
         handoffReason: 'ai_error',
-        matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: matchedProducts.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
         durationMs: Date.now() - startTime,
       });
 
@@ -767,20 +820,32 @@ ${kbContext}
     return this.leaveChat(dialogId);
   }
 
-  async suggestDraftResponse(query: string): Promise<{ suggestion: string; matchedArticles: { id: string; title: string; score: number }[] }> {
-    const matched = knowledgeBase.search(query, 3);
-    const kbContext = matched
+  async suggestDraftResponse(query: string): Promise<{
+    suggestion: string;
+    matchedArticles: { id: string; title: string; score: number }[];
+    matchedProducts?: { code: string; name: string; priceFormatted: string; inStock: boolean }[];
+  }> {
+    const [matchedKb, productRes] = await Promise.all([
+      Promise.resolve(knowledgeBase.search(query, 3)),
+      meiliProductService.searchProducts(query, { limit: 3 }).catch(() => ({ hits: [] })),
+    ]);
+
+    const kbContext = matchedKb
       .map((m) => `### ${m.article.title} (Ангилал: ${m.article.category})\n${m.article.content}`)
       .join('\n\n');
 
+    const productContext = productRes.hits.length > 0
+      ? meiliProductService.formatForPrompt(productRes.hits)
+      : '';
+
     const prompt = `Та бол БСБ компанийн харилцагчийн үйлчилгээний операторт туслах хиймэл оюун ухаан юм.
 Оператор хэрэглэгчийн доорх асуултад шууд илгээх боломжтой, эелдэг найрсаг, тодорхой, мэргэжлийн хариултын нооргийг Монгол хэлээр боловсруулж өгнө үү.
-Хэрэв мэдээллийн сангаас хариулт олдохгүй бол хэрэглэгчид найрсаг хандан дэлгэрэнгүй тодруулах эсвэл шууд холбогдох боломжтой хариулт санал болгоно уу.
+Хэрэв бараа, бүтээгдэхүүн, үнэ, загвар, нөөц асуусан бол БСБ Барааны сангаас (MeiliSearch) олдсон бодит бүтээгдэхүүний нэр, үнэ, бэлэн байгаа эсэх мэдээллийг оруулан хариулна.
 
 --- ХЭРЭГЛЭГЧИЙН АСУУЛТ ---
 ${query}
 
---- МЭДЭЭЛЛИЙН САНГИЙН ЭХ СУРВАЛЖ ---
+${productContext ? productContext + '\n\n' : ''}--- МЭДЭЭЛЛИЙН САНГИЙН ЭХ СУРВАЛЖ ---
 ${kbContext || 'Одоогоор мэдээллийн сангаас шууд тохирох нийтлэл олдсонгүй.'}
 
 Операторт шууд илгээхэд бэлэн Монгол хариулт:`;
@@ -799,23 +864,36 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       if (content) {
         return {
           suggestion: content,
-          matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+          matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+          matchedProducts: productRes.hits.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
         };
       }
     } catch (e) {
-      console.warn('AI suggest draft error, falling back to top KB article content:', e);
+      console.warn('AI suggest draft error, falling back to top KB/Product content:', e);
     }
 
-    if (matched.length > 0) {
+    if (productRes.hits.length > 0) {
+      const p = productRes.hits[0];
+      const stockText = p.inStock ? 'Бэлэн байна' : 'Одоогоор нөөц дууссан';
       return {
-        suggestion: `Сайн байна уу! ${matched[0].article.title} талаарх мэдээлэл:\n${matched[0].article.content.slice(0, 300)}...`,
-        matchedArticles: matched.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        suggestion: `Сайн байна уу! Танд ${p.name} барааны үнэ ${p.priceFormatted} (${stockText}). Дэлгэрэнгүй мэдээлэл авахыг хүсвэл би шалгаж өгөх боломжтой байна.`,
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: productRes.hits.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
+      };
+    }
+
+    if (matchedKb.length > 0) {
+      return {
+        suggestion: `Сайн байна уу! ${matchedKb[0].article.title} талаарх мэдээлэл:\n${matchedKb[0].article.content.slice(0, 300)}...`,
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: [],
       };
     }
 
     return {
-      suggestion: 'Сайн байна уу! Танд туслахад таатай байна. Та асуултаа тодруулж хэлбэл би шалгаж өгөх боломжтой байна.',
+      suggestion: 'Сайн байна уу! Танд туслахад таатай байна. Та сонирхож буй бараа бүтээгдэхүүн, загвараа хэлбэл би үнэ болон бэлэн байгаа нөөцийг шалгаж өгөх боломжтой байна.',
       matchedArticles: [],
+      matchedProducts: [],
     };
   }
 }

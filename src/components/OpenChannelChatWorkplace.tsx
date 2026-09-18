@@ -47,9 +47,11 @@ import {
   DollarSign,
   ExternalLink,
   MoreVertical,
+  Package,
 } from 'lucide-react';
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig, TypingUser } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
+import { ProductSearchModal } from './ProductSearchModal';
 import {
   playIncomingMessageSound,
   playOutgoingMessageSound,
@@ -161,6 +163,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [showQuickRepliesPanel, setShowQuickRepliesPanel] = useState(false);
   const [showCannedModal, setShowCannedModal] = useState(false);
   const [showKBModal, setShowKBModal] = useState(false);
+  const [showProductSearchModal, setShowProductSearchModal] = useState(false);
   const [showTransferModal, setShowTransferModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [closeReason, setCloseReason] = useState('Амжилттай шийдвэрлэсэн');
@@ -3143,6 +3146,19 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     <span className="hidden sm:inline">Мэдээллийн сан</span>
                     <span className="sm:hidden">Сан</span>
                   </button>
+
+                  {/* MeiliSearch BSB Product Search */}
+                  <button
+                    type="button"
+                    id="open-product-search-modal-btn"
+                    onClick={() => setShowProductSearchModal(true)}
+                    className="inline-flex items-center gap-1 px-2 sm:px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold border border-indigo-200 transition"
+                    title="БСБ MeiliSearch сангаас бараа хайж үнэ оруулах"
+                  >
+                    <Package className="w-3.5 h-3.5 text-indigo-600" />
+                    <span className="hidden sm:inline">Бараа хайх</span>
+                    <span className="sm:hidden">Бараа</span>
+                  </button>
                 </div>
               </div>
 
@@ -3856,6 +3872,17 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           </div>
         </div>
       )}
+
+      {/* 2.1 BSB MeiliSearch Product Search Modal */}
+      <ProductSearchModal
+        isOpen={showProductSearchModal}
+        onClose={() => setShowProductSearchModal(false)}
+        onInsertProduct={(text) => {
+          setInputText((prev) => (prev ? `${prev}\n\n${text}` : text));
+          setIsInternalNote(false);
+          chatInputRef.current?.focus();
+        }}
+      />
 
       {/* 3. Transfer Dialog Modal */}
       {showTransferModal && (

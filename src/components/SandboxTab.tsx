@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Send, Bot, User, Headphones, CheckCircle, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
+import { Send, Bot, User, Headphones, CheckCircle, AlertTriangle, Sparkles, RefreshCw, Database } from 'lucide-react';
 
 interface SandboxMessage {
   id: string;
@@ -24,12 +24,14 @@ export const SandboxTab: React.FC = () => {
   const [isSending, setIsSending] = useState(false);
 
   const presetQuestions = [
+    'iPhone 16 үнэ хэд вэ, бэлэн байгаа юу?',
+    'Panasonic ухаалаг ТВ ямар үнэтэй байгаа вэ?',
+    'Electrolux угаалгын машин байгаа юу?',
     'Танай ажлын цагийн хуваарь ямар байдаг вэ?',
     'Захиалгаа StorePay-ээр хүүгүй хувааж төлж болох уу?',
     'Хүргэлт хэдэн цагийн дотор ирэх вэ? Үнэгүй юу?',
     'Бараа гэмтэлтэй ирвэл хэрхэн буцаах, солиулах вэ?',
     'Намайг оператортой холбоод өгөөч',
-    'Танайд Ангараг гариг руу нисэх пуужин зардаг уу?',
   ];
 
   const handleSend = async (textToSend?: string) => {
@@ -110,15 +112,21 @@ export const SandboxTab: React.FC = () => {
       {/* Interactive Chat Pane */}
       <div className="lg:col-span-2 bg-white rounded-xl border border-slate-200 shadow-xs flex flex-col h-[500px] sm:h-[600px] overflow-hidden">
         {/* Chat Header */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 gap-2">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 gap-2 flex-wrap">
           <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
             <div className="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
               <Bot className="w-4 h-4" />
             </div>
             <div className="min-w-0">
-              <h3 className="text-xs font-semibold text-slate-900 truncate">Чат Туршилтын Симулятор (Sandbox)</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-xs font-semibold text-slate-900 truncate">Чат Туршилтын Симулятор (Sandbox)</h3>
+                <span className="hidden sm:inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  <Database className="w-3 h-3 text-emerald-600" />
+                  MeiliSearch холбогдсон
+                </span>
+              </div>
               <p className="text-[10px] sm:text-[11px] text-slate-500 truncate">
-                Ботын хариулт, мэдээллийн сан, оператор руу шилжих үйлдлийг турших
+                Ботын хариулт, MeiliSearch барааны сан (https://meili.bsb.mn), оператор руу шилжих үйлдлийг турших
               </p>
             </div>
           </div>

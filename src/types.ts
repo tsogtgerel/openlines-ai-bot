@@ -23,6 +23,32 @@ export interface BotConfig {
   systemPromptAddition: string;
   model: string;
   botAssignmentMode?: 'manual_only' | 'all_chats';
+  enableProductSearch?: boolean;
+  meiliUrl?: string;
+  meiliIndex?: string;
+}
+
+export interface BsbProduct {
+  id: number;
+  code: string;
+  productCode: string;
+  name: string;
+  brand: string;
+  category: string;
+  price: number;
+  priceFormatted: string;
+  originalPrice?: number;
+  originalPriceFormatted?: string;
+  hasDiscount: boolean;
+  promotionPercentage?: number;
+  inStock: boolean;
+  onHand?: number;
+  attributes: string[];
+  attributesSummary: string;
+  descriptionSummary: string;
+  imageUrl?: string;
+  slug?: string;
+  isService?: boolean;
 }
 
 export interface DialogLog {
@@ -44,6 +70,7 @@ export interface DialogLog {
   handedOff: boolean;
   handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined' | 'assigned_to_operator' | 'manual_transfer';
   matchedArticles?: { id: string; title: string; score: number }[];
+  matchedProducts?: { code: string; name: string; priceFormatted: string; inStock: boolean }[];
   durationMs: number;
   messagesCount?: number;
 }
