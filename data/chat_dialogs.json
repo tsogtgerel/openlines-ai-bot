@@ -13,15 +13,15 @@
     "channelId": 11,
     "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
     "channelType": "facebook",
-    "status": "new",
-    "priority": "high",
-    "assignedAgentId": null,
-    "assignedAgentName": null,
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "6751",
+    "assignedAgentName": "Оператор #6751",
     "assignedAgentAvatar": null,
     "lastMessageText": "Үнэ",
     "lastMessageTime": "2026-09-18T07:22:08+03:00",
     "lastMessageSender": "customer",
-    "unreadCount": 1,
+    "unreadCount": 0,
     "createdAt": "2026-09-18T07:21:57+03:00",
     "botActive": false,
     "messages": [
@@ -88,6 +88,14 @@
         "text": "Үнэ",
         "timestamp": "2026-09-18T07:22:08+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1117990",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Zultsetseg Erdene picked conversation",
+        "timestamp": "2026-09-18T08:48:59+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -97,7 +105,7 @@
     "customer": {
       "name": "Guest",
       "tags": [
-        "LIVECHAT",
+        "WEBCHAT",
         "Битрикс24 Live"
       ]
     },
@@ -449,7 +457,10 @@
         "timestamp": "2026-09-18T06:37:32+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв.",
+    "closedByAgentId": "6751",
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-71503",
@@ -3343,7 +3354,10 @@
         "timestamp": "2026-09-18T06:31:32+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.",
+    "closedByAgentId": "3065",
+    "closedByAgentName": "Номин Баттөмөр"
   },
   {
     "id": "chat-77144",
@@ -6399,7 +6413,10 @@
         "timestamp": "2026-09-18T07:28:40+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.",
+    "closedByAgentId": "15",
+    "closedByAgentName": "Цогтгэрэл Ч"
   },
   {
     "id": "chat-76336",
@@ -6978,7 +6995,7 @@
     "dialogId": "chat76294",
     "customer": {
       "name": "Narmandakh Namkhainyambuu",
-      "crmLeadId": "LEAD-59196",
+      "crmLeadId": "LEAD-59158",
       "tags": [
         "FACEBOOK",
         "Битрикс24 Live"
@@ -6989,14 +7006,14 @@
     "channelType": "facebook",
     "status": "bot",
     "priority": "normal",
-    "assignedAgentId": "15",
+    "assignedAgentId": "6751",
     "assignedAgentName": "Zultsetseg Erdene",
     "assignedAgentAvatar": null,
     "lastMessageText": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
     "lastMessageTime": "2026-09-18T06:28:06+03:00",
     "lastMessageSender": "bot",
     "unreadCount": 0,
-    "createdAt": "2026-09-18T05:48:49+03:00",
+    "createdAt": "2026-09-18T02:22:16+03:00",
     "reopenedAt": "2026-09-18T02:49:21.697Z",
     "botActive": true,
     "messages": [

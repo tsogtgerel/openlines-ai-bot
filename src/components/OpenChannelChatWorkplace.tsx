@@ -119,9 +119,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   // Filters & Search
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'my' | 'my_closed' | 'bot' | 'closed' | 'starred'>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'new' | 'my' | 'my_closed' | 'bot' | 'closed' | 'starred'>(() => {
+    if (currentAgent?.accessRole === 'agent') return 'my';
+    return 'all';
+  });
   const [channelFilter, setChannelFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest' | 'pending_ai' | 'closed_newest' | 'closed_oldest'>('newest');
+
+  // Ensure agent is never stuck in supervisor-only tabs (all, closed, bot)
+  useEffect(() => {
+    if (currentAgent?.accessRole === 'agent') {
+      if (statusFilter === 'all' || statusFilter === 'closed' || statusFilter === 'bot') {
+        setStatusFilter('my');
+      }
+    }
+  }, [currentAgent?.accessRole, statusFilter]);
 
   // Dedicated Closed Chats Filters
   const [dateRangeFilter, setDateRangeFilter] = useState<'all' | 'today' | '7days' | '30days'>('all');
@@ -1606,18 +1618,37 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     return new Date(isoDate).toLocaleDateString([], { month: 'numeric', day: 'numeric' });
   };
 
-  const unassignedCount = dialogs.filter((d) => d.status === 'new').length;
-  const myActiveCount = dialogs.filter(
+  const isAgent = currentAgent?.accessRole === 'agent';
+
+  // Agent-specific accessible dialogs pool:
+  // ONLY unassigned in assigned channels, chats handled by this agent, and chats closed by this agent
+  const agentAccessibleDialogs = useMemo(() => {
+    if (!isAgent || !currentAgent) return dialogs;
+    let list = dialogs;
+    if (!currentAgent.canAccessAllChannels && Array.isArray(currentAgent.assignedChannelIds)) {
+      const allowed = currentAgent.assignedChannelIds.map(String);
+      list = list.filter((d) => allowed.includes(String(d.channelId)));
+    }
+    return list.filter((d) => {
+      const isUnassigned = !d.assignedAgentId || d.status === 'new' || d.assignedAgentId === 'unassigned';
+      const isMine =
+        d.assignedAgentId === currentAgent.id ||
+        isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent) ||
+        isMyClosedDialog(d, currentAgent);
+      return isUnassigned || isMine;
+    });
+  }, [dialogs, currentAgent, isAgent]);
+
+  const unassignedCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => d.status === 'new').length;
+  const myActiveCount = (isAgent ? agentAccessibleDialogs : dialogs).filter(
     (d) =>
       (d.status === 'in_progress' || d.status === 'assigned') &&
       (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
   ).length;
-  const myClosedCount = dialogs.filter((d) => d.status === 'closed' && isMyClosedDialog(d, currentAgent)).length;
+  const myClosedCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => d.status === 'closed' && isMyClosedDialog(d, currentAgent)).length;
   const botCount = dialogs.filter((d) => d.status === 'bot').length;
   const allClosedCount = dialogs.filter((d) => d.status === 'closed').length;
-  const starredCount = dialogs.filter((d) => Boolean(d.isStarred)).length;
-
-  const isAgent = currentAgent?.accessRole === 'agent';
+  const starredCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => Boolean(d.isStarred)).length;
 
   return (
     <div className={`flex-1 flex flex-col min-h-0 h-full bg-white border-0 ${isAgent ? 'sm:border-t sm:border-slate-200 rounded-none m-0' : 'sm:border border-slate-200 rounded-none sm:rounded-2xl shadow-none sm:shadow-sm m-0 sm:m-3 lg:m-4'} overflow-hidden`}>
@@ -1631,9 +1662,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           <div className="p-2.5 sm:p-3 border-b border-slate-200 bg-white flex items-center justify-between gap-2 min-w-0">
             <div className="flex items-center gap-1.5 min-w-0">
               <MessageSquare className="w-4 h-4 text-blue-600 shrink-0" />
-              <h2 className="font-bold text-slate-900 text-xs sm:text-sm truncate">Бүх чат</h2>
+              <h2 className="font-bold text-slate-900 text-xs sm:text-sm truncate">
+                {isAgent ? 'Миний ажлын чат' : 'Бүх чат'}
+              </h2>
               <span className="px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-700 text-[10px] sm:text-xs font-semibold shrink-0">
-                {dialogs.length}
+                {isAgent ? agentAccessibleDialogs.length : dialogs.length}
               </span>
               <span
                 className={`inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded-full border shrink-0 transition-colors ${
@@ -1782,7 +1815,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
             {/* Quick Channel Chips */}
             <div className="flex items-center gap-1.5 pt-1 overflow-x-auto text-[10px]">
-              {botConfig?.selectedLineId && (
+              {!isAgent && botConfig?.selectedLineId && (
                 <button
                   type="button"
                   id="filter-bot-channel-quick-btn"
@@ -1814,40 +1847,76 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
           {/* Status Filter Tabs */}
           <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-1.5 overflow-x-auto scrollbar-none whitespace-nowrap text-[11px]">
-            <button
-              id="tab-all-chats-btn"
-              onClick={() => setStatusFilter('all')}
-              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
-                statusFilter === 'all'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
-            >
-              Бүгд ({dialogs.length})
-            </button>
-            <button
-              id="tab-queue-chats-btn"
-              onClick={() => setStatusFilter('new')}
-              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
-                statusFilter === 'new'
-                  ? 'bg-rose-600 text-white font-semibold'
-                  : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
-              }`}
-            >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-              <span>Дараалал ({unassignedCount})</span>
-            </button>
-            <button
-              id="tab-my-chats-btn"
-              onClick={() => setStatusFilter('my')}
-              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
-                statusFilter === 'my'
-                  ? 'bg-blue-600 text-white font-semibold'
-                  : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60'
-              }`}
-            >
-              <span>Минийх ({myActiveCount})</span>
-            </button>
+            {/* Supervisor / Admin only: All chats tab */}
+            {!isAgent && (
+              <button
+                id="tab-all-chats-btn"
+                onClick={() => setStatusFilter('all')}
+                className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 ${
+                  statusFilter === 'all'
+                    ? 'bg-slate-900 text-white'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Бүгд ({dialogs.length})
+              </button>
+            )}
+
+            {/* Agent: My chats first; Supervisor: Queue first */}
+            {isAgent ? (
+              <>
+                <button
+                  id="tab-my-chats-btn"
+                  onClick={() => setStatusFilter('my')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
+                    statusFilter === 'my'
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60'
+                  }`}
+                >
+                  <span>Минийх ({myActiveCount})</span>
+                </button>
+                <button
+                  id="tab-queue-chats-btn"
+                  onClick={() => setStatusFilter('new')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
+                    statusFilter === 'new'
+                      ? 'bg-rose-600 text-white font-semibold'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  <span>Дараалал ({unassignedCount})</span>
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  id="tab-queue-chats-btn"
+                  onClick={() => setStatusFilter('new')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
+                    statusFilter === 'new'
+                      ? 'bg-rose-600 text-white font-semibold'
+                      : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200/60'
+                  }`}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                  <span>Дараалал ({unassignedCount})</span>
+                </button>
+                <button
+                  id="tab-my-chats-btn"
+                  onClick={() => setStatusFilter('my')}
+                  className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
+                    statusFilter === 'my'
+                      ? 'bg-blue-600 text-white font-semibold'
+                      : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200/60'
+                  }`}
+                >
+                  <span>Минийх ({myActiveCount})</span>
+                </button>
+              </>
+            )}
+
             <button
               id="tab-my-closed-chats-btn"
               onClick={() => {
@@ -1864,20 +1933,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 fill-emerald-100" />
               <span>Миний хаасан ({myClosedCount})</span>
             </button>
-            <button
-              id="tab-bot-chats-btn"
-              onClick={() => setStatusFilter('bot')}
-              className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
-                statusFilter === 'bot'
-                  ? 'bg-purple-600 text-white shadow-2xs font-semibold'
-                  : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/60'
-              }`}
-              title="AI Ботын хариулж буй болон хариулсан чатууд"
-            >
-              <Bot className="w-3 h-3" />
-              <span>AI Бот ({botCount})</span>
-            </button>
-            {currentAgent?.accessRole !== 'agent' && (
+
+            {!isAgent && (
+              <button
+                id="tab-bot-chats-btn"
+                onClick={() => setStatusFilter('bot')}
+                className={`px-2.5 py-1 rounded-md font-medium transition shrink-0 flex items-center gap-1 ${
+                  statusFilter === 'bot'
+                    ? 'bg-purple-600 text-white shadow-2xs font-semibold'
+                    : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200/60'
+                }`}
+                title="AI Ботын хариулж буй болон хариулсан чатууд"
+              >
+                <Bot className="w-3 h-3" />
+                <span>AI Бот ({botCount})</span>
+              </button>
+            )}
+
+            {!isAgent && (
               <button
                 id="tab-closed-chats-btn"
                 onClick={() => {
@@ -1893,6 +1966,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 Бүх хаагдсан ({allClosedCount})
               </button>
             )}
+
             <button
               id="tab-starred-chats-btn"
               onClick={() => setStatusFilter('starred')}
