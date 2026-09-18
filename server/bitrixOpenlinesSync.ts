@@ -133,7 +133,46 @@ export class BitrixOpenlinesSyncService {
       if (updatedDialog) {
         chatManager.upsertBitrixDialog(updatedDialog);
         this.knownSessionCounts.set(numChatId, rawData.messages.length);
-        return chatManager.getDialogById(`chat-${numChatId}`) || updatedDialog;
+
+        const currentDialog = chatManager.getDialogById(`chat-${numChatId}`) || updatedDialog;
+        const botCfg = botWorker.getConfig();
+        const isExplicitlyConnected = Boolean(currentDialog?.botActive);
+        const isBotActiveForThisChat =
+          isExplicitlyConnected ||
+          (botCfg.botAssignmentMode === 'all_chats' &&
+            currentDialog.status !== 'in_progress' &&
+            currentDialog.status !== 'assigned' &&
+            currentDialog.botActive !== false &&
+            !currentDialog.assignedAgentId &&
+            (!botCfg.selectedLineId || Number(botCfg.selectedLineId) === Number(configId)));
+
+        const visibleMsgs = currentDialog.messages.filter((m) => m.sender !== 'system');
+        const lastMsg = visibleMsgs[visibleMsgs.length - 1];
+
+        if (isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && currentDialog.status !== 'closed') {
+          const hasBotReplied = visibleMsgs.some(
+            (m) =>
+              m.sender === 'bot' &&
+              new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+          );
+
+          if (!hasBotReplied) {
+            botWorker
+              .processOpenlineCustomerMessage({
+                chatId: numChatId,
+                dialogId: `chat${numChatId}`,
+                messageId: Number(lastMsg.id.replace('bx-', '')) || 0,
+                text: lastMsg.text,
+                customerName: currentDialog.customer.name,
+                channelId: Number(configId) || 0,
+                channelName,
+                channelType: currentDialog.channelType,
+              })
+              .catch((err) => console.error('[OpenlinesSync] syncSingleChat AI Bot error:', err));
+          }
+        }
+
+        return currentDialog;
       }
     } catch (e: any) {
       console.warn(`[OpenlinesSync] syncSingleChat error for ${numChatId}:`, e.message);
@@ -282,7 +321,7 @@ export class BitrixOpenlinesSyncService {
       let status: ChatDialog['status'] = 'new';
       if (s.status === 'closed') {
         status = 'closed';
-      } else if (isThisLineBotBound && lastMsg && lastMsg.sender === 'bot') {
+      } else if (existingDialog?.botActive || (isThisLineBotBound && lastMsg && lastMsg.sender === 'bot')) {
         status = 'bot';
       } else if (hasActiveOperator || (s.status === 'answered' && operatorUser)) {
         status = 'in_progress';
@@ -331,6 +370,7 @@ export class BitrixOpenlinesSyncService {
         createdAt: s.dateCreate,
         closedAt: closedAtDate,
         reopenedAt: reopenedAtDate,
+        botActive: existingDialog?.botActive !== undefined ? existingDialog.botActive : (status === 'bot'),
         messages,
       };
     } catch (e: any) {
@@ -449,23 +489,21 @@ export class BitrixOpenlinesSyncService {
               updatedCount++;
 
               // Бот идэвхтэй бөгөөд харилцагч хамгийн сүүлд бичсэн бол AI хариулт илгээх
-              const isThisLineBotBound =
-                Boolean(botCfg.isPollingActive) &&
-                Boolean(botCfg.selectedLineId) &&
-                Number(botCfg.selectedLineId) === Number(s.configId);
+              const isExplicitlyConnected = Boolean(chatDialog.botActive);
 
               const isBotActiveForThisChat =
-                botCfg.botAssignmentMode === 'all_chats'
-                  ? chatDialog.status !== 'in_progress' &&
-                    chatDialog.status !== 'assigned' &&
-                    chatDialog.botActive !== false &&
-                    !chatDialog.assignedAgentId
-                  : chatDialog.botActive === true;
+                isExplicitlyConnected ||
+                (botCfg.botAssignmentMode === 'all_chats' &&
+                  chatDialog.status !== 'in_progress' &&
+                  chatDialog.status !== 'assigned' &&
+                  chatDialog.botActive !== false &&
+                  !chatDialog.assignedAgentId &&
+                  (!botCfg.selectedLineId || Number(botCfg.selectedLineId) === Number(s.configId)));
 
               const visibleMsgs = chatDialog.messages.filter((m) => m.sender !== 'system');
               const lastMsg = visibleMsgs[visibleMsgs.length - 1];
 
-              if (isThisLineBotBound && isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
+              if (isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && s.status !== 'closed') {
                 const hasBotReplied = visibleMsgs.some(
                   (m) =>
                     m.sender === 'bot' &&

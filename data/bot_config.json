@@ -4,7 +4,7 @@
   "botName": "BSB AI Туслах",
   "selectedLineId": null,
   "selectedLineName": "",
-  "isPollingActive": false,
+  "isPollingActive": true,
   "currentOffset": 21,
   "tone": "professional",
   "language": "mn",
@@ -28,5 +28,6 @@
     "/operator"
   ],
   "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.",
-  "model": "bitrix/bitrixgpt-5.5"
+  "model": "bitrix/bitrixgpt-5.5",
+  "botAssignmentMode": "manual_only"
 }

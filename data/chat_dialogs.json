@@ -215,6 +215,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T08:18:34+03:00",
     "closedAt": "2026-09-18T05:05:50+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115280",
@@ -337,9 +338,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-76944",
@@ -366,6 +367,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T07:35:33+03:00",
     "closedAt": "2026-09-17T11:57:54+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115118",
@@ -528,9 +530,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв.",
     "closedByAgentId": "125",
-    "closedByAgentName": "Nomi N",
-    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
+    "closedByAgentName": "Nomi N"
   },
   {
     "id": "chat-76920",
@@ -557,6 +559,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T06:51:43+03:00",
     "closedAt": "2026-09-17T10:53:41+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1114714",
@@ -647,9 +650,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.",
     "closedByAgentId": "125",
-    "closedByAgentName": "Nomi N",
-    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
+    "closedByAgentName": "Nomi N"
   },
   {
     "id": "chat-52197",
@@ -675,6 +678,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-17T10:19:58+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-908249",
@@ -863,6 +867,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T08:45:33+03:00",
     "closedAt": "2026-09-17T12:16:20+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115348",
@@ -961,9 +966,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-77024",
@@ -990,6 +995,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T09:14:39+03:00",
     "closedAt": "2026-09-17T12:16:19+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115454",
@@ -1088,9 +1094,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв."
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-77004",
@@ -1116,6 +1122,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-17T08:50:00+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115380",
@@ -1248,6 +1255,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T11:35:41+03:00",
     "closedAt": "2026-09-18T03:02:39+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1115698",
@@ -1410,9 +1418,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв.",
     "closedByAgentId": "4605",
-    "closedByAgentName": "Энхзаяа А.",
-    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-76786",
@@ -1439,6 +1447,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T12:12:07+03:00",
     "closedAt": "2026-09-17T12:17:27+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1114108",
@@ -1601,9 +1610,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-77084",
@@ -1629,6 +1638,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T12:06:38+03:00",
     "closedAt": "2026-09-18T03:04:16+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116044",
@@ -1719,9 +1729,9 @@
         "status": "delivered"
       }
     ],
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.",
     "closedByAgentId": "4605",
-    "closedByAgentName": "Оператор #4605",
-    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
+    "closedByAgentName": "Оператор #4605"
   },
   {
     "id": "chat-77088",
@@ -1747,6 +1757,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-17T12:19:58+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116326",
@@ -1910,6 +1921,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-17T14:14:05+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116548",
@@ -2050,6 +2062,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T14:38:17+03:00",
     "closedAt": "2026-09-18T03:02:39+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116592",
@@ -2214,8 +2227,7 @@
     ],
     "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
     "closedByAgentId": "4605",
-    "closedByAgentName": "Энхзаяа А.",
-    "botActive": false
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77096",
@@ -2241,6 +2253,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-17T12:43:30+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116428",
@@ -2347,6 +2360,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 1,
     "createdAt": "2026-09-17T15:25:39+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116626",
@@ -2380,8 +2394,7 @@
         "timestamp": "2026-09-17T15:25:39+03:00",
         "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-77138",
@@ -2407,6 +2420,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-17T15:53:27+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116666",
@@ -2496,8 +2510,7 @@
         "timestamp": "2026-09-17T15:54:20+03:00",
         "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-77142",
@@ -2522,6 +2535,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 1,
     "createdAt": "2026-09-17T21:32:09+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116712",
@@ -2555,8 +2569,7 @@
         "timestamp": "2026-09-17T21:32:09+03:00",
         "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-77152",
@@ -2583,6 +2596,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-18T04:15:02+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116824",
@@ -2671,9 +2685,16 @@
         "text": "https://bsb.mn/categories/category_1510?has_stock=true",
         "timestamp": "2026-09-18T04:33:39+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1117318",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
+        "timestamp": "2026-09-18T06:01:17+03:00",
+        "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-77144",
@@ -2700,6 +2721,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-18T03:29:24+03:00",
     "closedAt": "2026-09-18T05:16:31+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116798",
@@ -2832,8 +2854,7 @@
     ],
     "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "botActive": false
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-77186",
@@ -2858,6 +2879,7 @@
     "lastMessageSender": "customer",
     "unreadCount": 1,
     "createdAt": "2026-09-18T05:10:00+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1116978",
@@ -2947,8 +2969,7 @@
         "timestamp": "2026-09-18T05:28:18+03:00",
         "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-76672",
@@ -3082,6 +3103,7 @@
     "unreadCount": 0,
     "createdAt": "2026-09-17T07:21:35+03:00",
     "closedAt": "2026-09-17T11:52:41+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1113222",
@@ -3244,10 +3266,9 @@
         "status": "delivered"
       }
     ],
-    "botActive": false,
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.",
     "closedByAgentId": "6751",
-    "closedByAgentName": "Zultsetseg Erdene",
-    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
+    "closedByAgentName": "Zultsetseg Erdene"
   },
   {
     "id": "chat-76652",
@@ -3748,47 +3769,8 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-16T10:34:08+03:00",
+    "botActive": false,
     "messages": [
-      {
-        "id": "bx-1113100",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-16T10:42:22+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113102",
-        "sender": "bot",
-        "senderName": "BSB AI Туслах",
-        "text": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
-        "timestamp": "2026-09-16T10:42:23+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113104",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-16T10:42:25+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113106",
-        "sender": "bot",
-        "senderName": "BSB AI Туслах",
-        "text": "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
-        "timestamp": "2026-09-16T10:42:27+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1113234",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "хш",
-        "timestamp": "2026-09-16T11:06:02+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1113236",
         "sender": "agent",
@@ -3907,6 +3889,46 @@
         "senderName": "Систем",
         "text": "Цогтгэрэл Ч picked conversation",
         "timestamp": "2026-09-16T11:16:29+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1113498",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation was removed from the agent because the agent has clocked out or not clocked in yet.",
+        "timestamp": "2026-09-16T11:46:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1113500",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-16T11:46:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1114932",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Nomi N picked conversation",
+        "timestamp": "2026-09-17T06:59:02+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1114934",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
+        "timestamp": "2026-09-17T06:59:05+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1114946",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation closed.",
+        "timestamp": "2026-09-17T06:59:55+03:00",
         "status": "delivered"
       }
     ]
@@ -5555,49 +5577,18 @@
     "channelId": 1,
     "channelName": "Бидэнтэй чатлаарай! BSB.mn",
     "channelType": "webchat",
-    "status": "new",
-    "priority": "high",
+    "status": "bot",
+    "priority": "normal",
     "assignedAgentId": null,
     "assignedAgentName": null,
     "assignedAgentAvatar": null,
-    "lastMessageText": "tsagiin huvaari",
-    "lastMessageTime": "2026-09-18T05:26:00+03:00",
-    "lastMessageSender": "customer",
+    "lastMessageText": "Сайн байна уу? Танд энэ өдрийн мэнд хүргэе.\n\nТанай хүргэлтийн нөхцөлийн талаар мэдээлэл өгөхөд:\n\n* **Улаанбаатар хот дотор:** 50,000₮-с дээш худалдан авалтад хүргэлт үнэгүй бөгөөд 24-48 цагийн дотор таны гэрийн хаягаар хүргэнэ. Мөн тавилга, цахилгаан барааг мэргэжлийн баг угсарч, суурилуулж өгөх үйлчилгээтэй.\n* **Орон нутагт:** Орон нутгийн унаанд 24 цагийн дотор найдвартай хүргэж өгнө.\n* **Захиалга хянах:** Та захиалгын явцыг мессежээр ирсэн линк болон утасны дугаараараа хянаж болно.\n\nТанд өөр асуух зүйл байвал би туслахад бэлэн байна.",
+    "lastMessageTime": "2026-09-18T03:09:36.484Z",
+    "lastMessageSender": "bot",
     "unreadCount": 1,
     "createdAt": "2026-09-18T05:21:42+03:00",
+    "botActive": true,
     "messages": [
-      {
-        "id": "bx-1112160",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Data received:",
-        "timestamp": "2026-09-16T07:19:05+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112162",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-16T07:19:05+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112164",
-        "sender": "customer",
-        "senderName": "Guest",
-        "text": "hi",
-        "timestamp": "2026-09-16T07:19:05+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1112168",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч picked conversation",
-        "timestamp": "2026-09-16T07:19:14+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1112170",
         "sender": "agent",
@@ -5725,9 +5716,91 @@
         "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
         "timestamp": "2026-09-18T05:32:22+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1117342",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "hi",
+        "timestamp": "2026-09-18T06:03:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117346",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "huvaari",
+        "timestamp": "2026-09-18T06:03:14+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117352",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T06:03:20+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117356",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T06:03:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1117364",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "цагийн хуваарь",
+        "timestamp": "2026-09-18T06:04:39+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bot-msg-1789700956367",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Таны асуултад хариулж, манай компанийн ажлын цагийн хуваарийг хүргэж байна:\n\n*   **Харилцагчийн үйлчилгээний төв болон төв оффис:** Даваа - Баасан гаригт 09:00 - 18:30 цагийн хооронд ажиллана.\n*   **БСБ-гийн бүх салбар их дэлгүүрүүд:** Даваа - Ням гаригт 10:00 - 20:00 цаг хүртэл өдөр бүр ажиллана.\n*   **Онлайн дэлгүүр:** Захиалгыг 24/7 цагийн турш хүлээн авна.",
+        "timestamp": "2026-09-18T03:09:16.367Z",
+        "keyboard": [
+          {
+            "text": "Оператор дуудах",
+            "action": "/operator"
+          }
+        ],
+        "status": "delivered"
+      },
+      {
+        "id": "sys-1789700967200-353",
+        "sender": "system",
+        "text": "🤖 Энэ чатад BSB AI Туслах амжилттай холбогдлоо. Харилцагчийн асуултад бот хариулна.",
+        "timestamp": "2026-09-18T03:09:27.200Z"
+      },
+      {
+        "id": "msg-1789700972223-350",
+        "sender": "customer",
+        "senderName": "Хэрэглэгч",
+        "text": "Сайн байна уу, танай хүргэлтийн нөхцөл ямар байдаг вэ?",
+        "timestamp": "2026-09-18T03:09:32.223Z",
+        "isInternalNote": false,
+        "status": "sent"
+      },
+      {
+        "id": "bot-msg-1789700976484",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Танд энэ өдрийн мэнд хүргэе.\n\nТанай хүргэлтийн нөхцөлийн талаар мэдээлэл өгөхөд:\n\n* **Улаанбаатар хот дотор:** 50,000₮-с дээш худалдан авалтад хүргэлт үнэгүй бөгөөд 24-48 цагийн дотор таны гэрийн хаягаар хүргэнэ. Мөн тавилга, цахилгаан барааг мэргэжлийн баг угсарч, суурилуулж өгөх үйлчилгээтэй.\n* **Орон нутагт:** Орон нутгийн унаанд 24 цагийн дотор найдвартай хүргэж өгнө.\n* **Захиалга хянах:** Та захиалгын явцыг мессежээр ирсэн линк болон утасны дугаараараа хянаж болно.\n\nТанд өөр асуух зүйл байвал би туслахад бэлэн байна.",
+        "timestamp": "2026-09-18T03:09:36.484Z",
+        "keyboard": [
+          {
+            "text": "Оператор дуудах",
+            "action": "/operator"
+          }
+        ],
+        "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-76336",
@@ -6315,18 +6388,27 @@
     "channelId": 11,
     "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
     "channelType": "facebook",
-    "status": "new",
-    "priority": "high",
+    "status": "bot",
+    "priority": "normal",
     "assignedAgentId": "6751",
     "assignedAgentName": "Zultsetseg Erdene",
     "assignedAgentAvatar": null,
-    "lastMessageText": "Sono app нь дэлгүүртэй холбогдоод авах боломжтой гээд байх юм",
-    "lastMessageTime": "2026-09-18T05:48:51+03:00",
-    "lastMessageSender": "customer",
-    "unreadCount": 1,
+    "lastMessageText": "Бүх цахилгаан бараа, компьютер, тавилгад үйлдвэрийн албан ёсны 1-ээс 3 хүртэлх жилийн баталгаа олгогдоно. Баталгаат хугацаанд манай албан ёсны Сервис төв үнэ төлбөргүй үйлчилнэ.",
+    "lastMessageTime": "2026-09-18T03:10:15.705Z",
+    "lastMessageSender": "bot",
+    "unreadCount": 0,
     "createdAt": "2026-09-18T02:22:16+03:00",
     "reopenedAt": "2026-09-18T02:49:21.697Z",
+    "botActive": true,
     "messages": [
+      {
+        "id": "bx-1116752",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #20956 started",
+        "timestamp": "2026-09-18T02:22:17+03:00",
+        "status": "delivered"
+      },
       {
         "id": "bx-1116754",
         "sender": "system",
@@ -6486,9 +6568,22 @@
         "text": "",
         "timestamp": "2026-09-18T05:49:21+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bot-msg-1789701015705",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Бүх цахилгаан бараа, компьютер, тавилгад үйлдвэрийн албан ёсны 1-ээс 3 хүртэлх жилийн баталгаа олгогдоно. Баталгаат хугацаанд манай албан ёсны Сервис төв үнэ төлбөргүй үйлчилнэ.",
+        "timestamp": "2026-09-18T03:10:15.705Z",
+        "keyboard": [
+          {
+            "text": "Оператор дуудах",
+            "action": "/operator"
+          }
+        ],
+        "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-76170",
@@ -14333,6 +14428,7 @@
     "lastMessageSender": "agent",
     "unreadCount": 0,
     "createdAt": "2026-09-17T15:45:36+03:00",
+    "botActive": false,
     "messages": [
       {
         "id": "bx-1111236",
@@ -14494,8 +14590,7 @@
         "timestamp": "2026-09-17T15:52:13+03:00",
         "status": "delivered"
       }
-    ],
-    "botActive": false
+    ]
   },
   {
     "id": "chat-75626",

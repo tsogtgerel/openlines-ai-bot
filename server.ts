@@ -929,6 +929,43 @@ async function startServer() {
         }
       }
 
+      // Хэрэв харилцагч бичсэн бөгөөд чат дээр бот идэвхтэй бол автоматаар AI хариулт үүсгэнэ
+      if (sender === 'customer') {
+        const dialog = outcome.dialog;
+        const botCfg = botWorker.getConfig();
+        const shouldBotReply =
+          dialog.botActive === true ||
+          (botCfg.botAssignmentMode === 'all_chats' &&
+            dialog.status !== 'in_progress' &&
+            dialog.status !== 'assigned' &&
+            dialog.botActive !== false &&
+            !dialog.assignedAgentId);
+
+        if (shouldBotReply && dialog.status !== 'closed') {
+          setTimeout(async () => {
+            try {
+              if (dialog.dialogId && dialog.dialogId.startsWith('chat') && !dialog.dialogId.startsWith('chat-')) {
+                const numericChatId = parseInt(dialog.dialogId.replace('chat', ''), 10);
+                await botWorker.processOpenlineCustomerMessage({
+                  chatId: numericChatId || 0,
+                  dialogId: dialog.dialogId,
+                  messageId: outcome.message.id,
+                  text: text.trim(),
+                  customerName: dialog.customer.name,
+                  channelId: Number(dialog.channelId) || 0,
+                  channelName: dialog.channelName || 'Суваг',
+                  channelType: dialog.channelType,
+                });
+              } else {
+                await botWorker.processMessage(dialog.id, text.trim());
+              }
+            } catch (botErr: any) {
+              console.error('[Server] Bot response error for customer message:', botErr.message);
+            }
+          }, 350);
+        }
+      }
+
       res.json({ success: true, data: outcome });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
@@ -1083,6 +1120,42 @@ async function startServer() {
       if (dialog.dialogId) {
         await botWorker.rejoinChat(dialog.dialogId);
       }
+
+      // Хэрэв харилцагчийн хамгийн сүүлийн мессеж хариултгүй хүлээгдэж байгаа бол шууд AI хариултыг дуудах
+      const visibleMsgs = dialog.messages.filter((m) => m.sender !== 'system');
+      const lastMsg = visibleMsgs[visibleMsgs.length - 1];
+      if (lastMsg && lastMsg.sender === 'customer' && dialog.status !== 'closed') {
+        const hasBotReplied = visibleMsgs.some(
+          (m) =>
+            m.sender === 'bot' &&
+            new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+        );
+
+        if (!hasBotReplied) {
+          setTimeout(async () => {
+            try {
+              if (dialog.dialogId && dialog.dialogId.startsWith('chat') && !dialog.dialogId.startsWith('chat-')) {
+                const numericChatId = parseInt(dialog.dialogId.replace('chat', ''), 10);
+                await botWorker.processOpenlineCustomerMessage({
+                  chatId: numericChatId || 0,
+                  dialogId: dialog.dialogId,
+                  messageId: lastMsg.id,
+                  text: lastMsg.text,
+                  customerName: dialog.customer.name,
+                  channelId: Number(dialog.channelId) || 0,
+                  channelName: dialog.channelName || 'Суваг',
+                  channelType: dialog.channelType,
+                });
+              } else {
+                await botWorker.processMessage(dialog.id, lastMsg.text);
+              }
+            } catch (err: any) {
+              console.error('[Server] Bot response error upon connect-bot:', err.message);
+            }
+          }, 350);
+        }
+      }
+
       res.json({ success: true, data: dialog });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
@@ -2265,7 +2338,7 @@ async function startServer() {
 
     // Алхам 2: Хэрэв бот тохируулагдсан ба полинг идэвхтэй байсан бол автоматаар асаах
     const cfg = botWorker.getConfig();
-    if (cfg.botId && cfg.selectedLineId && cfg.isPollingActive) {
+    if (cfg.botId && cfg.isPollingActive) {
       botWorker.startPolling().catch((err) => {
         console.warn('[BotWorker] Startup polling error:', err.message);
       });

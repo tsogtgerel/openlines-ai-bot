@@ -2331,8 +2331,8 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                   <span className="hidden sm:inline">CRM мэдээлэл</span>
                   <span className="sm:hidden">CRM</span>
                 </button>
-                {/* Bot Connect/Disconnect Button right in chat header */}
-                {(() => {
+                {/* Channel-level Bot Bind/Disconnect (only when in all_chats mode) */}
+                {botConfig?.botAssignmentMode === 'all_chats' && (() => {
                   const channelLine = openLines.find(
                     (l) => String(l.id) === selectedDialog.channelId || l.name === selectedDialog.channelName
                   );

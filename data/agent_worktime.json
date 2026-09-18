@@ -204,7 +204,7 @@
         "Интернэт дэлгүүр - Facebook - Messenger",
         "Интернэт дэлгүүр - Telegram"
       ],
-      "activeSessions": 5,
+      "activeSessions": 0,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 24,
+      "activeSessions": 21,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },

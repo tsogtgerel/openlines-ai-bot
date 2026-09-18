@@ -204,13 +204,6 @@ export class BotWorkerService {
       this.pollTimer = null;
     }
 
-    if (!this.config.selectedLineId) {
-      this.config.isPollingActive = false;
-      this.saveConfig();
-      console.log('[BotWorker] Polling not started: no line is bound to bot.');
-      return;
-    }
-
     this.config.isPollingActive = true;
     this.saveConfig();
 
@@ -319,7 +312,7 @@ export class BotWorkerService {
    * офсетийг автоматаар хадгалан дараагийн ээлжинд давхардалгүй шалгана.
    */
   private async pollCycle() {
-    if (this.isProcessingPoll || !this.config.botId || !this.config.isPollingActive || !this.config.selectedLineId) {
+    if (this.isProcessingPoll || !this.config.botId || !this.config.isPollingActive) {
       return;
     }
 
@@ -355,7 +348,7 @@ export class BotWorkerService {
    * операторын ажлын талбар (chatManager) болон AI хариулагч руу дамжуулах.
    */
   private async handleEvent(evt: any) {
-    if (!this.config.isPollingActive || !this.config.selectedLineId || !this.config.botId) {
+    if (!this.config.isPollingActive || !this.config.botId) {
       return;
     }
 
@@ -438,15 +431,15 @@ export class BotWorkerService {
 
     // Check if dialog is assigned to an operator, in progress, or bot has detached
     const existingDialog = chatManager.getDialogById(dialogId);
-    if (
-      existingDialog &&
-      (existingDialog.status === 'in_progress' ||
-        existingDialog.status === 'assigned' ||
-        (existingDialog.assignedAgentId && existingDialog.assignedAgentId !== 'unassigned') ||
-        existingDialog.botActive === false)
-    ) {
-      console.log(`[BotWorker] Aborting bot reply for ${dialogId}: Assigned to operator ${existingDialog.assignedAgentName || existingDialog.assignedAgentId} (bot detached)`);
-      return { answer: '', handedOff: false };
+    if (existingDialog) {
+      if (existingDialog.botActive === false) {
+        console.log(`[BotWorker] Aborting bot reply for ${dialogId}: botActive is explicitly false`);
+        return { answer: '', handedOff: false };
+      }
+      if (!existingDialog.botActive && existingDialog.assignedAgentId && existingDialog.assignedAgentId !== 'unassigned') {
+        console.log(`[BotWorker] Aborting bot reply for ${dialogId}: Assigned to operator ${existingDialog.assignedAgentName || existingDialog.assignedAgentId} (bot detached)`);
+        return { answer: '', handedOff: false };
+      }
     }
 
     // Strip basic PII for model privacy
@@ -610,11 +603,24 @@ ${kbContext}
     channelName: string;
     channelType: any;
   }): Promise<{ answer: string; handedOff: boolean } | null> {
-    if (!this.config.botId || !this.config.isPollingActive || !this.config.selectedLineId) {
+    if (!this.config.botId) {
       return null;
     }
 
-    if (Number(this.config.selectedLineId) !== Number(params.channelId)) {
+    const currentDialog =
+      chatManager.getDialogById(params.dialogId) ||
+      chatManager.getDialogById(`chat-${params.chatId}`) ||
+      chatManager.getDialogById(`chat${params.chatId}`);
+
+    const isExplicitlyConnected = Boolean(currentDialog?.botActive);
+
+    // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
+    if (this.config.botAssignmentMode === 'manual_only' && !isExplicitlyConnected) {
+      return null;
+    }
+
+    // Хэрэв бүх чатад автоматаар хариулах горимтой бөгөөд тухайлсан суваг сонгосон бол сувгийн ID тохирч буйг шалгана
+    if (!isExplicitlyConnected && this.config.selectedLineId && Number(this.config.selectedLineId) !== Number(params.channelId)) {
       return null;
     }
 
@@ -625,22 +631,15 @@ ${kbContext}
     this.processedOpenlineMessageIds.add(msgKey);
 
     // Check if dialog is currently in progress, assigned to an operator, or bot has detached
-    const currentDialog = chatManager.getDialogById(params.dialogId);
-    if (
-      currentDialog &&
-      (currentDialog.status === 'in_progress' ||
-        currentDialog.status === 'assigned' ||
-        (currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') ||
-        currentDialog.botActive === false)
-    ) {
-      console.log(`[BotWorker] Skipping openline message processing for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId} (bot detached)`);
-      return null;
-    }
-
-    // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
-    if (this.config.botAssignmentMode === 'manual_only' && !currentDialog?.botActive) {
-      console.log(`[BotWorker] Skipping openline message processing for ${params.dialogId}: Manual assignment mode is active and bot is not connected to this chat`);
-      return null;
+    if (currentDialog) {
+      if (currentDialog.botActive === false) {
+        console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Bot explicitly detached`);
+        return null;
+      }
+      if (!isExplicitlyConnected && currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') {
+        console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId}`);
+        return null;
+      }
     }
 
     // Keep set bounded to prevent memory growth
