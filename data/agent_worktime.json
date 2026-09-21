@@ -51,7 +51,8 @@
       ],
       "activeSessions": 32,
       "accessRole": "admin",
-      "canAccessAllChannels": true
+      "canAccessAllChannels": true,
+      "bitrixWorkdayStatus": "OPENED"
     },
     {
       "id": "bx-121",
@@ -495,7 +496,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 260,
+      "activeSessions": 256,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -697,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 3,
+      "activeSessions": 9,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1155,7 +1156,7 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 6,
+      "activeSessions": 7,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },

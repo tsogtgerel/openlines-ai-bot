@@ -136,7 +136,7 @@ export class BitrixOpenlinesSyncService {
 
         const currentDialog = chatManager.getDialogById(`chat-${numChatId}`) || updatedDialog;
         const botCfg = botWorker.getConfig();
-        const isExplicitlyConnected = Boolean(currentDialog?.botActive);
+        const isExplicitlyConnected = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
         const isBotActiveForThisChat =
           isExplicitlyConnected ||
           (botCfg.botAssignmentMode === 'all_chats' &&
@@ -150,13 +150,18 @@ export class BitrixOpenlinesSyncService {
         const lastMsg = visibleMsgs[visibleMsgs.length - 1];
 
         if (isBotActiveForThisChat && lastMsg && lastMsg.sender === 'customer' && currentDialog.status !== 'closed') {
+          const lastMsgTime = new Date(lastMsg.timestamp).getTime();
+          const botConnectedTime = currentDialog.botConnectedAt ? new Date(currentDialog.botConnectedAt).getTime() : 0;
+          const isSentBeforeBotConnected = botConnectedTime > 0 && lastMsgTime < botConnectedTime - 2000;
+
+          const hasAgentReplied = visibleMsgs.some(
+            (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() >= lastMsgTime
+          );
           const hasBotReplied = visibleMsgs.some(
-            (m) =>
-              m.sender === 'bot' &&
-              new Date(m.timestamp).getTime() >= new Date(lastMsg.timestamp).getTime()
+            (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= lastMsgTime
           );
 
-          if (!hasBotReplied) {
+          if (!hasBotReplied && !hasAgentReplied && !isSentBeforeBotConnected) {
             botWorker
               .processOpenlineCustomerMessage({
                 chatId: numChatId,
@@ -318,10 +323,31 @@ export class BitrixOpenlinesSyncService {
         ? (rawData.users?.find((u: any) => u.id === Number(s.operatorId)) || operatorUser)
         : null;
 
+      // Check if bot is invited in messages or present in users list
+      const isBotInvitedInMessages = sortedRaw.some((m: any) => {
+        const t = (m.text || '').toLowerCase();
+        return (
+          t.includes('invited bsb ai assistant') ||
+          t.includes('invited bsb') ||
+          t.includes('invited bot') ||
+          (botCfg.botName && t.includes(`invited ${botCfg.botName.toLowerCase()}`))
+        );
+      });
+      const isBotUserInChat = Boolean(
+        rawData.users?.some(
+          (u: any) => Number(u.id) === Number(botCfg.botId) || Number(u.id) === 19170
+        )
+      );
+
+      const isBotActiveNow =
+        existingDialog?.botActive !== undefined
+          ? existingDialog.botActive
+          : (isBotInvitedInMessages || isBotUserInChat || (isThisLineBotBound && lastMsg && lastMsg.sender === 'bot'));
+
       let status: ChatDialog['status'] = 'new';
       if (s.status === 'closed') {
         status = 'closed';
-      } else if (existingDialog?.botActive || (isThisLineBotBound && lastMsg && lastMsg.sender === 'bot')) {
+      } else if (isBotActiveNow) {
         status = 'bot';
       } else if (hasActiveOperator || (s.status === 'answered' && operatorUser)) {
         status = 'in_progress';
@@ -343,6 +369,15 @@ export class BitrixOpenlinesSyncService {
         } else if (status === 'closed' && bitrixCloseTime > reopenTime) {
           reopenedAtDate = undefined;
         }
+      }
+
+      let botConnectedAt = existingDialog?.botConnectedAt;
+      if (!botConnectedAt && isBotActiveNow) {
+        const inviteMsg = sortedRaw.find((m: any) => {
+          const t = (m.text || '').toLowerCase();
+          return t.includes('invited') && (t.includes('ai') || t.includes('assistant') || t.includes('bot') || t.includes('bsb'));
+        });
+        botConnectedAt = inviteMsg?.date || new Date().toISOString();
       }
 
       return {
@@ -370,7 +405,8 @@ export class BitrixOpenlinesSyncService {
         createdAt: s.dateCreate,
         closedAt: closedAtDate,
         reopenedAt: reopenedAtDate,
-        botActive: existingDialog?.botActive !== undefined ? existingDialog.botActive : (status === 'bot'),
+        botActive: isBotActiveNow,
+        botConnectedAt,
         messages,
       };
     } catch (e: any) {
@@ -489,7 +525,7 @@ export class BitrixOpenlinesSyncService {
               updatedCount++;
 
               // Бот идэвхтэй бөгөөд харилцагч хамгийн сүүлд бичсэн бол AI хариулт илгээх
-              const isExplicitlyConnected = Boolean(chatDialog.botActive);
+              const isExplicitlyConnected = Boolean(chatDialog.botActive || chatDialog.status === 'bot');
 
               const isBotActiveForThisChat =
                 isExplicitlyConnected ||
@@ -505,14 +541,17 @@ export class BitrixOpenlinesSyncService {
 
               if (isBotActiveForThisChat && lastCustomerMsg && s.status !== 'closed') {
                 const customerTime = new Date(lastCustomerMsg.timestamp).getTime();
+                const botConnectedTime = chatDialog.botConnectedAt ? new Date(chatDialog.botConnectedAt).getTime() : 0;
+                const isSentBeforeBotConnected = botConnectedTime > 0 && customerTime < botConnectedTime - 2000;
+
                 const hasAgentReplied = chatDialog.messages.some(
-                  (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() > customerTime
+                  (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() >= customerTime
                 );
                 const hasBotReplied = chatDialog.messages.some(
                   (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= customerTime
                 );
 
-                if (!hasBotReplied && !hasAgentReplied) {
+                if (!hasBotReplied && !hasAgentReplied && !isSentBeforeBotConnected) {
                   botWorker
                     .processOpenlineCustomerMessage({
                       chatId: s.chatId,
@@ -557,9 +596,15 @@ export class BitrixOpenlinesSyncService {
       }
     }
 
-    const res = await vibeRequest('POST', `/v1/chats/${dialogId}/messages`, {
-      message,
-    });
+    const res = await vibeRequest(
+      'POST',
+      `/v1/chats/${dialogId}/messages`,
+      {
+        message,
+      },
+      undefined,
+      { isOutgoingMessage: true }
+    );
 
     // Mark current session count as increased so next sync will refresh smoothly
     if (!isNaN(num)) {
@@ -601,7 +646,7 @@ export class BitrixOpenlinesSyncService {
     this.knownSessionStatuses.set(chatId, 'closed');
   }
 
-  startAutoSync(intervalMs = 1800) {
+  startAutoSync(intervalMs = 4500) {
     if (this.timer) {
       clearInterval(this.timer);
     }
@@ -614,14 +659,14 @@ export class BitrixOpenlinesSyncService {
       console.warn('[OpenlinesSync] Initial sync error:', err.message);
     });
 
-    // 1. Periodic background sync for all open sessions (1.8s for rapid chat delivery)
+    // 1. Periodic background sync for all open sessions (4.5s prevents rate limiting)
     this.timer = setInterval(() => {
       this.syncOpenlineSessions(25).catch((err) => {
         console.warn('[OpenlinesSync] Interval sync error:', err.message);
       });
     }, intervalMs);
 
-    // 2. Ultra high-frequency sync for the active chat currently open on the operator screen (800ms interval)
+    // 2. Focused sync for the active chat currently open on the operator screen (2.5s interval)
     this.activeChatTimer = setInterval(() => {
       if (this.activeChatId && !this.isSingleSyncing) {
         this.isSingleSyncing = true;
@@ -633,7 +678,7 @@ export class BitrixOpenlinesSyncService {
             this.isSingleSyncing = false;
           });
       }
-    }, 800);
+    }, 2500);
   }
 
   stopAutoSync() {

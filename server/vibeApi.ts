@@ -43,99 +43,140 @@ export async function vibeRequest<T = any>(
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
   path: string,
   body?: any,
-  customApiKey?: string
+  customApiKey?: string,
+  options?: { isOutgoingMessage?: boolean; maxRetries?: number }
 ): Promise<VibeApiResponse<T>> {
-  // Fast fail if currently rate limited to prevent compounding server penalties
-  const rateLimitStatus = getVibeRateLimitInfo();
-  if (rateLimitStatus.isRateLimited) {
-    return {
-      success: false,
-      error: {
-        code: 'RATE_LIMITED',
-        message: `Too many requests. Rate limit in effect for another ${rateLimitStatus.retryAfterSec}s.`,
-      },
-    };
-  }
+  const isOutgoing = Boolean(options?.isOutgoingMessage);
+  const maxRetries = options?.maxRetries ?? (isOutgoing ? 3 : 0);
+  let attempt = 0;
 
-  const apiKey = customApiKey || getApiKey();
-  const url = `${VIBE_API_URL}${path}`;
+  while (attempt <= maxRetries) {
+    attempt++;
 
-  return new Promise((resolve, reject) => {
-    const urlObj = new URL(url);
-    const postData = body ? JSON.stringify(body) : null;
-
-    const headers: Record<string, string> = {
-      'X-Api-Key': apiKey,
-      Accept: 'application/json',
-    };
-
-    if (postData) {
-      headers['Content-Type'] = 'application/json';
-      headers['Content-Length'] = Buffer.byteLength(postData).toString();
+    // Fast fail non-critical requests if currently rate limited
+    const rateLimitStatus = getVibeRateLimitInfo();
+    if (rateLimitStatus.isRateLimited) {
+      if (isOutgoing && attempt <= maxRetries) {
+        const waitTime = Math.min(Math.max(rateLimitStatus.retryAfterMs, 1000), 5000);
+        console.log(`[VibeApi] Outgoing message queued. Waiting ${waitTime}ms for rate limit window...`);
+        await new Promise((r) => setTimeout(r, waitTime));
+      } else {
+        return {
+          success: false,
+          error: {
+            code: 'RATE_LIMITED',
+            message: `Too many requests. Rate limit in effect for another ${rateLimitStatus.retryAfterSec}s.`,
+          },
+        };
+      }
     }
 
-    const req = https.request(
-      {
-        hostname: urlObj.hostname,
-        port: urlObj.port || 443,
-        path: urlObj.pathname + urlObj.search,
-        method,
-        headers,
-      },
-      (res) => {
-        let rawData = '';
-        res.on('data', (chunk) => (rawData += chunk));
-        res.on('end', () => {
-          try {
-            // Handle 204 No Content or empty success response
-            if (res.statusCode === 204 || (!rawData && res.statusCode && res.statusCode < 300)) {
-              return resolve({ success: true, data: null as any });
-            }
+    const apiKey = customApiKey || getApiKey();
+    const url = `${VIBE_API_URL}${path}`;
 
-            const parsed = JSON.parse(rawData);
+    try {
+      const response = await new Promise<VibeApiResponse<T>>((resolve, reject) => {
+        const urlObj = new URL(url);
+        const postData = body ? JSON.stringify(body) : null;
 
-            // Check if rate limited
-            if (res.statusCode === 429 || parsed.error?.code === 'RATE_LIMITED') {
-              const msg = parsed.error?.message || parsed.message || '';
-              const match = msg.match(/(\d+)\s*(?:second|sec|s)/i);
-              const retrySec = match ? parseInt(match[1], 10) : 15;
-              rateLimitedUntil = Date.now() + retrySec * 1000 + 500;
-              console.warn(`[VibeApi] Rate limit triggered. Backing off for ${retrySec} seconds.`);
-            }
+        const headers: Record<string, string> = {
+          'X-Api-Key': apiKey,
+          Accept: 'application/json',
+        };
 
-            if (res.statusCode && res.statusCode >= 400 && !parsed.error) {
-              resolve({
-                success: false,
-                error: {
-                  code: `HTTP_${res.statusCode}`,
-                  message: parsed.message || rawData || `Request failed with status ${res.statusCode}`,
-                },
-              });
-            } else {
-              resolve(parsed);
-            }
-          } catch {
-            resolve({
-              success: false,
-              error: {
-                code: `HTTP_${res.statusCode}`,
-                message: rawData || 'Invalid JSON response from VibeCode API',
-              },
+        if (postData) {
+          headers['Content-Type'] = 'application/json';
+          headers['Content-Length'] = Buffer.byteLength(postData).toString();
+        }
+
+        const req = https.request(
+          {
+            hostname: urlObj.hostname,
+            port: urlObj.port || 443,
+            path: urlObj.pathname + urlObj.search,
+            method,
+            headers,
+          },
+          (res) => {
+            let rawData = '';
+            res.on('data', (chunk) => (rawData += chunk));
+            res.on('end', () => {
+              try {
+                // Handle 204 No Content or empty success response
+                if (res.statusCode === 204 || (!rawData && res.statusCode && res.statusCode < 300)) {
+                  return resolve({ success: true, data: null as any });
+                }
+
+                const parsed = JSON.parse(rawData);
+
+                // Check if rate limited
+                if (res.statusCode === 429 || parsed.error?.code === 'RATE_LIMITED') {
+                  const msg = parsed.error?.message || parsed.message || '';
+                  const match = msg.match(/(\d+)\s*(?:second|sec|s)/i);
+                  const retrySec = match ? parseInt(match[1], 10) : 15;
+                  rateLimitedUntil = Date.now() + retrySec * 1000 + 500;
+                  console.warn(`[VibeApi] Rate limit triggered. Backing off for ${retrySec} seconds.`);
+                }
+
+                if (res.statusCode && res.statusCode >= 400 && !parsed.error) {
+                  resolve({
+                    success: false,
+                    error: {
+                      code: `HTTP_${res.statusCode}`,
+                      message: parsed.message || rawData || `Request failed with status ${res.statusCode}`,
+                    },
+                  });
+                } else {
+                  resolve(parsed);
+                }
+              } catch {
+                resolve({
+                  success: false,
+                  error: {
+                    code: `HTTP_${res.statusCode}`,
+                    message: rawData || 'Invalid JSON response from VibeCode API',
+                  },
+                });
+              }
             });
           }
+        );
+
+        req.on('error', (err) => {
+          reject(err);
         });
+
+        if (postData) {
+          req.write(postData);
+        }
+        req.end();
+      });
+
+      // If rate limited and we have retries left for outgoing message
+      if (response.error?.code === 'RATE_LIMITED' && isOutgoing && attempt <= maxRetries) {
+        const retryDelay = 2000 * attempt;
+        console.log(`[VibeApi] Outgoing message encountered rate limit. Retrying in ${retryDelay}ms (attempt ${attempt}/${maxRetries})...`);
+        await new Promise((r) => setTimeout(r, retryDelay));
+        continue;
       }
-    );
 
-    req.on('error', (err) => {
-      reject(err);
-    });
-
-    if (postData) {
-      req.write(postData);
+      return response;
+    } catch (err: any) {
+      if (isOutgoing && attempt <= maxRetries) {
+        await new Promise((r) => setTimeout(r, 1500));
+        continue;
+      }
+      throw err;
     }
-    req.end();
-  });
+  }
+
+  return {
+    success: false,
+    error: {
+      code: 'MAX_RETRIES_EXCEEDED',
+      message: 'Failed to complete request after maximum retries.',
+    },
+  };
 }
 
 // -------------------------------------------------------------------------

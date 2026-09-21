@@ -428,6 +428,79 @@ async function startServer() {
     }
   });
 
+  /**
+   * GET /api/meili/indices
+   * MeiliSearch дээрх бүх 5 индексийн (app_bsb_products, app_bsb_taxons, app_bsb_brands, app_bsb_product_terms, app_bsb_attributes)
+   * холболт, нийт баримтын тоо, статусыг нэгтгэн авах.
+   */
+  app.get('/api/meili/indices', async (req, res) => {
+    try {
+      const stats = await meiliProductService.getAllIndicesStats();
+      res.json({ success: true, data: stats });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/meili/terms
+   * app_bsb_product_terms индексээс буцаалтын нөхцөл, хүргэлтийн нөхцөл, төлбөрийн албан ёсны заалтуудыг авах.
+   */
+  app.get('/api/meili/terms', async (req, res) => {
+    try {
+      const q = (req.query.q as string) || '';
+      const terms = await meiliProductService.searchProductTerms(q);
+      res.json({ success: true, data: terms });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/meili/brands
+   * app_bsb_brands индексээс 140+ албан ёсны брэнд, лого, барааны тоог хайх/авах.
+   */
+  app.get('/api/meili/brands', async (req, res) => {
+    try {
+      const q = (req.query.q as string) || '';
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 30;
+      const brands = await meiliProductService.searchBrands(q, limit);
+      res.json({ success: true, data: brands });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/meili/taxons
+   * app_bsb_taxons индексээс 620+ барааны ангилал, шатлал, холбоос (slug)-ийг хайх/авах.
+   */
+  app.get('/api/meili/taxons', async (req, res) => {
+    try {
+      const q = (req.query.q as string) || '';
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 30;
+      const taxons = await meiliProductService.searchTaxons(q, limit);
+      res.json({ success: true, data: taxons });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/meili/attributes
+   * app_bsb_attributes индексээс 160+ техникийн үзүүлэлт, шүүлтүүрийн шинж чанарыг хайх/авах.
+   */
+  app.get('/api/meili/attributes', async (req, res) => {
+    try {
+      const q = (req.query.q as string) || '';
+      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 30;
+      const attributes = await meiliProductService.searchAttributes(q, limit);
+      res.json({ success: true, data: attributes });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
   // ==========================================================================
   // 5. Logs & Live Testing Simulator API
   // ==========================================================================
@@ -591,7 +664,174 @@ async function startServer() {
       }
       const testDialogId = dialogId || `sim-${Date.now()}`;
       const outcome = await botWorker.processMessage(testDialogId, message);
-      res.json({ success: true, data: outcome });
+      res.json({
+        success: true,
+        data: outcome,
+        handoff: outcome.handoff || outcome.handedOff || false,
+        sessionCleared: outcome.sessionCleared || false,
+        chatId: testDialogId,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/bot/ask
+   * POST /api/bot/chat
+   * POST /api/bot/respond
+   * Backend API handler for AI responses:
+   * Returns AI answer or a 'handoff' signal when a chat is transferred to an agent.
+   * Clears the active session state for that specific chat ID in AI memory to prevent the bot
+   * from responding to messages meant for the human agent.
+   */
+  app.post(['/api/bot/ask', '/api/bot/chat', '/api/bot/respond'], async (req, res) => {
+    try {
+      const { message, text, dialogId, chatId } = req.body || {};
+      const targetMessage = (message || text || '').trim();
+      const targetChatId = dialogId || chatId || `chat-${Date.now()}`;
+
+      if (!targetMessage) {
+        return res.status(400).json({ success: false, error: { message: 'Message or text is required' } });
+      }
+
+      // Check if session is already handed off before invoking AI
+      const dialog = chatManager.getDialog(targetChatId) || chatManager.getDialogById(targetChatId);
+      const isBotActive = Boolean(dialog?.botActive || dialog?.status === 'bot');
+      if (!isBotActive && botWorker.isSessionHandedOff(targetChatId)) {
+        const agentName = dialog?.assignedAgentName || dialog?.assignedAgentId || 'хүний оператор';
+        return res.json({
+          success: true,
+          data: {
+            answer: '',
+            handedOff: true,
+            handoff: true,
+            handoffReason: 'transferred_to_agent',
+            transferredToAgent: agentName,
+            chatId: targetChatId,
+            sessionCleared: true,
+          },
+          handoff: true,
+          signal: 'handoff',
+          handedOff: true,
+          sessionCleared: true,
+          chatId: targetChatId,
+          transferredToAgent: agentName,
+          message: 'Chat has been handed off to an agent. Bot response suppressed.',
+        });
+      }
+
+      const outcome = await botWorker.processMessage(targetChatId, targetMessage);
+
+      res.json({
+        success: true,
+        data: outcome,
+        handoff: outcome.handoff || outcome.handedOff || false,
+        signal: (outcome.handoff || outcome.handedOff) ? 'handoff' : undefined,
+        handedOff: outcome.handedOff || false,
+        sessionCleared: outcome.sessionCleared || false,
+        chatId: targetChatId,
+        transferredToAgent: outcome.transferredToAgent,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/bot/handoff
+   * POST /api/chats/:id/handoff
+   * Explicit handoff signal endpoint: transfers chat to human agent and immediately
+   * clears the active session state and memory for that specific chat ID.
+   */
+  app.post(['/api/bot/handoff', '/api/chats/:id/handoff'], async (req, res) => {
+    try {
+      const chatId = req.params.id || req.body.chatId || req.body.dialogId;
+      const { agentId, agentName, reason } = req.body || {};
+
+      if (!chatId) {
+        return res.status(400).json({ success: false, error: { message: 'Chat ID is required' } });
+      }
+
+      // Update dialog in chatManager
+      const existing = chatManager.getDialog(chatId) || chatManager.getDialogById(chatId);
+      if (existing) {
+        if (agentId && agentName) {
+          chatManager.transferDialog(chatId, agentId, agentName);
+        } else {
+          chatManager.detachBotFromChat(chatId, agentName || 'Хүний оператор');
+        }
+      }
+
+      // Clear active session state in bot memory
+      const result = botWorker.clearActiveSessionState(chatId, {
+        reason: reason || 'transferred_to_agent',
+        transferredToAgent: agentName || existing?.assignedAgentName || 'Оператор',
+      });
+
+      const targetId = existing?.dialogId || existing?.id || chatId;
+      await botWorker.leaveChat(targetId);
+
+      res.json({
+        success: true,
+        handoff: true,
+        signal: 'handoff',
+        chatId,
+        sessionCleared: true,
+        transferredToAgent: agentName || existing?.assignedAgentName || 'Оператор',
+        reason: reason || 'transferred_to_agent',
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/bot/sessions
+   * List all tracked AI sessions and their handoff status
+   */
+  app.get('/api/bot/sessions', (req, res) => {
+    try {
+      const sessions = botWorker.getAllActiveSessions();
+      res.json({ success: true, data: sessions, total: sessions.length });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/bot/sessions/:chatId
+   * Get session status and AI memory for a specific chat ID
+   */
+  app.get('/api/bot/sessions/:chatId', (req, res) => {
+    try {
+      const session = botWorker.getSession(req.params.chatId);
+      const isHandedOff = botWorker.isSessionHandedOff(req.params.chatId);
+      res.json({
+        success: true,
+        data: session || null,
+        isHandedOff,
+        chatId: req.params.chatId,
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/bot/sessions/:chatId/reactivate
+   * Reactivate bot session memory and reset handoff flag for a specific chat ID
+   */
+  app.post('/api/bot/sessions/:chatId/reactivate', async (req, res) => {
+    try {
+      const chatId = req.params.chatId;
+      chatManager.connectBotToChat(chatId);
+      botWorker.reactivateBotSession(chatId);
+      res.json({
+        success: true,
+        chatId,
+        message: `Bot session reactivated and connected to ${chatId}`,
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1173,15 +1413,28 @@ async function startServer() {
         }
       }
 
-      // Хэрэв оператор өөртөө авсан эсвэл in_progress болсон бол ботыг чатнаас салгах (leave)
+      let isHandoff = false;
+      // Хэрэв оператор өөртөө авсан эсвэл in_progress болсон бол ботыг чатнаас салгах (leave) ба AI сессийг цэвэрлэх
       if (req.body.assignedAgentId || req.body.status === 'in_progress') {
         const targetId = updated.dialogId || updated.id;
         if (targetId) {
           await botWorker.leaveChat(targetId);
         }
+        botWorker.clearActiveSessionState(req.params.id, {
+          reason: 'assigned_to_operator',
+          transferredToAgent: updated.assignedAgentName || req.body.assignedAgentName,
+        });
+        isHandoff = true;
       }
 
-      res.json({ success: true, data: updated });
+      res.json({
+        success: true,
+        data: updated,
+        handoff: isHandoff,
+        signal: isHandoff ? 'handoff' : undefined,
+        sessionCleared: isHandoff,
+        chatId: req.params.id,
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1196,47 +1449,28 @@ async function startServer() {
     try {
       const config = botWorker.getConfig();
       const botName = config.botName || 'BSB AI Туслах';
-      const dialog = chatManager.connectBotToChat(req.params.id, botName);
-      if (dialog.dialogId) {
-        await botWorker.rejoinChat(dialog.dialogId);
-      }
-
-      // Хэрэв харилцагчийн асуулт хариултгүй хүлээгдэж байгаа бол шууд AI хариултыг дуудах
-      const customerMsgs = dialog.messages.filter((m) => m.sender === 'customer');
-      const lastCustomerMsg = customerMsgs[customerMsgs.length - 1];
-      if (lastCustomerMsg && dialog.status !== 'closed') {
-        const customerTime = new Date(lastCustomerMsg.timestamp).getTime();
-        const hasBotReplied = dialog.messages.some(
-          (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= customerTime
-        );
-
-        if (!hasBotReplied) {
-          setTimeout(async () => {
-            try {
-              const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
-              if (match) {
-                const numericChatId = parseInt(match[0], 10);
-                await botWorker.processOpenlineCustomerMessage({
-                  chatId: numericChatId || 0,
-                  dialogId: `chat${numericChatId}`,
-                  messageId: lastCustomerMsg.id,
-                  text: lastCustomerMsg.text,
-                  customerName: dialog.customer.name,
-                  channelId: Number(dialog.channelId) || 0,
-                  channelName: dialog.channelName || 'Суваг',
-                  channelType: dialog.channelType,
-                });
-              } else {
-                await botWorker.processMessage(dialog.id, lastCustomerMsg.text);
-              }
-            } catch (err: any) {
-              console.error('[Server] Bot response error upon connect-bot:', err.message);
-            }
-          }, 350);
+      let dialog: any = null;
+      try {
+        dialog = chatManager.connectBotToChat(req.params.id, botName);
+        if (dialog.dialogId) {
+          await botWorker.rejoinChat(dialog.dialogId);
         }
+      } catch (notFoundErr) {
+        // If dialog was created dynamically or in simulator, rejoin directly
+        await botWorker.rejoinChat(req.params.id);
       }
+      botWorker.reactivateBotSession(req.params.id);
 
-      res.json({ success: true, data: dialog });
+      // Оператор чатыг бот руу шилжүүлэх үед өмнө нь оператортой бичиж байсан хуучин чатад хариулахгүй.
+      // Бот зөвхөн шилжүүлснээс хойш харилцагчаас ирэх шинэ асуултыг хүлээн авч хариулна.
+
+      res.json({
+        success: true,
+        data: dialog,
+        handoff: false,
+        botActive: true,
+        chatId: req.params.id,
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1253,7 +1487,19 @@ async function startServer() {
       if (dialog.dialogId) {
         await botWorker.leaveChat(dialog.dialogId);
       }
-      res.json({ success: true, data: dialog });
+      botWorker.clearActiveSessionState(req.params.id, {
+        reason: 'detach_bot_to_operator',
+        transferredToAgent: operatorName || 'Оператор',
+      });
+      res.json({
+        success: true,
+        data: dialog,
+        handoff: true,
+        signal: 'handoff',
+        sessionCleared: true,
+        chatId: req.params.id,
+        transferredToAgent: operatorName || 'Оператор',
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1262,6 +1508,7 @@ async function startServer() {
   /**
    * POST /api/chats/:id/transfer
    * Чатыг өөр мэргэшсэн оператор руу шилжүүлэх (Re-assign).
+   * Идэвхтэй AI сесс ба санах ойг цэвэрлэж, handoff дохиог буцаана.
    */
   app.post('/api/chats/:id/transfer', async (req, res) => {
     try {
@@ -1273,7 +1520,19 @@ async function startServer() {
       if (dialog.dialogId) {
         await botWorker.leaveChat(dialog.dialogId);
       }
-      res.json({ success: true, data: dialog });
+      botWorker.clearActiveSessionState(req.params.id, {
+        reason: 'transferred_to_agent',
+        transferredToAgent: targetAgentName,
+      });
+      res.json({
+        success: true,
+        data: dialog,
+        handoff: true,
+        signal: 'handoff',
+        sessionCleared: true,
+        chatId: req.params.id,
+        transferredToAgent: targetAgentName,
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }

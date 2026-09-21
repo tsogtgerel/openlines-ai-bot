@@ -32,6 +32,8 @@ import {
   FormattedBsbProduct,
   ProductDisplayConfig,
   DEFAULT_PRODUCT_CONFIG,
+  BSB_CATEGORIES,
+  DetectedProductContext,
 } from './meiliProductService';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
@@ -75,7 +77,7 @@ export interface DialogLog {
   customerMessage: string;
   botAnswer: string;
   handedOff: boolean;
-  handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined';
+  handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined' | 'assigned_to_operator' | 'manual_transfer';
   matchedArticles: { id: string; title: string; score: number }[];
   matchedProducts?: {
     code: string;
@@ -87,6 +89,38 @@ export interface DialogLog {
     categoryUrl?: string;
   }[];
   durationMs: number;
+}
+
+/**
+ * AI харилцан ярианы идэвхтэй сесс ба санах ойн төлөв (AI Conversation Memory & Session State)
+ */
+export interface AiSessionState {
+  chatId: string;
+  dialogId: string;
+  isActive: boolean;
+  isHandedOff: boolean;
+  handoffTimestamp?: string;
+  handoffReason?: string;
+  transferredToAgent?: string;
+  lastCustomerMessage?: string;
+  lastBotResponse?: string;
+  detectedContext?: any;
+  conversationTurns: Array<{ role: 'customer' | 'bot' | 'system'; text: string; timestamp: string }>;
+  startedAt: string;
+  lastActivityAt: string;
+}
+
+/**
+ * Ботын боловсруулалтын хариу ба гарсан handoff дохио
+ */
+export interface BotProcessOutcome {
+  answer: string;
+  handedOff: boolean;
+  handoff?: boolean; // Explicit 'handoff' signal when transferred to an agent
+  handoffReason?: string;
+  transferredToAgent?: string;
+  chatId?: string;
+  sessionCleared?: boolean;
 }
 
 const DEFAULT_CONFIG: BotConfig = {
@@ -136,10 +170,279 @@ export class BotWorkerService {
   private isProcessingPoll = false;
   private processedOpenlineMessageIds = new Set<string>();
 
+  // Active AI conversation memory & session states per chat ID
+  private activeSessions = new Map<string, AiSessionState>();
+
   constructor() {
     this.ensureDataDir();
     this.loadConfig();
     this.loadLogs();
+
+    // Listen to handoff events from chatManager to automatically clear active AI session states
+    chatManager.on('handoff', (event: any) => {
+      try {
+        if (event?.dialogId) {
+          this.clearActiveSessionState(event.dialogId, {
+            reason: event.reason || 'transferred_to_agent',
+            transferredToAgent: event.targetAgentName,
+          });
+        }
+        if (event?.dialogNumericId && event.dialogNumericId !== event.dialogId) {
+          this.clearActiveSessionState(event.dialogNumericId, {
+            reason: event.reason || 'transferred_to_agent',
+            transferredToAgent: event.targetAgentName,
+          });
+        }
+      } catch (err) {
+        console.error('[BotWorker] Error handling handoff event:', err);
+      }
+    });
+
+    chatManager.on('bot_connected', (event: any) => {
+      try {
+        if (event?.dialogId) {
+          this.reactivateBotSession(event.dialogId);
+        }
+        if (event?.dialogNumericId && event.dialogNumericId !== event.dialogId) {
+          this.reactivateBotSession(event.dialogNumericId);
+        }
+      } catch (err) {
+        console.error('[BotWorker] Error handling bot_connected event:', err);
+      }
+    });
+  }
+
+  /**
+   * Normalize chat or dialog key to resolve chat123, 123, d-123 to consistent key
+   */
+  public normalizeChatKey(id: string): string {
+    if (!id) return '';
+    const match = id.match(/\d+/);
+    if (match) {
+      return match[0];
+    }
+    return id.toLowerCase().trim();
+  }
+
+  /**
+   * Get active session state for a chat
+   */
+  public getSession(chatOrDialogId: string): AiSessionState | undefined {
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+    return this.activeSessions.get(rawKey) || this.activeSessions.get(normKey);
+  }
+
+  /**
+   * Check if a chat session is currently handed off to a human agent
+   */
+  public isSessionHandedOff(chatOrDialogId: string): boolean {
+    if (!chatOrDialogId) return false;
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+    const session = this.activeSessions.get(rawKey) || this.activeSessions.get(normKey);
+
+    // Also check chatManager dialog status
+    const dialog =
+      chatManager.getDialog(chatOrDialogId) ||
+      chatManager.getDialogById(chatOrDialogId) ||
+      (normKey ? chatManager.getDialogById(`chat-${normKey}`) : undefined) ||
+      (normKey ? chatManager.getDialogById(`chat${normKey}`) : undefined);
+
+    // CRITICAL: If the dialog explicitly has botActive === true (or status === 'bot'),
+    // the bot is ACTIVE in this chat! It is NOT handed off.
+    if (dialog && (dialog.botActive === true || dialog.status === 'bot')) {
+      if (session && session.isHandedOff) {
+        session.isHandedOff = false;
+      }
+      return false;
+    }
+
+    // If dialog explicitly has botActive === false, bot is detached / handed off
+    if (dialog && dialog.botActive === false) {
+      return true;
+    }
+
+    // Check memory session flag
+    if (session && session.isHandedOff) {
+      return true;
+    }
+
+    // If botActive is not explicitly true, check if assigned to human operator or in progress
+    if (dialog) {
+      if (
+        dialog.status === 'in_progress' ||
+        dialog.status === 'assigned' ||
+        (!dialog.botActive && dialog.assignedAgentId && dialog.assignedAgentId !== 'unassigned')
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Clear the active session state for a specific chat ID in AI memory.
+   * Dispatches the 'handoff' signal and ensures the bot stops responding to messages meant for the human agent.
+   */
+  public clearActiveSessionState(
+    chatOrDialogId: string,
+    options?: { reason?: string; transferredToAgent?: string }
+  ): { cleared: boolean; chatId: string; handoff: boolean; transferredToAgent?: string } {
+    if (!chatOrDialogId) {
+      return { cleared: false, chatId: '', handoff: true };
+    }
+
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+
+    const existing = this.activeSessions.get(rawKey) || this.activeSessions.get(normKey);
+
+    const handoffReason = options?.reason || 'transferred_to_agent';
+    const transferredToAgent = options?.transferredToAgent;
+    const now = new Date().toISOString();
+
+    if (existing) {
+      existing.isActive = false;
+      existing.isHandedOff = true;
+      existing.handoffTimestamp = now;
+      existing.handoffReason = handoffReason;
+      if (transferredToAgent) {
+        existing.transferredToAgent = transferredToAgent;
+      }
+      // Purge active conversation memory turns and detected context
+      existing.conversationTurns = [];
+      existing.detectedContext = undefined;
+      existing.lastActivityAt = now;
+    } else {
+      // Create a tombstone/handoff record in AI memory so that future messages are immediately blocked
+      const handedOffSession: AiSessionState = {
+        chatId: normKey || rawKey,
+        dialogId: rawKey,
+        isActive: false,
+        isHandedOff: true,
+        handoffTimestamp: now,
+        handoffReason,
+        transferredToAgent,
+        conversationTurns: [],
+        startedAt: now,
+        lastActivityAt: now,
+      };
+      this.activeSessions.set(rawKey, handedOffSession);
+      if (normKey && normKey !== rawKey) {
+        this.activeSessions.set(normKey, handedOffSession);
+      }
+    }
+
+    console.log(
+      `[BotWorker] Cleared active AI session state and memory for chat ${chatOrDialogId} (Handoff signal sent. Agent: ${transferredToAgent || 'operator'}, Reason: ${handoffReason})`
+    );
+
+    return {
+      cleared: true,
+      chatId: chatOrDialogId,
+      handoff: true,
+      transferredToAgent,
+    };
+  }
+
+  /**
+   * Reactivate bot session memory when bot is intentionally re-connected to chat
+   */
+  public reactivateBotSession(chatOrDialogId: string): void {
+    if (!chatOrDialogId) return;
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+    this.activeSessions.delete(rawKey);
+    if (normKey) this.activeSessions.delete(normKey);
+
+    const newSession: AiSessionState = {
+      chatId: normKey || rawKey,
+      dialogId: rawKey,
+      isActive: true,
+      isHandedOff: false,
+      conversationTurns: [],
+      startedAt: new Date().toISOString(),
+      lastActivityAt: new Date().toISOString(),
+    };
+    this.activeSessions.set(rawKey, newSession);
+    if (normKey && normKey !== rawKey) {
+      this.activeSessions.set(normKey, newSession);
+    }
+    this.clearProcessedOpenlineMessages(chatOrDialogId);
+    console.log(`[BotWorker] Reactivated AI session state for chat ${chatOrDialogId}`);
+  }
+
+  /**
+   * Clear tracked processed openline message IDs
+   */
+  public clearProcessedOpenlineMessages(chatOrDialogId?: string): void {
+    if (!chatOrDialogId) {
+      this.processedOpenlineMessageIds.clear();
+      return;
+    }
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+    for (const key of Array.from(this.processedOpenlineMessageIds)) {
+      if (key.includes(rawKey) || (normKey && key.includes(normKey))) {
+        this.processedOpenlineMessageIds.delete(key);
+      }
+    }
+  }
+
+  /**
+   * Record conversation turn in AI memory for active sessions
+   */
+  public recordSessionTurn(
+    chatOrDialogId: string,
+    customerText: string,
+    botText: string,
+    context?: any
+  ): void {
+    const rawKey = chatOrDialogId;
+    const normKey = this.normalizeChatKey(chatOrDialogId);
+    let session = this.activeSessions.get(rawKey) || this.activeSessions.get(normKey);
+
+    const now = new Date().toISOString();
+    if (!session) {
+      session = {
+        chatId: normKey || rawKey,
+        dialogId: rawKey,
+        isActive: true,
+        isHandedOff: false,
+        conversationTurns: [],
+        startedAt: now,
+        lastActivityAt: now,
+      };
+      this.activeSessions.set(rawKey, session);
+      if (normKey && normKey !== rawKey) {
+        this.activeSessions.set(normKey, session);
+      }
+    }
+
+    session.lastCustomerMessage = customerText;
+    session.lastBotResponse = botText;
+    session.lastActivityAt = now;
+    if (context) {
+      session.detectedContext = context;
+    }
+
+    session.conversationTurns.push(
+      { role: 'customer', text: customerText, timestamp: now },
+      { role: 'bot', text: botText, timestamp: now }
+    );
+
+    // Keep memory turns bounded (e.g. last 20 turns)
+    if (session.conversationTurns.length > 20) {
+      session.conversationTurns = session.conversationTurns.slice(-20);
+    }
+  }
+
+  /**
+   * Get all active sessions
+   */
+  public getAllActiveSessions(): AiSessionState[] {
+    return Array.from(this.activeSessions.values());
   }
 
   private ensureDataDir() {
@@ -270,10 +573,10 @@ export class BotWorkerService {
     // Run first cycle immediately
     this.pollCycle().catch((err) => console.error('Immediate poll error:', err));
 
-    // Poll every 1.2 seconds for low-latency customer event capture
+    // Poll every 2.5 seconds for steady customer event capture without rate limiting
     this.pollTimer = setInterval(() => {
       this.pollCycle().catch((err) => console.error('Poll error:', err));
-    }, 1200);
+    }, 2500);
     console.log(`[BotWorker] Polling started for bot ${this.config.botId} with offset ${this.config.currentOffset}`);
   }
 
@@ -449,16 +752,36 @@ export class BotWorkerService {
     });
 
     // Check if dialog is currently in progress, assigned to an operator, or bot has detached
-    const currentDialog = chatManager.getDialogById(dialogId);
+    const normKey = this.normalizeChatKey(dialogId);
+    const currentDialog =
+      chatManager.getDialogById(dialogId) ||
+      chatManager.getDialog(dialogId) ||
+      (normKey ? chatManager.getDialogById(`chat-${normKey}`) : undefined) ||
+      (normKey ? chatManager.getDialogById(`chat${normKey}`) : undefined);
+
+    const isBotActive = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
+
     if (
-      currentDialog &&
-      (currentDialog.status === 'in_progress' ||
-        currentDialog.status === 'assigned' ||
-        (currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') ||
-        currentDialog.botActive === false)
+      !isBotActive &&
+      (this.isSessionHandedOff(dialogId) ||
+        (currentDialog &&
+          (currentDialog.status === 'in_progress' ||
+            currentDialog.status === 'assigned' ||
+            (currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') ||
+            currentDialog.botActive === false)))
     ) {
-      console.log(`[BotWorker] Skipping bot auto-reply for ${dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId} (bot detached)`);
+      console.log(`[BotWorker] Skipping bot auto-reply for ${dialogId}: Handled by operator or transferred to agent (bot detached)`);
       return;
+    }
+
+    // Хэрэв бот холбогдохоос өмнө оператортой харилцаж байсан хуучин мессеж бол алгасна
+    if (currentDialog?.botConnectedAt) {
+      const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
+      const eventTime = (messageObj.date ? new Date(messageObj.date).getTime() : 0) || (evt.date ? new Date(evt.date).getTime() : 0);
+      if (eventTime > 0 && eventTime < botConnectedTime - 2000) {
+        console.log(`[BotWorker] Skipping event for ${dialogId}: Message was sent before bot connected`);
+        return;
+      }
     }
 
     // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
@@ -479,7 +802,7 @@ export class BotWorkerService {
    * 5. VibeCode AI (BitrixGPT) загварт баримтуудыг System Prompt болгон өгч хариулт бэлтгэх
    * 6. Бэлэн хариултыг 'Оператор дуудах' инлайн товчлуурын хамт илгээх
    */
-  async processMessage(dialogId: string, text: string): Promise<{ answer: string; handedOff: boolean }> {
+  async processMessage(dialogId: string, text: string): Promise<BotProcessOutcome> {
     const startTime = Date.now();
     const botId = this.config.botId;
 
@@ -487,16 +810,67 @@ export class BotWorkerService {
       throw new Error('Bot is not registered');
     }
 
-    // Check if dialog is assigned to an operator, in progress, or bot has detached
-    const existingDialog = chatManager.getDialogById(dialogId);
+    // Check if dialog is already transferred to an agent, in progress, or bot has detached
+    const normKey = this.normalizeChatKey(dialogId);
+    const existingDialog =
+      chatManager.getDialog(dialogId) ||
+      chatManager.getDialogById(dialogId) ||
+      (normKey ? chatManager.getDialogById(`chat-${normKey}`) : undefined) ||
+      (normKey ? chatManager.getDialogById(`chat${normKey}`) : undefined);
+
+    const isBotActive = Boolean(existingDialog?.botActive || existingDialog?.status === 'bot');
+
+    if (!isBotActive && this.isSessionHandedOff(dialogId)) {
+      const agentName = existingDialog?.assignedAgentName || existingDialog?.assignedAgentId || 'хүний оператор';
+      console.log(`[BotWorker] Aborting bot reply for ${dialogId}: Chat has been transferred to agent ${agentName}. Active session cleared.`);
+      this.clearActiveSessionState(dialogId, {
+        reason: 'transferred_to_agent',
+        transferredToAgent: String(agentName),
+      });
+      return {
+        answer: '',
+        handedOff: true,
+        handoff: true, // explicit handoff signal
+        handoffReason: 'transferred_to_agent',
+        transferredToAgent: String(agentName),
+        chatId: dialogId,
+        sessionCleared: true,
+      };
+    }
+
     if (existingDialog) {
       if (existingDialog.botActive === false) {
         console.log(`[BotWorker] Aborting bot reply for ${dialogId}: botActive is explicitly false`);
-        return { answer: '', handedOff: false };
+        this.clearActiveSessionState(dialogId, { reason: 'bot_detached' });
+        return {
+          answer: '',
+          handedOff: true,
+          handoff: true,
+          handoffReason: 'bot_detached',
+          chatId: dialogId,
+          sessionCleared: true,
+        };
       }
-      if (!existingDialog.botActive && existingDialog.assignedAgentId && existingDialog.assignedAgentId !== 'unassigned') {
+      if (
+        !existingDialog.botActive &&
+        existingDialog.status !== 'bot' &&
+        existingDialog.assignedAgentId &&
+        existingDialog.assignedAgentId !== 'unassigned'
+      ) {
         console.log(`[BotWorker] Aborting bot reply for ${dialogId}: Assigned to operator ${existingDialog.assignedAgentName || existingDialog.assignedAgentId} (bot detached)`);
-        return { answer: '', handedOff: false };
+        this.clearActiveSessionState(dialogId, {
+          reason: 'assigned_to_operator',
+          transferredToAgent: existingDialog.assignedAgentName || existingDialog.assignedAgentId,
+        });
+        return {
+          answer: '',
+          handedOff: true,
+          handoff: true,
+          handoffReason: 'assigned_to_operator',
+          transferredToAgent: existingDialog.assignedAgentName || existingDialog.assignedAgentId,
+          chatId: dialogId,
+          sessionCleared: true,
+        };
       }
     }
 
@@ -514,8 +888,9 @@ export class BotWorkerService {
 
     if (isEscalationRequested) {
       const handoffMsg = "Би таныг яг одоо харилцагчийн үйлчилгээний ажилтантай (оператортой) холбож байна. Түр хүлээнэ үү...";
+      const handoffReason = lowerText === '/operator' ? 'user_button' : 'keyword';
       await this.sendReply(dialogId, handoffMsg);
-      await this.handoffToOperator(dialogId);
+      await this.handoffToOperator(dialogId, handoffReason);
       chatManager.recordBotReply(dialogId, handoffMsg, true, this.config.botName);
 
       this.addLog({
@@ -525,13 +900,20 @@ export class BotWorkerService {
         customerMessage: text,
         botAnswer: handoffMsg,
         handedOff: true,
-        handoffReason: lowerText === '/operator' ? 'user_button' : 'keyword',
+        handoffReason,
         matchedArticles: [],
         matchedProducts: [],
         durationMs: Date.now() - startTime,
       });
 
-      return { answer: handoffMsg, handedOff: true };
+      return {
+        answer: handoffMsg,
+        handedOff: true,
+        handoff: true, // explicit handoff signal
+        handoffReason,
+        chatId: dialogId,
+        sessionCleared: true,
+      };
     }
 
     // 2. Check for polite greeting (e.g. "Сайн байна уу", "Өдрийн мэнд") to avoid immediate handoff
@@ -540,6 +922,8 @@ export class BotWorkerService {
       const greetingReply = "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.";
       await this.sendReply(dialogId, greetingReply, true);
       chatManager.recordBotReply(dialogId, greetingReply, false, this.config.botName);
+      this.recordSessionTurn(dialogId, text, greetingReply);
+
       this.addLog({
         id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         timestamp: new Date().toISOString(),
@@ -551,11 +935,12 @@ export class BotWorkerService {
         matchedProducts: [],
         durationMs: Date.now() - startTime,
       });
-      return { answer: greetingReply, handedOff: false };
+      return { answer: greetingReply, handedOff: false, handoff: false, chatId: dialogId, sessionCleared: false };
     }
 
     // 3. Search MeiliSearch Product Database (https://meili.bsb.mn) using conversation context
     let matchedProducts: FormattedBsbProduct[] = [];
+    let detectedProductContext: DetectedProductContext | undefined;
     const isProdSearchActive = this.config.productSearchEnabled !== false && this.config.enableProductSearch !== false;
     if (isProdSearchActive) {
       try {
@@ -567,23 +952,77 @@ export class BotWorkerService {
           config: this.config.productConfig,
         });
         matchedProducts = prodResult.hits;
+        detectedProductContext = prodResult.detectedContext;
       } catch (prodErr) {
         console.warn('[BotWorker] MeiliSearch query failed:', prodErr);
       }
     }
 
-    // 4. Search Knowledge Base
+    // 4. Search Knowledge Base & MeiliSearch Official Product Terms (app_bsb_product_terms)
     const matchedKb = knowledgeBase.search(sanitizedText, 3);
     const topKbScore = matchedKb.length > 0 ? matchedKb[0].score : 0;
+    const matchedTerm = await meiliProductService.findRelevantTerm(sanitizedText);
 
-    // 5. If confidence is below threshold and no products found -> handoff to operator immediately without hallucinations
+    // 5. If confidence is below threshold, no products, and no official term -> check taxon or handoff
     const hasProductMatch = matchedProducts.length > 0;
     const hasKbMatch = matchedKb.length > 0 && topKbScore >= this.config.handoffThreshold;
+    const hasTermMatch = matchedTerm !== null;
 
-    if (!hasProductMatch && !hasKbMatch) {
+    if (!hasProductMatch && !hasKbMatch && !hasTermMatch) {
+      // Check if a category was detected in the customer query (e.g. угаалгын машин, хөргөгч, зурагт)
+      let detectedCat =
+        detectedProductContext?.detectedCategory ||
+        BSB_CATEGORIES.find((c) => c.keywords.some((kw) => sanitizedText.toLowerCase().includes(kw)))?.name;
+      let detectedSlug =
+        detectedProductContext?.categorySlug ||
+        BSB_CATEGORIES.find((c) => c.name === detectedCat)?.slug;
+
+      // Also check official MeiliSearch taxons (app_bsb_taxons)
+      if (!detectedCat || !detectedSlug) {
+        try {
+          const liveTaxon = await meiliProductService.findBestTaxon(sanitizedText);
+          if (liveTaxon && liveTaxon.slug && liveTaxon.name) {
+            detectedCat = liveTaxon.name;
+            detectedSlug = liveTaxon.slug;
+          }
+        } catch {}
+      }
+
+      if (detectedCat && detectedSlug) {
+        let catUrl = detectedSlug.startsWith('http')
+          ? detectedSlug
+          : `https://bsb.mn/categories/${detectedSlug}`;
+        if (
+          detectedCat.toLowerCase().includes('буйдан') ||
+          detectedSlug.toLowerCase().includes('buidan') ||
+          detectedSlug.includes('2287')
+        ) {
+          catUrl = 'https://bsb.mn/categories/category_2287?has_stock=true';
+        }
+        const catReply = `Сайн байна уу! БСБ-д худалдаалагдаж буй ${detectedCat}-ны бүх загваруудыг дараах албан ёсны ангиллын холбоосоор орж сонирхох боломжтой:\n\n📁 [Ангилал: ${detectedCat}](${catUrl})\n\nТанд сонирхож буй брэнд, үзүүлэлт байгаа бол бичнэ үү, би дэлгэрэнгүй шалгаж өгье!`;
+
+        await this.sendReply(dialogId, catReply, true);
+        chatManager.recordBotReply(dialogId, catReply, false, this.config.botName);
+        this.recordSessionTurn(dialogId, text, catReply);
+
+        this.addLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          timestamp: new Date().toISOString(),
+          dialogId,
+          customerMessage: text,
+          botAnswer: catReply,
+          handedOff: false,
+          matchedArticles: [],
+          matchedProducts: [],
+          durationMs: Date.now() - startTime,
+        });
+
+        return { answer: catReply, handedOff: false, handoff: false, chatId: dialogId, sessionCleared: false };
+      }
+
       const unsureMsg = "Манай барааны болон мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!";
       await this.sendReply(dialogId, unsureMsg);
-      await this.handoffToOperator(dialogId);
+      await this.handoffToOperator(dialogId, 'low_confidence');
       chatManager.recordBotReply(dialogId, unsureMsg, true, this.config.botName);
 
       this.addLog({
@@ -599,13 +1038,24 @@ export class BotWorkerService {
         durationMs: Date.now() - startTime,
       });
 
-      return { answer: unsureMsg, handedOff: true };
+      return {
+        answer: unsureMsg,
+        handedOff: true,
+        handoff: true,
+        handoffReason: 'low_confidence',
+        chatId: dialogId,
+        sessionCleared: true,
+      };
     }
 
     // 6. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
     try {
       const productContext = matchedProducts.length > 0
         ? meiliProductService.formatForPrompt(matchedProducts, this.config.productConfig)
+        : '';
+
+      const termsContext = matchedTerm
+        ? `--- БСБ АЛБАН ЁСНЫ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛҮҮД (app_bsb_product_terms) ---\nГарчиг: ${matchedTerm.title}\nТайлбар: ${matchedTerm.term.description}\nНөхцөл, заалтууд:\n${matchedTerm.cleanText}\n`
         : '';
 
       const kbContext = matchedKb
@@ -627,13 +1077,15 @@ export class BotWorkerService {
 ДҮРЭМ ЖУРАМ:
 1. Бараа, бүтээгдэхүүн, үнэ, загвар, техникийн үзүүлэлт, бэлэн байгаа эсэхийг асуусан бол "БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН"-аас олдсон бодит бүтээгдэхүүний брэнд, нэр, үнэ (₮-өөр), бэлэн байгаа эсэх төлөв, гол техникийн үзүүлэлтийг тодорхой дурдаж хариулна.
 2. Хэрэв барааны нөөц дууссан ("Одоогоор нөөц дууссан") байвал "Одоогоор нөөц түр дууссан байна" гэдгийг тодорхой мэдэгдэнэ.
-3. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Барааны мэдээллийг тодорхой дурдана.'}
-4. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), хүргэлт, салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
-5. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
-6. Өнгө аяс: ${this.config.tone}.
+3. Хүргэлт, буцаалт, төлбөрийн нөхцөлийн талаар асуусан бол "БСБ АЛБАН ЁСНЫ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛҮҮД"-ийн заалтыг (жишээ нь 72 цагийн сэтгэл ханамж, 24-72 цагийн хүргэлт, 250,000₮-с дээш үнэгүй хүргэлт г.м) яг үнэн зөв дурдаж хариулна.
+4. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Барааны мэдээллийг тодорхой дурдана.'}
+5. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
+6. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
+7. БСБ Барааны сан эсвэл Үйлчилгээний нөхцөлөөс мэдээлэл олдсон бол [TRANSFER_OPERATOR] гаргахгүй, олдсон албан ёсны мэдээллийг найрсаг танилцуулна.
+8. Өнгө аяс: ${this.config.tone}.
 ${this.config.systemPromptAddition}
 
-${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---\n' + kbContext + '\n\n' : ''}Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
+${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---\n' + kbContext + '\n\n' : ''}Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
 
       const aiRes = await vibeRequest<any>('POST', '/v1/chat/completions', {
         model: this.config.model || 'bitrix/bitrixgpt-5.5',
@@ -647,9 +1099,57 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
       const aiContent = (rawAny.choices?.[0]?.message?.content || rawAny.data?.choices?.[0]?.message?.content || '').trim();
 
       if (!aiContent || aiContent.includes('[TRANSFER_OPERATOR]')) {
+        // If products were found in MeiliSearch, do NOT transfer to operator with "no info"!
+        if (matchedProducts.length > 0) {
+          const itemsList = matchedProducts.slice(0, 3).map((p, idx) => {
+            const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
+            const price = p.priceFormatted || 'Үнэ тодруулах';
+            const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
+            return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${price} (${stock})${specs}`;
+          }).join('\n\n');
+
+          const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category);
+          const categoryLinkPart = categoryItem
+            ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+            : '';
+
+          const directProductReply = `Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n${itemsList}${categoryLinkPart}\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!`;
+
+          await this.sendReply(dialogId, directProductReply, true);
+          chatManager.recordBotReply(dialogId, directProductReply, false, this.config.botName);
+
+          this.addLog({
+            id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+            timestamp: new Date().toISOString(),
+            dialogId,
+            customerMessage: text,
+            botAnswer: directProductReply,
+            handedOff: false,
+            matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+            matchedProducts: matchedProducts.map((p) => ({
+              code: p.productCode,
+              name: p.name,
+              priceFormatted: p.priceFormatted,
+              inStock: p.inStock,
+              productUrl: p.productUrl,
+              category: p.category,
+              categoryUrl: p.categoryUrl,
+            })),
+            durationMs: Date.now() - startTime,
+          });
+
+          return {
+            answer: directProductReply,
+            handedOff: false,
+            handoff: false,
+            chatId: dialogId,
+            sessionCleared: false,
+          };
+        }
+
         const transferText = "Манай мэдээллийн санд энэ асуултын талаар баталгаажсан мэдээлэл хангалтгүй байгаа тул таныг мэргэжилтэнтэй холбож байна.";
         await this.sendReply(dialogId, transferText);
-        await this.handoffToOperator(dialogId);
+        await this.handoffToOperator(dialogId, 'model_declined');
         chatManager.recordBotReply(dialogId, transferText, true, this.config.botName);
 
         this.addLog({
@@ -673,7 +1173,14 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
           durationMs: Date.now() - startTime,
         });
 
-        return { answer: transferText, handedOff: true };
+        return {
+          answer: transferText,
+          handedOff: true,
+          handoff: true,
+          handoffReason: 'model_declined',
+          chatId: dialogId,
+          sessionCleared: true,
+        };
       }
 
       // Sanitize product and category links to guarantee they are 100% valid official BSB.mn links
@@ -686,6 +1193,7 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
       // Send the AI answer with inline keyboard
       await this.sendReply(dialogId, sanitizedAiContent, true);
       chatManager.recordBotReply(dialogId, sanitizedAiContent, false, this.config.botName);
+      this.recordSessionTurn(dialogId, text, sanitizedAiContent);
 
       this.addLog({
         id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
@@ -707,13 +1215,69 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         durationMs: Date.now() - startTime,
       });
 
-      return { answer: sanitizedAiContent, handedOff: false };
+      return {
+        answer: sanitizedAiContent,
+        handedOff: false,
+        handoff: false,
+        chatId: dialogId,
+        sessionCleared: false,
+      };
     } catch (err: any) {
       console.error('[BotWorker] AI completion error:', err);
+
+      // If MeiliSearch products were found, gracefully return them instead of error message
+      if (matchedProducts.length > 0) {
+        const itemsList = matchedProducts.slice(0, 3).map((p, idx) => {
+          const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
+          const price = p.priceFormatted || 'Үнэ тодруулах';
+          const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
+          return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${price} (${stock})${specs}`;
+        }).join('\n\n');
+
+        const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category);
+        const categoryLinkPart = categoryItem
+          ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+          : '';
+
+        const directProductReply = `Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n${itemsList}${categoryLinkPart}\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!`;
+
+        await this.sendReply(dialogId, directProductReply, true);
+        chatManager.recordBotReply(dialogId, directProductReply, false, this.config.botName);
+        this.recordSessionTurn(dialogId, text, directProductReply);
+
+        this.addLog({
+          id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+          timestamp: new Date().toISOString(),
+          dialogId,
+          customerMessage: text,
+          botAnswer: directProductReply,
+          handedOff: false,
+          matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+          matchedProducts: matchedProducts.map((p) => ({
+            code: p.productCode,
+            name: p.name,
+            priceFormatted: p.priceFormatted,
+            inStock: p.inStock,
+            productUrl: p.productUrl,
+            category: p.category,
+            categoryUrl: p.categoryUrl,
+          })),
+          durationMs: Date.now() - startTime,
+        });
+
+        return {
+          answer: directProductReply,
+          handedOff: false,
+          handoff: false,
+          chatId: dialogId,
+          sessionCleared: false,
+        };
+      }
+
       // Fallback behavior on AI error
       const fallbackText = this.config.fallbackMessage;
       await this.sendReply(dialogId, fallbackText);
-      await this.handoffToOperator(dialogId);
+      await this.handoffToOperator(dialogId, 'ai_error');
       chatManager.recordBotReply(dialogId, fallbackText, true, this.config.botName);
 
       this.addLog({
@@ -729,7 +1293,14 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         durationMs: Date.now() - startTime,
       });
 
-      return { answer: fallbackText, handedOff: true };
+      return {
+        answer: fallbackText,
+        handedOff: true,
+        handoff: true,
+        handoffReason: 'ai_error',
+        chatId: dialogId,
+        sessionCleared: true,
+      };
     }
   }
 
@@ -755,7 +1326,7 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
       chatManager.getDialogById(`chat-${params.chatId}`) ||
       chatManager.getDialogById(`chat${params.chatId}`);
 
-    const isExplicitlyConnected = Boolean(currentDialog?.botActive);
+    const isExplicitlyConnected = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
 
     // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
     if (this.config.botAssignmentMode === 'manual_only' && !isExplicitlyConnected) {
@@ -767,11 +1338,11 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
       return null;
     }
 
-    const msgKey = `${params.dialogId}-${params.messageId}`;
-    if (this.processedOpenlineMessageIds.has(msgKey)) {
+    // Check if session is handed off to an agent in AI memory
+    if (!isExplicitlyConnected && (this.isSessionHandedOff(params.dialogId) || (params.chatId && this.isSessionHandedOff(String(params.chatId))))) {
+      console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Chat has active handoff to human agent. Bot response suppressed.`);
       return null;
     }
-    this.processedOpenlineMessageIds.add(msgKey);
 
     // Check if dialog is currently in progress, assigned to an operator, or bot has detached
     if (currentDialog) {
@@ -783,7 +1354,40 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId}`);
         return null;
       }
+
+      // Хэрэв бот холбогдохоос өмнө оператортой бичиж байсан хуучин чат бол огт хариулахгүй
+      if (currentDialog.botConnectedAt) {
+        const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
+        const matchingMsg = currentDialog.messages.find(
+          (m) => m.id === `bx-${params.messageId}` || m.id === String(params.messageId) || m.text === params.text
+        );
+        if (matchingMsg && new Date(matchingMsg.timestamp).getTime() < botConnectedTime - 2000) {
+          console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Message sent before bot was connected (${matchingMsg.timestamp} < ${currentDialog.botConnectedAt})`);
+          return null;
+        }
+      }
+
+      // Мөн уг мессежид аль хэдийн оператор эсвэл бот хариулсан эсэхийг шалгах
+      const matchingMsg = currentDialog.messages.find(
+        (m) => m.id === `bx-${params.messageId}` || m.id === String(params.messageId) || m.text === params.text
+      );
+      if (matchingMsg) {
+        const msgTime = new Date(matchingMsg.timestamp).getTime();
+        const hasAgentOrBotReplied = currentDialog.messages.some(
+          (m) => (m.sender === 'agent' || m.sender === 'bot') && new Date(m.timestamp).getTime() >= msgTime
+        );
+        if (hasAgentOrBotReplied) {
+          console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Already replied to by agent or bot`);
+          return null;
+        }
+      }
     }
+
+    const msgKey = `${params.dialogId}-${params.messageId}`;
+    if (this.processedOpenlineMessageIds.has(msgKey)) {
+      return null;
+    }
+    this.processedOpenlineMessageIds.add(msgKey);
 
     // Keep set bounded to prevent memory growth
     if (this.processedOpenlineMessageIds.size > 2000) {
@@ -844,23 +1448,38 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
 
     let sentViaBot = false;
     try {
-      const res = await vibeRequest<any>('POST', `/v1/bots/${this.config.botId}/messages`, body);
+      const res = await vibeRequest<any>(
+        'POST',
+        `/v1/bots/${this.config.botId}/messages`,
+        body,
+        undefined,
+        { isOutgoingMessage: true }
+      );
       if (res && res.success) {
         sentViaBot = true;
-        console.log(`[BotWorker] Sent reply via bot endpoint to ${bitrixDialogId}`);
-        return;
+        console.log(`[BotWorker] Sent reply via bot endpoint to ${bitrixDialogId} (msgId: ${JSON.stringify(res.data)})`);
+        return res.data;
+      } else {
+        console.warn(`[BotWorker] Bot message failed for ${bitrixDialogId}:`, res?.error);
       }
     } catch (e: any) {
-      // fallback-рүү үргэлжилнэ
+      console.warn(`[BotWorker] Error sending bot message:`, e.message);
     }
 
     // 2. Fallback: Bitrix чат руу шууд мессеж илгээх (Openlines холбогчоор харилцагчид шууд хүрдэг)
     try {
-      const chatRes = await vibeRequest<any>('POST', `/v1/chats/${bitrixDialogId}/messages`, {
-        message,
-      });
+      const chatRes = await vibeRequest<any>(
+        'POST',
+        `/v1/chats/${bitrixDialogId}/messages`,
+        {
+          message,
+        },
+        undefined,
+        { isOutgoingMessage: true }
+      );
       if (chatRes && chatRes.success) {
-        console.log(`[BotWorker] Sent reply via chat endpoint to ${bitrixDialogId} (msgId: ${chatRes.data})`);
+        console.log(`[BotWorker] Sent reply via chat endpoint fallback to ${bitrixDialogId} (msgId: ${JSON.stringify(chatRes.data)})`);
+        return chatRes.data;
       } else {
         console.warn(`[BotWorker] Chat message warning for ${bitrixDialogId}:`, chatRes?.error);
       }
@@ -906,7 +1525,8 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
     }
   }
 
-  private async handoffToOperator(dialogId: string) {
+  private async handoffToOperator(dialogId: string, reason?: string) {
+    this.clearActiveSessionState(dialogId, { reason: reason || 'transferred_to_operator' });
     return this.leaveChat(dialogId);
   }
 
@@ -1029,12 +1649,40 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
     }
 
     if (productRes.hits.length > 0) {
-      const p = productRes.hits[0];
-      const stockText = p.inStock ? 'Бэлэн байна' : 'Одоогоор нөөц дууссан';
+      const items = productRes.hits.slice(0, 3).map((p, idx) => {
+        const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
+        const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
+        return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${p.priceFormatted} (${stock})${specs}`;
+      }).join('\n\n');
+
+      const categoryItem = productRes.hits.find((p) => p.categoryUrl && p.category);
+      const catPart = categoryItem
+        ? `\n\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+        : '';
+
       return {
-        suggestion: `Сайн байна уу! Танд ${p.name} барааны үнэ ${p.priceFormatted} (${stockText}).\n\n🛒 [Бараа үзэх](${p.url})`,
+        suggestion: `Сайн байна уу! БСБ-д худалдаалагдаж буй барааны мэдээллийг хүргэж байна:\n\n${items}${catPart}\n\nТанд дэлгэрэнгүй мэдээлэл хэрэгтэй бол лавлана уу!`,
         matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
         matchedProducts: mappedProducts,
+        detectedContext: productRes.detectedContext,
+      };
+    }
+
+    if (productRes.detectedContext?.detectedCategory) {
+      const catName = productRes.detectedContext.detectedCategory;
+      const catSlug = productRes.detectedContext.categorySlug || 'categories';
+      let catUrl = `https://bsb.mn/categories/${catSlug}`;
+      if (
+        catName.toLowerCase().includes('буйдан') ||
+        catSlug.toLowerCase().includes('buidan') ||
+        catSlug.includes('2287')
+      ) {
+        catUrl = 'https://bsb.mn/categories/category_2287?has_stock=true';
+      }
+      return {
+        suggestion: `Сайн байна уу! БСБ-д худалдаалагдаж буй ${catName}-ны бүх загваруудыг дараах албан ёсны холбоосоор орж сонирхох боломжтой:\n\n📁 [Ангилал: ${catName}](${catUrl})\n\nТанд сонирхож буй брэнд, үзүүлэлт байгаа бол бичнэ үү, би дэлгэрэнгүй шалгаж өгье!`,
+        matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
+        matchedProducts: [],
         detectedContext: productRes.detectedContext,
       };
     }

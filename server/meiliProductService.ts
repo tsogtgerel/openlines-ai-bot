@@ -101,6 +101,54 @@ const DEFAULT_MEILI_URL = 'https://meili.bsb.mn';
 const DEFAULT_MEILI_API_KEY = '1TkoJ[9Qa|14/&7Q';
 const DEFAULT_MEILI_INDEX = 'app_bsb_products';
 
+export const MEILI_INDICES = {
+  PRODUCTS: 'app_bsb_products',
+  ATTRIBUTES: 'app_bsb_attributes',
+  BRANDS: 'app_bsb_brands',
+  PRODUCT_TERMS: 'app_bsb_product_terms',
+  TAXONS: 'app_bsb_taxons',
+} as const;
+
+export interface BsbProductTerm {
+  id: number;
+  name: string;
+  type: 'return_term' | 'delivery_term' | 'delivery_payment_term' | string;
+  description: string;
+  content: string;
+  plainContent?: string;
+}
+
+export interface BsbBrand {
+  id: number;
+  code: string;
+  name: string;
+  totalProducts: number;
+  taxons: string[];
+  featured?: boolean;
+  images?: Array<{ id: number; type: string; path: string; thumbnail?: string; large?: string }>;
+}
+
+export interface BsbTaxon {
+  id: number;
+  code: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  productTotal: number;
+  parentCode?: string | null;
+  parent?: string | null;
+  images?: Array<{ id: number; type: string | null; path: string; thumbnail?: string; medium?: string }>;
+}
+
+export interface BsbAttribute {
+  id: number;
+  code: string;
+  name: string;
+  type: string;
+  position?: number;
+  configuration?: string[];
+}
+
 export const BSB_BRANDS: Array<{ name: string; aliases: string[] }> = [
   { name: 'Samsung', aliases: ['samsung', 'самсунг'] },
   { name: 'Apple', aliases: ['apple', 'аппл', 'айфон', 'iphone', 'ipad', 'айпад', 'macbook', 'макбүүк', 'airpods'] },
@@ -140,97 +188,212 @@ export const BSB_CATEGORIES: Array<{
   {
     name: 'Хөргөгч',
     slug: 'ref_two_doors',
-    keywords: ['хөргөгч', 'хөлдөөгч', 'хөргүүр', 'хөргөгчний', 'refrigerator', 'fridge', 'freezer', 'side by side', '2 хаалгатай'],
+    keywords: [
+      'хөргөгч',
+      'хөлдөөгч',
+      'хөргүүр',
+      'хөргөгчний',
+      'refrigerator',
+      'fridge',
+      'freezer',
+      'side by side',
+      '2 хаалгатай',
+      'khorgoogch',
+      'khorgogch',
+      'horgoogch',
+      'kholdoogch',
+      'holdoogch',
+    ],
     canonicalSearchTerm: 'хөргөгч',
   },
   {
     name: 'Угаалгын машин',
     slug: 'washing_machine',
-    keywords: ['угаалгын машин', 'угаалга', 'угаагч', 'хатаагч', 'washing machine', 'washer', 'dryer', 'автомат угаалгын'],
+    keywords: [
+      'угаалгын машин',
+      'угаалгын',
+      'угаалга',
+      'угаагч',
+      'угаах машин',
+      'угаалгын машины',
+      'угаалгын машинууд',
+      'автомат угаалгын',
+      'бүрэн автомат',
+      'хагас автомат',
+      'хатаагч',
+      'хувцас хатаагч',
+      'washing machine',
+      'washer',
+      'dryer',
+      'ugaalgin mashin',
+      'ugaalgiin mashin',
+      'ugaalgyn mashin',
+      'ugaalga',
+      'ugaagch',
+      'ugaah mashin',
+    ],
     canonicalSearchTerm: 'угаалгын машин',
   },
   {
     name: 'Телевизор',
     slug: 'tv',
-    keywords: ['зурагт', 'телевизор', 'тв', 'tv', 'oled', 'qled', 'led tv', 'smart tv', 'ухаалаг зурагт'],
+    keywords: [
+      'зурагт',
+      'телевизор',
+      'тв',
+      'tv',
+      'oled',
+      'qled',
+      'led tv',
+      'smart tv',
+      'ухаалаг зурагт',
+      'zuragt',
+      'televizor',
+      'tivi',
+    ],
     canonicalSearchTerm: 'зурагт',
   },
   {
     name: 'Гар утас',
     slug: 'mobile',
-    keywords: ['гар утас', 'утас', 'смартфон', 'phone', 'smartphone', 'mobile', 'айфон', 'iphone', 'galaxy', 'redmi'],
+    keywords: [
+      'гар утас',
+      'утас',
+      'смартфон',
+      'phone',
+      'smartphone',
+      'mobile',
+      'айфон',
+      'iphone',
+      'galaxy',
+      'redmi',
+      'gar utas',
+      'utas',
+      'smartfon',
+    ],
     canonicalSearchTerm: 'гар утас',
   },
   {
     name: 'Компьютер, Ноутбук',
     slug: 'computer',
-    keywords: ['ноутбук', 'зөөврийн компьютер', 'компьютер', 'laptop', 'notebook', 'macbook', 'зөөврийн', 'суурин компьютер', 'десктоп'],
-    canonicalSearchTerm: 'ноутбук',
+    keywords: [
+      'ноутбук',
+      'зөөврийн компьютер',
+      'компьютер',
+      'laptop',
+      'notebook',
+      'macbook',
+      'зөөврийн',
+      'суурин компьютер',
+      'десктоп',
+      'noutbuk',
+      'nootbuk',
+      'zeevriin kom',
+    ],
+    canonicalSearchTerm: 'зөөврийн компьютер',
   },
   {
     name: 'Тоос сорогч',
     slug: 'vacuum_cleaner_washer',
-    keywords: ['тоос сорогч', 'тоос сорогчийн', 'робот тоос сорогч', 'vacuum', 'cleaner'],
+    keywords: [
+      'тоос сорогч',
+      'тоос сорогчийн',
+      'робот тоос сорогч',
+      'vacuum',
+      'cleaner',
+      'toos sorogch',
+      'toosorogch',
+      'toos sorogchiin',
+    ],
     canonicalSearchTerm: 'тоос сорогч',
   },
   {
     name: 'Плитк, зуух',
     slug: 'hob',
-    keywords: ['плитка', 'плитк', 'индукц', 'зуух', 'шарах шүүгээ', 'печь', 'хийн плитк', 'hob', 'oven'],
+    keywords: [
+      'плитка',
+      'плитк',
+      'индукц',
+      'зуух',
+      'шарах шүүгээ',
+      'печь',
+      'хийн плитк',
+      'hob',
+      'oven',
+      'plitka',
+      'plitk',
+      'zuukh',
+      'zuuh',
+      'indukts',
+    ],
     canonicalSearchTerm: 'плитк',
   },
   {
     name: 'Агаар цэвэршүүлэгч',
     slug: 'air_purifier_all',
-    keywords: ['агаар цэвэршүүлэгч', 'агаар чийгшүүлэгч', 'шүүлтүүр', 'air purifier', 'purifier'],
+    keywords: [
+      'агаар цэвэршүүлэгч',
+      'агаар чийгшүүлэгч',
+      'шүүлтүүр',
+      'air purifier',
+      'purifier',
+      'agaar tsevershuulegch',
+      'agaar chiigshuulegch',
+    ],
     canonicalSearchTerm: 'агаар цэвэршүүлэгч',
   },
   {
     name: 'Будаа агшаагч',
     slug: 'rice_cooker',
-    keywords: ['будаа агшаагч', 'битүү чанагч', 'rice cooker', 'pressure cooker'],
+    keywords: [
+      'будаа агшаагч',
+      'битүү чанагч',
+      'rice cooker',
+      'pressure cooker',
+      'budaa agshaagch',
+    ],
     canonicalSearchTerm: 'будаа агшаагч',
   },
   {
     name: 'Буйдан',
-    slug: 'code_2287',
-    keywords: ['буйдан', 'диван', 'булангийн буйдан', 'ор болдог буйдан', 'sofa', 'couch'],
+    slug: 'category_2287?has_stock=true',
+    keywords: ['буйдан', 'диван', 'булангийн буйдан', 'ор болдог буйдан', 'sofa', 'couch', 'buidan', 'buidang', 'divan'],
     canonicalSearchTerm: 'буйдан',
   },
   {
     name: 'Ор, матрас',
     slug: 'code_23/bukh-tavilga/or',
-    keywords: ['ор', 'матрас', 'унтлагын ор', 'bed', 'mattress'],
+    keywords: ['ор', 'матрас', 'унтлагын ор', 'bed', 'mattress', 'or', 'matras', 'untlagiin or'],
     canonicalSearchTerm: 'ор',
   },
   {
     name: 'Ширээ, сандал',
     slug: 'code_23/bukh-tavilga/shiree-sandal',
-    keywords: ['ширээ', 'сандал', 'ажлын ширээ', 'хоолны ширээ', 'оффис ширээ', 'table', 'chair', 'desk'],
+    keywords: ['ширээ', 'сандал', 'ажлын ширээ', 'хоолны ширээ', 'оффис ширээ', 'table', 'chair', 'desk', 'shiree', 'sandal'],
     canonicalSearchTerm: 'ширээ сандал',
   },
   {
     name: 'Данх, ус буцалгагч',
     slug: 'kettle',
-    keywords: ['данх', 'ус буцалгагч', 'чайник', 'kettle'],
+    keywords: ['данх', 'ус буцалгагч', 'чайник', 'kettle', 'dankh', 'danh', 'chainik'],
     canonicalSearchTerm: 'данх',
   },
   {
     name: 'Индүү',
     slug: 'iron',
-    keywords: ['индүү', 'уурын индүү', 'iron', 'steamer'],
+    keywords: ['индүү', 'уурын индүү', 'iron', 'steamer', 'induu', 'indvv'],
     canonicalSearchTerm: 'индүү',
   },
   {
     name: 'Чихэвч',
     slug: 'audio',
-    keywords: ['чихэвч', 'airpods', 'earbuds', 'headphone', 'headset', 'чихэвчний'],
+    keywords: ['чихэвч', 'airpods', 'earbuds', 'headphone', 'headset', 'чихэвчний', 'chikhevch', 'chihevch'],
     canonicalSearchTerm: 'чихэвч',
   },
   {
     name: 'Кофе чанагч',
     slug: 'coffee_maker',
-    keywords: ['кофе чанагч', 'кофе машин', 'espresso', 'coffee maker'],
+    keywords: ['кофе чанагч', 'кофе машин', 'espresso', 'coffee maker', 'kofe chanagch', 'kofe mashin'],
     canonicalSearchTerm: 'кофе чанагч',
   },
 ];
@@ -255,6 +418,22 @@ const QUESTION_STOP_WORDS = [
   'бэлэн байгаа юу',
   'бэлэн байна уу',
   'хайж байна',
+  'хайж байгаа',
+  'хайхаар',
+  'гээд хайхаар',
+  'хайх',
+  'хайя',
+  'харах',
+  'харъя',
+  'үзье',
+  'үзүүлээч',
+  'линк',
+  'линкийг',
+  'линк өгөөч',
+  'линк байна уу',
+  'холбоос',
+  'холбоосыг',
+  'холбоос өгөөч',
   'авах гэсэн юм',
   'авах гэсийн',
   'сонирхож байна',
@@ -271,6 +450,12 @@ const QUESTION_STOP_WORDS = [
   'мэдээлэл өгөөч',
   'мэдээлэл авъя',
   'мэдээлэл авмаар байна',
+  'мэдээлэл',
+  'зөвлөгөө',
+  'санал болгох',
+  'санал болгооч',
+  'сонголт',
+  'сонголтууд',
   'байна',
   'байгаа',
   'уу',
@@ -294,6 +479,12 @@ export class MeiliProductService {
   private totalProductsCount = 0;
   private lastHealthCheck = 0;
   private isConnected = false;
+  private cachedTerms: BsbProductTerm[] | null = null;
+  private termsCacheTime = 0;
+  private cachedBrands: BsbBrand[] | null = null;
+  private brandsCacheTime = 0;
+  private cachedTaxons: BsbTaxon[] | null = null;
+  private taxonsCacheTime = 0;
 
   constructor() {
     this.meiliUrl = (process.env.MEILI_URL || process.env.MEILISEARCH_HOST || DEFAULT_MEILI_URL).replace(/\/+$/, '');
@@ -311,6 +502,7 @@ export class MeiliProductService {
       totalProducts: this.totalProductsCount,
       isConnected: this.isConnected,
       lastHealthCheck: this.lastHealthCheck,
+      indices: MEILI_INDICES,
     };
   }
 
@@ -319,7 +511,360 @@ export class MeiliProductService {
     if (key) this.apiKey = key;
     if (index) this.indexName = index;
     this.cache.clear();
+    this.cachedTerms = null;
+    this.cachedBrands = null;
+    this.cachedTaxons = null;
     this.checkHealth().catch(() => {});
+  }
+
+  public htmlToCleanText(html: string): string {
+    if (!html) return '';
+    let text = html;
+    text = text.replace(/&#39;/g, "'").replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ');
+    text = text.replace(/<ol[^>]*>/gi, '\n').replace(/<\/ol>/gi, '\n');
+    text = text.replace(/<ul[^>]*>/gi, '\n').replace(/<\/ul>/gi, '\n');
+    text = text.replace(/<li[^>]*>/gi, () => '• ').replace(/<\/li>/gi, '\n');
+    text = text.replace(/<p[^>]*>/gi, '\n').replace(/<\/p>/gi, '\n');
+    text = text.replace(/<br\s*[\/]?>/gi, '\n');
+    text = text.replace(/<strong[^>]*>(.*?)<\/strong>/gi, '$1');
+    text = text.replace(/<b[^>]*>(.*?)<\/b>/gi, '$1');
+    text = text.replace(/<span[^>]*>(.*?)<\/span>/gi, '$1');
+    text = text.replace(/<[^>]+>/g, '');
+    text = text.replace(/\n\s*\n\s*\n/g, '\n\n').trim();
+    return text;
+  }
+
+  /**
+   * Generic MeiliSearch query helper for any index
+   */
+  public async queryIndex<T = any>(
+    indexName: string,
+    params: { q?: string; limit?: number; filter?: string | string[]; offset?: number }
+  ): Promise<{ hits: T[]; estimatedTotalHits: number }> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    try {
+      const res = await fetch(`${this.meiliUrl}/indexes/${indexName}/search`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          q: params.q || '',
+          limit: params.limit !== undefined ? params.limit : 20,
+          filter: params.filter,
+          offset: params.offset || 0,
+        }),
+        signal: controller.signal,
+      });
+
+      if (!res.ok) {
+        throw new Error(`MeiliSearch index ${indexName} error: ${res.status} ${res.statusText}`);
+      }
+
+      const data = await res.json();
+      return {
+        hits: (data.hits || []) as T[],
+        estimatedTotalHits: data.estimatedTotalHits || data.totalHits || (data.hits?.length || 0),
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  /**
+   * Fetch all 3 official BSB Product Terms (Буцаалтын нөхцөл, Хүргэлтийн нөхцөл, Хүргэлтийн төлбөр авах нөхцөл)
+   * from MeiliSearch index `app_bsb_product_terms`.
+   */
+  public async getProductTerms(forceRefresh = false): Promise<BsbProductTerm[]> {
+    const now = Date.now();
+    if (!forceRefresh && this.cachedTerms && now - this.termsCacheTime < 1000 * 60 * 30) {
+      return this.cachedTerms;
+    }
+
+    try {
+      const result = await this.queryIndex<BsbProductTerm>(MEILI_INDICES.PRODUCT_TERMS, {
+        q: '',
+        limit: 10,
+      });
+
+      const formatted = result.hits.map((item) => ({
+        ...item,
+        plainContent: this.htmlToCleanText(item.content),
+      }));
+
+      this.cachedTerms = formatted;
+      this.termsCacheTime = now;
+      return formatted;
+    } catch (e) {
+      console.warn('[MeiliProductService] Error fetching product terms:', e);
+      return this.cachedTerms || [];
+    }
+  }
+
+  /**
+   * Search product terms in `app_bsb_product_terms`
+   */
+  public async searchProductTerms(query: string): Promise<BsbProductTerm[]> {
+    const terms = await this.getProductTerms();
+    if (!query || !query.trim()) return terms;
+
+    const qLower = query.toLowerCase().trim();
+    return terms.filter(
+      (t) =>
+        t.name.toLowerCase().includes(qLower) ||
+        t.description.toLowerCase().includes(qLower) ||
+        (t.plainContent && t.plainContent.toLowerCase().includes(qLower)) ||
+        t.type.toLowerCase().includes(qLower)
+    );
+  }
+
+  /**
+   * Automatically match customer query against official terms from `app_bsb_product_terms`
+   */
+  public async findRelevantTerm(customerQuery: string): Promise<{
+    term: BsbProductTerm;
+    cleanText: string;
+    title: string;
+  } | null> {
+    const terms = await this.getProductTerms();
+    if (!terms || terms.length === 0) return null;
+
+    const q = customerQuery.toLowerCase().trim();
+
+    // 1. Check Return & Refund Policy (Буцаалтын нөхцөл)
+    const isReturnQuery =
+      q.includes('буцаа') ||
+      q.includes('буцаалт') ||
+      q.includes('солиул') ||
+      q.includes('солих') ||
+      q.includes('гэмтэлтэй') ||
+      q.includes('сэтгэл ханамж') ||
+      q.includes('алданги') ||
+      q.includes('буцааж болох уу') ||
+      q.includes('мөнгө буцаах');
+
+    if (isReturnQuery) {
+      const returnTerm = terms.find((t) => t.type === 'return_term') || terms[0];
+      if (returnTerm) {
+        return {
+          term: returnTerm,
+          title: returnTerm.name,
+          cleanText: returnTerm.plainContent || this.htmlToCleanText(returnTerm.content),
+        };
+      }
+    }
+
+    // 2. Check Delivery Fee Policy (Хүргэлтийн төлбөр)
+    const isDeliveryFeeQuery =
+      q.includes('хүргэлтийн үнэ') ||
+      q.includes('хүргэлтийн төлбөр') ||
+      q.includes('хүргэлт хэд вэ') ||
+      q.includes('хүргэлтийн үнэ хэд') ||
+      q.includes('үнэгүй хүргэлт') ||
+      q.includes('250000') ||
+      q.includes('250,000');
+
+    if (isDeliveryFeeQuery) {
+      const feeTerm = terms.find((t) => t.type === 'delivery_payment_term');
+      const delivTerm = terms.find((t) => t.type === 'delivery_term');
+      if (feeTerm) {
+        const combined = `${feeTerm.plainContent || this.htmlToCleanText(feeTerm.content)}\n\n${delivTerm ? (delivTerm.plainContent || this.htmlToCleanText(delivTerm.content)) : ''}`.trim();
+        return {
+          term: feeTerm,
+          title: feeTerm.name,
+          cleanText: combined,
+        };
+      }
+    }
+
+    // 3. Check General Delivery Terms (Хүргэлтийн нөхцөл, хугацаа, хязгаар бүс)
+    const isDeliveryQuery =
+      q.includes('хүргэлт') ||
+      q.includes('хүргэх хугацаа') ||
+      q.includes('хэзээ ирэх') ||
+      q.includes('хэзээ хүргэх') ||
+      q.includes('хотын хязгаар') ||
+      q.includes('хүргэлтийн бүс') ||
+      q.includes('хүргэлт яаж хийдэг') ||
+      q.includes('хүргэж өгөх');
+
+    if (isDeliveryQuery) {
+      const delivTerm = terms.find((t) => t.type === 'delivery_term');
+      if (delivTerm) {
+        return {
+          term: delivTerm,
+          title: delivTerm.name,
+          cleanText: delivTerm.plainContent || this.htmlToCleanText(delivTerm.content),
+        };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Search brands from MeiliSearch index `app_bsb_brands` (146 official brands)
+   */
+  public async searchBrands(query = '', limit = 20): Promise<BsbBrand[]> {
+    try {
+      const result = await this.queryIndex<BsbBrand>(MEILI_INDICES.BRANDS, {
+        q: query,
+        limit,
+      });
+      return result.hits;
+    } catch (e) {
+      console.warn('[MeiliProductService] Error querying brands:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Search categories/taxons from MeiliSearch index `app_bsb_taxons` (621 official categories)
+   */
+  public async searchTaxons(query = '', limit = 20): Promise<BsbTaxon[]> {
+    try {
+      const result = await this.queryIndex<BsbTaxon>(MEILI_INDICES.TAXONS, {
+        q: query,
+        limit,
+      });
+      return result.hits;
+    } catch (e) {
+      console.warn('[MeiliProductService] Error querying taxons:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Find best matching taxon/category from `app_bsb_taxons`
+   */
+  public async findBestTaxon(categoryOrQuery: string): Promise<BsbTaxon | null> {
+    if (!categoryOrQuery) return null;
+    const clean = categoryOrQuery.toLowerCase().trim();
+
+    // Official BSB category mapping for Sofa / Буйдан
+    if (clean.includes('буйдан') || clean.includes('диван') || clean.includes('sofa') || clean.includes('couch')) {
+      return {
+        id: 186,
+        code: 'category_2287',
+        name: 'Буйдан',
+        slug: 'category_2287?has_stock=true',
+        productTotal: 310,
+      };
+    }
+
+    try {
+      const result = await this.queryIndex<BsbTaxon>(MEILI_INDICES.TAXONS, {
+        q: clean,
+        limit: 5,
+      });
+      if (result.hits && result.hits.length > 0) {
+        // Look for exact name match
+        const exact = result.hits.find(
+          (t) => t.name.toLowerCase() === clean || t.slug.toLowerCase() === clean || t.code.toLowerCase() === clean
+        );
+        const hit = exact || result.hits[0];
+        if (hit && (hit.name.toLowerCase().includes('буйдан') || hit.slug.includes('buidan') || hit.code === 'category_2287')) {
+          return {
+            ...hit,
+            slug: 'category_2287?has_stock=true',
+          };
+        }
+        return hit;
+      }
+      return null;
+    } catch (e) {
+      console.warn('[MeiliProductService] Error finding best taxon:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Search filter attributes from MeiliSearch index `app_bsb_attributes` (164 filter attributes)
+   */
+  public async searchAttributes(query = '', limit = 20): Promise<BsbAttribute[]> {
+    try {
+      const result = await this.queryIndex<BsbAttribute>(MEILI_INDICES.ATTRIBUTES, {
+        q: query,
+        limit,
+      });
+      return result.hits;
+    } catch (e) {
+      console.warn('[MeiliProductService] Error querying attributes:', e);
+      return [];
+    }
+  }
+
+  /**
+   * Get real-time stats and health across ALL 5 MeiliSearch indices
+   */
+  public async getAllIndicesStats(): Promise<
+    Record<
+      string,
+      {
+        index: string;
+        name: string;
+        count: number;
+        description: string;
+        status: 'connected' | 'error';
+      }
+    >
+  > {
+    const indicesConfig = [
+      {
+        index: MEILI_INDICES.PRODUCTS,
+        name: 'Бараа бүтээгдэхүүн',
+        description: 'БСБ-ийн 7,300+ нэр төрлийн цахилгаан бараа, компьютер, тавилга',
+      },
+      {
+        index: MEILI_INDICES.TAXONS,
+        name: 'Ангилал / Taxons',
+        description: '620+ барааны бүлэг, дэд ангилал ба бүтцийн шатлал',
+      },
+      {
+        index: MEILI_INDICES.BRANDS,
+        name: 'Брэндүүд',
+        description: '140+ албан ёсны брэндүүд, лого, барааны тоо',
+      },
+      {
+        index: MEILI_INDICES.PRODUCT_TERMS,
+        name: 'Үйлчилгээний нөхцөлүүд',
+        description: 'Хүргэлт, буцаалт, төлбөрийн албан ёсны журам, заалтууд',
+      },
+      {
+        index: MEILI_INDICES.ATTRIBUTES,
+        name: 'Шинж чанар / Үзүүлэлт',
+        description: '160+ техникийн үзүүлэлт, инч, хүчин чадал, шүүлтүүр',
+      },
+    ];
+
+    const results: Record<string, any> = {};
+
+    await Promise.all(
+      indicesConfig.map(async (item) => {
+        try {
+          const res = await this.queryIndex(item.index, { q: '', limit: 1 });
+          results[item.index] = {
+            index: item.index,
+            name: item.name,
+            count: res.estimatedTotalHits,
+            description: item.description,
+            status: 'connected',
+          };
+        } catch {
+          results[item.index] = {
+            index: item.index,
+            name: item.name,
+            count: 0,
+            description: item.description,
+            status: 'error',
+          };
+        }
+      })
+    );
+
+    return results;
   }
 
   public async checkHealth(): Promise<{ isConnected: boolean; totalProducts: number }> {
@@ -506,6 +1051,18 @@ export class MeiliProductService {
     return productKeywords.some((kw) => lower.includes(kw));
   }
 
+  // Helper to match category keywords with boundary checks for short words
+  private matchesCategoryKeyword(text: string, kw: string): boolean {
+    const normKw = kw.toLowerCase().trim();
+    const normText = text.toLowerCase();
+    if (normKw.length <= 3) {
+      // For short 2-3 letter words (like 'ор', 'тв', 'tv', 'bed'), require full word boundary
+      const regex = new RegExp(`(^|[^a-zA-Zа-яёөүА-ЯЁӨҮ0-9])${normKw}([^a-zA-Zа-яёөүА-ЯЁӨҮ0-9]|$)`, 'i');
+      return regex.test(normText);
+    }
+    return normText.includes(normKw);
+  }
+
   /**
    * Intelligently detects product name, exact code, brand, category, or specifications
    * from the entire ongoing conversation history (customer + previous agent messages).
@@ -517,13 +1074,32 @@ export class MeiliProductService {
     const rawQuery = (query || '').trim();
     const cleanQuery = this.extractCleanSearchQuery(rawQuery);
 
-    // Normalize messages into a chronological list
+    // Normalize messages into a chronological list, isolating to the current active session
     const messages: string[] = [];
     if (Array.isArray(conversation)) {
-      for (const item of conversation) {
+      // Find latest session boundary if conversation contains session markers
+      let startIndex = 0;
+      for (let idx = 0; idx < conversation.length; idx++) {
+        const item = conversation[idx];
+        const text = typeof item === 'string' ? item : ((item as any)?.text || '');
+        if (
+          text.includes('Session closed') ||
+          text.includes('Conversation #') ||
+          text.includes('Conversation started')
+        ) {
+          startIndex = idx + 1;
+        }
+      }
+
+      const activeSlice = conversation.slice(startIndex);
+      for (const item of activeSlice) {
         if (typeof item === 'string' && item.trim()) {
           messages.push(item.trim());
         } else if (item && typeof (item as any).text === 'string' && (item as any).text.trim()) {
+          // Ignore system messages from CRM / Openlines (e.g. "Order attached", "Deal attached", "picked conversation", etc.)
+          if ((item as any).sender === 'system') {
+            continue;
+          }
           messages.push((item as any).text.trim());
         }
       }
@@ -537,21 +1113,52 @@ export class MeiliProductService {
     let detectedCategoryObj: { name: string; slug: string; canonicalSearchTerm: string } | undefined;
     const detectedSpecs: string[] = [];
 
-    // Scan backwards from newest to oldest message
+    // Check if the customer's CURRENT message explicitly mentions a product category
+    const currentQueryLower = rawQuery.toLowerCase();
+    const directCategoryMatch = BSB_CATEGORIES.find((cat) =>
+      cat.keywords.some((kw) => this.matchesCategoryKeyword(currentQueryLower, kw))
+    );
+    if (directCategoryMatch) {
+      detectedCategoryObj = {
+        name: directCategoryMatch.name,
+        slug: directCategoryMatch.slug,
+        canonicalSearchTerm: directCategoryMatch.canonicalSearchTerm,
+      };
+    }
+
+    // Check if the customer's CURRENT message explicitly mentions a brand
+    let currentBrandMatch: string | undefined;
+    for (const brand of BSB_BRANDS) {
+      if (brand.aliases.some((alias) => new RegExp(`\\b${alias}\\b`, 'i').test(currentQueryLower))) {
+        currentBrandMatch = brand.name;
+        break;
+      }
+    }
+    if (currentBrandMatch) {
+      detectedBrand = currentBrandMatch;
+    }
+
+    // Check if current message has an explicit product code
+    const currentCodeMatch = rawQuery.match(/\b([A-Za-z0-9]{3,}-[A-Za-z0-9\-]+)\b/);
+    if (currentCodeMatch && !currentCodeMatch[1].toLowerCase().includes('wi-fi') && currentCodeMatch[1].length >= 5) {
+      exactCode = currentCodeMatch[1];
+    }
+
+    // Scan backwards from newest to oldest message for missing context ONLY if not directly supplied in current query
     for (let i = messages.length - 1; i >= 0; i--) {
       const msg = messages[i];
       const lower = msg.toLowerCase();
 
-      // 1. Detect explicit product code like PANA-TH-65NX950M, APPL-MY373X, LG-GC-B277BPUM
-      if (!exactCode) {
+      // 1. Detect explicit product code if not already found and user didn't switch to a broad category
+      if (!exactCode && !directCategoryMatch) {
         const codeMatch = msg.match(/\b([A-Za-z0-9]{3,}-[A-Za-z0-9\-]+)\b/);
         if (codeMatch && !codeMatch[1].toLowerCase().includes('wi-fi') && codeMatch[1].length >= 5) {
           exactCode = codeMatch[1];
         }
       }
 
-      // 2. Detect brand
-      if (!detectedBrand) {
+      // 2. Detect brand if not found in current query and user didn't switch categories
+      if (!detectedBrand && !directCategoryMatch) {
         for (const brand of BSB_BRANDS) {
           if (brand.aliases.some((alias) => new RegExp(`\\b${alias}\\b`, 'i').test(lower))) {
             detectedBrand = brand.name;
@@ -560,10 +1167,10 @@ export class MeiliProductService {
         }
       }
 
-      // 3. Detect category
+      // 3. Detect category from history if not in current query
       if (!detectedCategoryObj) {
         for (const cat of BSB_CATEGORIES) {
-          if (cat.keywords.some((kw) => lower.includes(kw))) {
+          if (cat.keywords.some((kw) => this.matchesCategoryKeyword(lower, kw))) {
             detectedCategoryObj = {
               name: cat.name,
               slug: cat.slug,
@@ -587,18 +1194,27 @@ export class MeiliProductService {
     }
 
     // Determine if query is a follow-up inquiry (e.g. "Үнэ нь хэд вэ?", "Бэлэн байна уу?", "55 инч нь", "Линк өгөөч")
-    const isFollowUpPattern = /^(үнэ|хэд|хэдтэй|бэлэн|байгаа|байна|хямдрал|өнгө|загвар|үзэх|линк|холбоос|аль|аль нь|санал|мэдээлэл|хэмжээ|хүргэлт|лизинг|storepay)/i;
+    const isFollowUpPattern = /^(үнэ|хэд|хэдтэй|бэлэн|байгаа|байна|хямдрал|өнгө|загвар|үзэх|линк|холбоос|аль|аль нь|санал|мэдээлэл|хэмжээ|хүргэлт|лизинг|storepay|pocket|une|hed|hedtei|belen|baigaa|baina|link|uzekh)/i;
     const isFollowUpQuery =
-      cleanQuery.length < 4 ||
-      isFollowUpPattern.test(cleanQuery) ||
-      cleanQuery === 'үнэ' ||
-      cleanQuery === 'бэлэн' ||
-      (detectedCategoryObj !== undefined && !cleanQuery.includes(detectedCategoryObj.canonicalSearchTerm) && cleanQuery.split(' ').length <= 2);
+      !directCategoryMatch &&
+      (cleanQuery.length < 4 ||
+        isFollowUpPattern.test(cleanQuery) ||
+        cleanQuery === 'үнэ' ||
+        cleanQuery === 'бэлэн' ||
+        cleanQuery === 'une' ||
+        cleanQuery === 'belen');
 
     let preciseQuery = cleanQuery;
 
     if (exactCode) {
       preciseQuery = exactCode;
+    } else if (directCategoryMatch) {
+      // Direct category inquiry like "угаалгын машин", "угаалгын машин байна уу", "угаалгын машин хайх"
+      if (detectedBrand) {
+        preciseQuery = `${detectedBrand} ${directCategoryMatch.canonicalSearchTerm}`;
+      } else {
+        preciseQuery = cleanQuery || directCategoryMatch.canonicalSearchTerm;
+      }
     } else if (isFollowUpQuery || cleanQuery.length < 4) {
       // Build precise query from conversation context: Brand + Specs + Category
       const parts: string[] = [];
@@ -658,10 +1274,27 @@ export class MeiliProductService {
 
     // 3. If still 0 hits and a category was detected, search canonical category term
     if (result.hits.length === 0 && detectedContext.detectedCategory) {
-      const catTerm = BSB_CATEGORIES.find((c) => c.name === detectedContext.detectedCategory)?.canonicalSearchTerm;
+      const catObj = BSB_CATEGORIES.find((c) => c.name === detectedContext.detectedCategory);
+      const catTerm = catObj?.canonicalSearchTerm;
       if (catTerm) {
-        const fallbackQ = detectedContext.detectedBrand ? `${detectedContext.detectedBrand} ${catTerm}` : catTerm;
-        result = await this.searchProducts(fallbackQ, options);
+        // First try pure canonical category term directly
+        result = await this.searchProducts(catTerm, options);
+        // If still 0 and brand was detected, try brand + catTerm
+        if (result.hits.length === 0 && detectedContext.detectedBrand) {
+          result = await this.searchProducts(`${detectedContext.detectedBrand} ${catTerm}`, options);
+        }
+      }
+    }
+
+    // 4. If still 0 hits and inStockOnly was true, retry without inStockOnly
+    if (result.hits.length === 0 && options.inStockOnly) {
+      const relaxedOptions = { ...options, inStockOnly: false };
+      result = await this.searchProducts(detectedContext.preciseQuery || query, relaxedOptions);
+      if (result.hits.length === 0 && detectedContext.detectedCategory) {
+        const catTerm = BSB_CATEGORIES.find((c) => c.name === detectedContext.detectedCategory)?.canonicalSearchTerm;
+        if (catTerm) {
+          result = await this.searchProducts(catTerm, relaxedOptions);
+        }
       }
     }
 
@@ -848,8 +1481,8 @@ export class MeiliProductService {
 
     const rawName = h.translations?.mn_MN?.name || h.name || productCode || '';
     const brandName = h.brand?.name || (h.brand?.code ? String(h.brand.code).toUpperCase() : '-');
-    const categoryName = h.mainTaxon?.name || h.productTaxons?.[0]?.name || 'Цахилгаан бараа';
-    const categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || h.mainTaxon?.code || '';
+    let categoryName = h.mainTaxon?.name || h.productTaxons?.[0]?.name || 'Цахилгаан бараа';
+    let categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || h.mainTaxon?.code || '';
 
     // Primary variant pricing
     const primaryVariant = h.variants?.[0] || {};
@@ -934,20 +1567,45 @@ export class MeiliProductService {
       productUrl = productUrl.replace('/undefined', `/${productCode}`);
     }
 
-    // Official BSB.mn category page route is https://bsb.mn/categories/:categorySlug
-    let catPattern = config?.categoryUrlPattern || `${baseUrl}/categories/{slug}`;
-    if (catPattern.includes('/category/{slug}') || catPattern.includes('/category/')) {
-      catPattern = catPattern.replace('/category/', '/categories/');
-    }
+    // Check if category represents Sofa / Буйдан
+    const isSofaCategory =
+      categoryName.toLowerCase().includes('буйдан') ||
+      rawName.toLowerCase().includes('буйдан') ||
+      categorySlug.toLowerCase().includes('buidan') ||
+      categorySlug.includes('2287') ||
+      categorySlug.includes('code_23/bukh-tavilga/buidan') ||
+      categorySlug.includes('code_2287') ||
+      h.mainTaxon?.code === 'category_2287' ||
+      h.mainTaxon?.code === 'category_4029' ||
+      (Array.isArray(h.productTaxons) &&
+        h.productTaxons.some(
+          (t: any) =>
+            t.code === 'category_2287' ||
+            t.code === 'category_4029' ||
+            (t.name && t.name.toLowerCase().includes('буйдан')) ||
+            (t.slug && t.slug.toLowerCase().includes('buidan'))
+        ));
 
-    let categoryUrl = categorySlug
-      ? catPattern
-          .replace('{slug}', categorySlug)
-          .replace('{code}', h.mainTaxon?.code || categorySlug)
-      : `${baseUrl}/categories`;
+    let categoryUrl: string;
+    if (isSofaCategory) {
+      categorySlug = 'category_2287?has_stock=true';
+      categoryUrl = `${baseUrl}/categories/category_2287?has_stock=true`;
+    } else {
+      // Official BSB.mn category page route is https://bsb.mn/categories/:categorySlug
+      let catPattern = config?.categoryUrlPattern || `${baseUrl}/categories/{slug}`;
+      if (catPattern.includes('/category/{slug}') || catPattern.includes('/category/')) {
+        catPattern = catPattern.replace('/category/', '/categories/');
+      }
 
-    if (categoryUrl.includes('/category/') && !categoryUrl.includes('/categories/')) {
-      categoryUrl = categoryUrl.replace('/category/', '/categories/');
+      categoryUrl = categorySlug
+        ? catPattern
+            .replace('{slug}', categorySlug)
+            .replace('{code}', h.mainTaxon?.code || categorySlug)
+        : `${baseUrl}/categories`;
+
+      if (categoryUrl.includes('/category/') && !categoryUrl.includes('/categories/')) {
+        categoryUrl = categoryUrl.replace('/category/', '/categories/');
+      }
     }
 
     // Warranty
@@ -1150,15 +1808,42 @@ ${rules.join('\n')}
     text = text.replace(/\]\(\s*\{+(https?:\/\/[^}\s)]+)\}+\s*\)/g, ']($1)');
     text = text.replace(/\{+(https?:\/\/bsb\.mn\/[^}\s]+)\}+/g, '$1');
 
+    // Always normalize any sofa / буйдан category URLs to official working link:
+    // https://bsb.mn/categories/category_2287?has_stock=true
+    text = text.replace(
+      /https?:\/\/bsb\.mn\/categories\/code_23\/bukh-tavilga\/buidan[^\s)\]]*/gi,
+      'https://bsb.mn/categories/category_2287?has_stock=true'
+    );
+    text = text.replace(
+      /https?:\/\/bsb\.mn\/categories\/code_2287[^\s)\]]*/gi,
+      'https://bsb.mn/categories/category_2287?has_stock=true'
+    );
+    text = text.replace(
+      /https?:\/\/bsb\.mn\/categories\/category_4029[^\s)\]]*/gi,
+      'https://bsb.mn/categories/category_2287?has_stock=true'
+    );
+    text = text.replace(
+      /https?:\/\/bsb\.mn\/categories\/[^\s)\]]*buidan[^\s)\]]*/gi,
+      'https://bsb.mn/categories/category_2287?has_stock=true'
+    );
+
     // 1. Replace any markdown link [label](url) that has incorrect, generic, or hallucinated URL with the matched product's exact 'url'
     if (products.length > 0) {
       text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (fullMatch, label, url) => {
+        const lowerLabel = label.toLowerCase();
+
+        // Check if this link refers to sofa category
+        if (lowerLabel.includes('буйдан') || lowerLabel.includes('sofa') || url.includes('buidan') || url.includes('2287')) {
+          if (url.includes('/categories/') || url.includes('/category/') || lowerLabel.includes('ангилал') || lowerLabel.includes('төрөл')) {
+            return `[${label}](https://bsb.mn/categories/category_2287?has_stock=true)`;
+          }
+        }
+
         // If it's already an exact official product url or category url from our hits
         if (products.some((p) => p.url === url || p.productUrl === url || p.categoryUrl === url)) {
           return fullMatch;
         }
 
-        const lowerLabel = label.toLowerCase();
         // If label refers to category
         if ((lowerLabel.includes('ангилал') || lowerLabel.includes('төрөл')) && products[0].categoryUrl) {
           return `[${label}](${products[0].categoryUrl})`;

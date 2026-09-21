@@ -48,6 +48,32 @@ export interface BotConfig {
   productConfig?: ProductDisplayConfig;
 }
 
+export interface AiSessionState {
+  chatId: string;
+  dialogId: string;
+  isActive: boolean;
+  isHandedOff: boolean;
+  handoffTimestamp?: string;
+  handoffReason?: string;
+  transferredToAgent?: string;
+  lastCustomerMessage?: string;
+  lastBotResponse?: string;
+  detectedContext?: any;
+  conversationTurns: Array<{ role: 'customer' | 'bot' | 'system'; text: string; timestamp: string }>;
+  startedAt: string;
+  lastActivityAt: string;
+}
+
+export interface BotProcessOutcome {
+  answer: string;
+  handedOff: boolean;
+  handoff: boolean; // Explicit 'handoff' signal when transferred to an agent
+  handoffReason?: string;
+  transferredToAgent?: string;
+  chatId?: string;
+  sessionCleared?: boolean;
+}
+
 export interface BsbProduct {
   id: number;
   code: string;
@@ -76,6 +102,54 @@ export interface BsbProduct {
   promotionsSummary?: string;
   siteRemainsSummary?: string;
   isService?: boolean;
+}
+
+export interface BsbProductTerm {
+  id: number;
+  name: string;
+  type: 'return_term' | 'delivery_term' | 'delivery_payment_term' | string;
+  description: string;
+  content: string;
+  plainContent?: string;
+}
+
+export interface BsbBrand {
+  id: number;
+  code: string;
+  name: string;
+  totalProducts: number;
+  taxons: string[];
+  featured?: boolean;
+  images?: Array<{ id: number; type: string; path: string; thumbnail?: string; large?: string }>;
+}
+
+export interface BsbTaxon {
+  id: number;
+  code: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  productTotal: number;
+  parentCode?: string | null;
+  parent?: string | null;
+  images?: Array<{ id: number; type: string | null; path: string; thumbnail?: string; medium?: string }>;
+}
+
+export interface BsbAttribute {
+  id: number;
+  code: string;
+  name: string;
+  type: string;
+  position?: number;
+  configuration?: string[];
+}
+
+export interface MeiliIndexInfo {
+  index: string;
+  name: string;
+  count: number;
+  description: string;
+  status: 'connected' | 'error' | 'loading';
 }
 
 export interface DialogLog {
@@ -201,6 +275,7 @@ export interface ChatDialog {
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
   unreadCount: number;
   botActive?: boolean;
+  botConnectedAt?: string;
   isStarred?: boolean;
   resolutionSummary?: string;
   closedAt?: string;

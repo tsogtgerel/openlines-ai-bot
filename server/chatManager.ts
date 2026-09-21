@@ -77,6 +77,7 @@ export interface ChatDialog {
   lastMessageSender: 'customer' | 'bot' | 'agent' | 'system';
   unreadCount: number; // Уншаагүй мессежийн тоо
   botActive?: boolean; // Бот тухайн чатад идэвхтэй хариулж байгаа эсэх (Оператор өөртөө авсан үед false болж сална)
+  botConnectedAt?: string; // Бот тухайн чатад холбогдсон/шилжсэн цаг (Өмнө нь оператортой бичсэн мессежүүдэд хариулахаас сэргийлнэ)
   isStarred?: boolean; // Онцолсон/од тавьсан эсэх
   resolutionSummary?: string; // Чат хаах үеийн шийдвэрлэлтийн дүгнэлт
   closedAt?: string; // Чат хаагдсан цаг
@@ -811,12 +812,34 @@ export class ChatManagerService extends EventEmitter {
     }
 
     Object.assign(dialog, updates);
+    if (updates.status === 'bot' || updates.botActive === true) {
+      if (!dialog.botConnectedAt) {
+        dialog.botConnectedAt = new Date().toISOString();
+      }
+    }
+    if (updates.assignedAgentId || updates.status === 'in_progress' || updates.status === 'assigned') {
+      dialog.botActive = false;
+      dialog.botConnectedAt = undefined;
+      this.emit('handoff', {
+        dialogId: id,
+        dialogNumericId: dialog.dialogId,
+        targetAgentId: updates.assignedAgentId || dialog.assignedAgentId,
+        targetAgentName: updates.assignedAgentName || dialog.assignedAgentName,
+        reason: 'assigned_to_operator',
+      });
+    }
     if (updates.status === 'closed') {
       if (!dialog.closedAt) {
         dialog.closedAt = new Date().toISOString();
       }
       dialog.unreadCount = 0;
       dialog.botActive = false;
+      dialog.botConnectedAt = undefined;
+      this.emit('handoff', {
+        dialogId: id,
+        dialogNumericId: dialog.dialogId,
+        reason: 'closed',
+      });
     }
 
     this.saveDialogs(id, 'dialog:update');
@@ -836,6 +859,7 @@ export class ChatManagerService extends EventEmitter {
     dialog.assignedAgentAvatar = null;
     dialog.status = 'bot';
     dialog.botActive = true;
+    dialog.botConnectedAt = new Date().toISOString();
 
     const notice = prevAgentName
       ? `🤖 Оператор ${prevAgentName} энэ чатад ${botName}-ыг холболоо. Бот автоматаар хариулж эхэлнэ.`
@@ -852,6 +876,12 @@ export class ChatManagerService extends EventEmitter {
     dialog.lastMessageTime = sysMsg.timestamp;
     dialog.lastMessageSender = 'system';
 
+    this.emit('bot_connected', {
+      dialogId: id,
+      dialogNumericId: dialog.dialogId,
+      botName,
+    });
+
     this.saveDialogs(id, 'dialog:update');
     return dialog;
   }
@@ -864,6 +894,7 @@ export class ChatManagerService extends EventEmitter {
     if (!dialog) throw new Error(`Dialog not found: ${id}`);
 
     dialog.botActive = false;
+    dialog.botConnectedAt = undefined;
     if (dialog.status === 'bot') {
       dialog.status = 'new';
     }
@@ -878,6 +909,13 @@ export class ChatManagerService extends EventEmitter {
     dialog.lastMessageText = sysMsg.text;
     dialog.lastMessageTime = sysMsg.timestamp;
     dialog.lastMessageSender = 'system';
+
+    this.emit('handoff', {
+      dialogId: id,
+      dialogNumericId: dialog.dialogId,
+      targetAgentName: operatorName,
+      reason: 'bot_detached',
+    });
 
     this.saveDialogs(id, 'dialog:update');
     return dialog;
@@ -899,12 +937,21 @@ export class ChatManagerService extends EventEmitter {
     if (targetAgentAvatar) dialog.assignedAgentAvatar = targetAgentAvatar;
     dialog.status = 'assigned';
     dialog.botActive = false;
+    dialog.botConnectedAt = undefined;
 
     dialog.messages.push({
       id: `sys-${Date.now()}`,
       sender: 'system',
       text: `Систем: Харилцан яриаг оператор ${targetAgentName}-д шилжүүллээ.`,
       timestamp: new Date().toISOString(),
+    });
+
+    this.emit('handoff', {
+      dialogId: id,
+      dialogNumericId: dialog.dialogId,
+      targetAgentId,
+      targetAgentName,
+      reason: 'transferred_to_agent',
     });
 
     this.saveDialogs(id, 'dialog:update');
@@ -1159,12 +1206,33 @@ export class ChatManagerService extends EventEmitter {
       const existing = this.dialogs[existingIndex];
       const prevMsgCount = existing.messages.length;
 
-      // Keep any internal notes added locally
+      // Keep any internal notes added locally and any recent pending local messages (sent within last 90s)
+      const now = Date.now();
       const internalNotes = existing.messages.filter((m) => m.isInternalNote);
+      const pendingLocalMsgs = existing.messages.filter((m) => {
+        if (m.isInternalNote) return false;
+        if (m.id.startsWith('bot-') || m.id.startsWith('msg-') || m.id.startsWith('sys-')) {
+          const ageMs = now - new Date(m.timestamp).getTime();
+          if (ageMs < 90000) {
+            // Check if this message text already exists in newDialog.messages
+            const alreadyInBitrix = newDialog.messages.some(
+              (bm) => bm.id === m.id || (bm.sender === m.sender && bm.text.trim() === m.text.trim())
+            );
+            return !alreadyInBitrix;
+          }
+        }
+        return false;
+      });
+
       const combinedMessages = [...newDialog.messages];
       for (const note of internalNotes) {
         if (!combinedMessages.some((m) => m.id === note.id)) {
           combinedMessages.push(note);
+        }
+      }
+      for (const pending of pendingLocalMsgs) {
+        if (!combinedMessages.some((m) => m.id === pending.id)) {
+          combinedMessages.push(pending);
         }
       }
       combinedMessages.sort(
