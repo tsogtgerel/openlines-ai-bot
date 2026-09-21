@@ -1,5 +1,454 @@
 [
   {
+    "id": "log-1789975225671-esz9",
+    "timestamp": "2026-09-21T07:20:25.671Z",
+    "dialogId": "test-verify-url",
+    "customerMessage": "Зурагт ямар үнэтэй байна вэ?",
+    "botAnswer": "Сайн байна уу? БСБ-ын барааны мэдээллийн санд байгаа телевизоруудын үнэ болон мэдээллийг танд танилцуулж байна.\n\n**1. PANASONIC TH-86NX950 Google Android 86 inch mini led tv**\n* **Үнэ:** 6,999,900₮ (30% хямдарсан, үндсэн үнэ: 9,999,900₮)\n* **Төлөв:** БЭЛЭН БАЙГАА\n* **Үзүүлэлт:** Дэлгэцийн хэмжээ: 85 инч | Дэлгэцийн нягтрал: 4K UHD | Онцлог: Ухаалаг (Android)\n* **Баталгаа:** 12 сар\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-TH-86NX950M)\n\n**2. PANASONIC TH-100NX900 Google Android 100 inch**\n* **Үнэ:** 10,999,900₮ (8% хямдарсан, үндсэн үнэ: 11,999,900₮)\n* **Төлөв:** БЭЛЭН БАЙГАА\n* **Үзүүлэлт:** Дэлгэцийн хэмжээ: 100 инч | Дэлгэцийн нягтрал: 4K UHD | Онцлог: Ухаалаг (Android)\n* **Баталгаа:** 12 сар\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-TH-100NX900M)\n\n**3. PANASONIC TH-86NX900 Google Android 86 inch full array tv**\n* **Үнэ:** 4,999,900₮ (23% хямдарсан, үндсэн үнэ: 6,499,900₮)\n* **Төлөв:** Одоогоор нөөц түр дууссан байна.\n* **Үзүүлэлт:** Дэлгэцийн хэмжээ: 86 инч | Дэлгэцийн нягтрал: 4K UHD | Онцлог: Ухаалаг (Android)\n* **Баталгаа:** 12 сар\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-TH-86NX900M)\n\n📁 [Ангилал: Телевизор, Аудио, Видео](https://bsb.mn/categories/tv_audio_video)\n📁 [Ангилал: Телевизор](https://bsb.mn/categories/tv)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "PANA-NF-GM401KSK",
+        "name": "Panasonic NF-GM401KSK Олон үйлдэлт шарагч",
+        "priceFormatted": "699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-NF-GM401KSK",
+        "category": "Тосонд шарагч, тосгүй шарагч",
+        "categoryUrl": "https://bsb.mn/categories/fryer"
+      },
+      {
+        "code": "PANA-TH-86NX950M",
+        "name": "PANASONIC TH-86NX950 Google Android 86 inch mini led tv",
+        "priceFormatted": "6,999,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-TH-86NX950M",
+        "category": "Телевизор, Аудио, Видео",
+        "categoryUrl": "https://bsb.mn/categories/tv_audio_video"
+      },
+      {
+        "code": "PANA-TH-100NX900M",
+        "name": "PANASONIC TH-100NX900 Google Android 100 inch",
+        "priceFormatted": "10,999,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-TH-100NX900M",
+        "category": "Телевизор",
+        "categoryUrl": "https://bsb.mn/categories/tv"
+      },
+      {
+        "code": "PANA-TH-86NX900M",
+        "name": "PANASONIC TH-86NX900 Google Android 86 inch full array tv",
+        "priceFormatted": "4,999,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-TH-86NX900M",
+        "category": "Телевизор, Аудио, Видео",
+        "categoryUrl": "https://bsb.mn/categories/tv_audio_video"
+      }
+    ],
+    "durationMs": 6722
+  },
+  {
+    "id": "log-1789974309885-cbq8",
+    "timestamp": "2026-09-21T07:05:09.885Z",
+    "dialogId": "chat8049",
+    "customerMessage": "ugaalgin mashin",
+    "botAnswer": "Сайн байна уу? БСБ-аас таны сонирхсон угаалгын машины сонголтуудыг танилцуулж байна.\n\nОдоогоор манай санд дараах загварууд бэлэн байгаа:\n\n1. **LG 11кг LG-F4V3ES6S Бүрэн автомат угаалгын машин**\n   - Үнэ: 1,699,900₮ (15% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-F4V3ES6S)\n\n2. **LG 11кг LG-TW4V7EB1W Бүрэн автомат угаалгын машин**\n   - Үнэ: 1,899,900₮ (21% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V7EB1W)\n\n3. **Panasonic 9кг PANA-NA-V90FC1WSG Бүрэн автомат угаалгын машин хатаагчтай**\n   - Үнэ: 2,599,900₮ (13% хямдарсан)\n   - Үзүүлэлт: Угаах жин 9.0кг, Хатаагчтай, Усаа халаадаг, Хэмжээ: 60x60см\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-NA-V90FC1WSG)\n\n4. **LG 11кг/7кг LG-TW4V5EG2S Бүрэн автомат хатаагчтай угаалгын машин**\n   - Үнэ: 2,599,900₮ (13% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг / Хатаах жин 7кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V5EG2S)\n\n📁 [Ангилал: Угаалгын машин](https://bsb.mn/categories/washing_machine)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "LG-F4V3ES6S",
+        "name": "LG 11кг LG-F4V3ES6S Бүрэн автомат угаалгын машин",
+        "priceFormatted": "1,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-F4V3ES6S",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "LG-TW4V7EB1W",
+        "name": "LG 11кг LG-TW4V7EB1W Бүрэн автомат угаалгын машин",
+        "priceFormatted": "1,899,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-TW4V7EB1W",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "PANA-NA-V90FC1WSG",
+        "name": "Panasonic 9кг PANA-NA-V90FC1WSG Бүрэн автомат угаалгын машин хатаагчтай",
+        "priceFormatted": "2,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-NA-V90FC1WSG",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "LG-TW4V5EG2S",
+        "name": "LG 11кг/7кг LG-TW4V5EG2S Бүрэн автомат хатаагчтай угаалгын машин",
+        "priceFormatted": "2,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-TW4V5EG2S",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      }
+    ],
+    "durationMs": 12376
+  },
+  {
+    "id": "log-1789974233498-qohs",
+    "timestamp": "2026-09-21T07:03:53.498Z",
+    "dialogId": "chat8049",
+    "customerMessage": "ugaalgin mashin",
+    "botAnswer": "Сайн байна уу? Танд БСБ-аас угаалгын машины дараах загваруудыг санал болгож байна.\n\n**1. LG 11кг LG-F4V3ES6S Бүрэн автомат угаалгын машин**\n*   **Үнэ:** 1,699,900₮ (Хямдарсан)\n*   **Төлөв:** БЭЛЭН БАЙГАА\n*   **Үзүүлэлт:** Угаах жин: 11кг, Баталгаа: 12 сар\n*   **Урамшуулал:** Наадая Аялъя бэлэгтэй худалдаа\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-F4V3ES6S)\n\n**2. LG 11кг LG-TW4V7EB1W Бүрэн автомат угаалгын машин**\n*   **Үнэ:** 1,899,900₮ (Хямдарсан)\n*   **Төлөв:** БЭЛЭН БАЙГАА\n*   **Үзүүлэлт:** Угаах жин: 11кг, Баталгаа: 12 сар\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V7EB1W)\n\n**3. Panasonic 9кг PANA-NA-V90FC1WSG Бүрэн автомат угаалгын машин хатаагчтай**\n*   **Үнэ:** 2,599,900₮ (Хямдарсан)\n*   **Төлөв:** БЭЛЭН БАЙГАА\n*   **Үзүүлэлт:** Угаах жин: 9.0кг, Онцлог: Хатаагчтай, Усаа халаадаг, Баталгаа: 12 сар\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-NA-V90FC1WSG)\n\n**4. LG 11кг/7кг LG-TW4V5EG2S Бүрэн автомат хатаагчтай угаалгын машин**\n*   **Үнэ:** 2,599,900₮ (Хямдарсан)\n*   **Төлөв:** БЭЛЭН БАЙГАА\n*   **Үзүүлэлт:** Угаах жин: 11кг, Баталгаа: 12 сар\n*   **Урамшуулал:** Наадая Аялъя бэлэгтэй худалдаа\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V5EG2S)\n\n📁 [Ангилал: Угаалгын машин](https://bsb.mn/categories/washing_machine)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "LG-F4V3ES6S",
+        "name": "LG 11кг LG-F4V3ES6S Бүрэн автомат угаалгын машин",
+        "priceFormatted": "1,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-F4V3ES6S",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "LG-TW4V7EB1W",
+        "name": "LG 11кг LG-TW4V7EB1W Бүрэн автомат угаалгын машин",
+        "priceFormatted": "1,899,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-TW4V7EB1W",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "PANA-NA-V90FC1WSG",
+        "name": "Panasonic 9кг PANA-NA-V90FC1WSG Бүрэн автомат угаалгын машин хатаагчтай",
+        "priceFormatted": "2,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-NA-V90FC1WSG",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "LG-TW4V5EG2S",
+        "name": "LG 11кг/7кг LG-TW4V5EG2S Бүрэн автомат хатаагчтай угаалгын машин",
+        "priceFormatted": "2,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-TW4V5EG2S",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      }
+    ],
+    "durationMs": 14759
+  },
+  {
+    "id": "log-1789974203726-n8qm",
+    "timestamp": "2026-09-21T07:03:23.726Z",
+    "dialogId": "chat78432",
+    "customerMessage": "хөргөгч үнэ",
+    "botAnswer": "Сайн байна уу? БСБ-ын хөргөгч, хөлдөөгчийн сонголттой танилцуулъя.\n\nОдоогоор бидэнд дараах загварууд бэлэн байгаа бөгөөд үнэ болон техникийн үзүүлэлтүүд нь эдгээс хамаарна:\n\n1. **Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/**\n   * Үнэ: 7,499,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0)\n\n2. **ANTUNCLE CF-FCR30 Машины хөргөгч 30л**\n   * Үнэ: 1,099,900₮ (31% хямдарсан)\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ANTU-CF-FCR30)\n\n3. **LG-GC-Q257CAFV LG Side by side 647л**\n   * Үнэ: 4,699,900₮ (24% хямдарсан)\n   * Үзүүлэлт: Нийт багтаамж: 628литр | Өндөр: 180см\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-Q257CAFV)\n\n4. **AEG Хөргөгч 242л OSC-6M199ES**\n   * Үнэ: 7,599,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/AEG-OSC-6M199ES)\n\n📁 [Ангилал: Хөргөгч, хөлдөөгч](https://bsb.mn/categories/ref_freezer)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.6333333333333333
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "ELEC-ENC-8MD18R0",
+        "name": "Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/",
+        "priceFormatted": "7,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "ANTU-CF-FCR30",
+        "name": "ANTUNCLE CF-FCR30 Машины хөргөгч 30л",
+        "priceFormatted": "1,099,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/ANTU-CF-FCR30",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "LG-GC-Q257CAFV",
+        "name": "LG-GC-Q257CAFV LG Side by side 647л",
+        "priceFormatted": "4,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-Q257CAFV",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "AEG-OSC-6M199ES",
+        "name": "AEG Хөргөгч 242л OSC-6M199ES",
+        "priceFormatted": "7,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/AEG-OSC-6M199ES",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      }
+    ],
+    "durationMs": 9995
+  },
+  {
+    "id": "log-1789973880325-p6g5",
+    "timestamp": "2026-09-21T06:58:00.325Z",
+    "dialogId": "sim-1789973876355",
+    "customerMessage": "буйдан үнэ хэд вэ",
+    "botAnswer": "Сайн байна уу? БСБ-аас танд энэ өдрийн мэнд хүргэе! Таны сонирхож буй буйдангийн загваруудын мэдээллийг доор харуулав.\n\n**[Бэлэн байгаа загварууд]**\n\n*   **CHEERS-70289M-3S Хөл амраагчтай буйдан**\n    *   Үнэ: 4,695,920₮ (Хямдарсан, үндсэн үнэ: 5,869,900₮, -20%)\n    *   Төлөв: БЭЛЭН БАЙГАА\n    🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/CHEERS-70289M-3S-WHITE_B3)\n\n*   **YI SHENG-607B-3S Буйдан 184 см**\n    *   Үнэ: 1,499,900₮\n    *   Төлөв: БЭЛЭН БАЙГАА\n    *   Үзүүлэлт: 3 хүний суудалтай, арьсан материалтай, хар өнгөтэй, урт: 180-189 см.\n    🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1)\n\n**[Одоогоор нөөц түр дууссан загварууд]**\n\n*   **CHEERS-U90092HM-2S Хөл амраагчтай, 2 хүний суудалтай буйдан**\n    *   Үнэ: 9,049,900₮\n    🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/CHEERS-U90092HM-2S-BROWN)\n\n*   **BRW-KAMARI-3S-BROWN Ор болдог буйдан**\n    *   Үнэ: 4,639,900₮\n    🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/BRW-KAMARI-3S-BROWN)\n\n📁 [Ангилал: Буйдан](https://bsb.mn/categories/category_2287?has_stock=true)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.31666666666666665
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.25
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "CHEERS-70289M-3S-WHITE_B3",
+        "name": "CHEERS-70289M-3S Хөл амраагчтай буйдан",
+        "priceFormatted": "4,695,920₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/CHEERS-70289M-3S-WHITE_B3",
+        "category": "Буйдан",
+        "categoryUrl": "https://bsb.mn/categories/category_2287?has_stock=true"
+      },
+      {
+        "code": "YISH-607B-3S-PUBLACK-B1",
+        "name": "YI SHENG-607B-3S Буйдан 184 см",
+        "priceFormatted": "1,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1",
+        "category": "Буйдан",
+        "categoryUrl": "https://bsb.mn/categories/category_2287?has_stock=true"
+      },
+      {
+        "code": "CHEERS-U90092HM-2S-BROWN",
+        "name": "CHEERS-U90092HM-2S  Хөл амраагчтай, 2 хүний суудалтай буйдан",
+        "priceFormatted": "9,049,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/CHEERS-U90092HM-2S-BROWN",
+        "category": "Буйдан",
+        "categoryUrl": "https://bsb.mn/categories/category_2287?has_stock=true"
+      },
+      {
+        "code": "BRW-KAMARI-3S-BROWN",
+        "name": "BRW-KAMARI-3S-BROWN Ор болдог буйдан",
+        "priceFormatted": "4,639,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/BRW-KAMARI-3S-BROWN",
+        "category": "Буйдан",
+        "categoryUrl": "https://bsb.mn/categories/category_2287?has_stock=true"
+      }
+    ],
+    "durationMs": 3969
+  },
+  {
+    "id": "log-1789972422962-9njf",
+    "timestamp": "2026-09-21T06:33:42.962Z",
+    "dialogId": "chat8049",
+    "customerMessage": "угаалгын машин",
+    "botAnswer": "Сайн байна уу! БСБ-аас танд зориулж бэлэн байгаа угаалгын машины зарим загваруудыг танилцуулж байна.\n\nТа дараах загваруудыг сонирхож болох юм:\n\n1. **[LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W](https://bsb.mn/products/by-code/LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (17% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (BSBWHS салбарт 75 ширхэг)\n   - **Үзүүлэлт:** Угаах жин 9.0кг\n   - **Баталгаа:** 12 сар\n\n2. **[VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг](https://bsb.mn/products/by-code/VEST-WB8B14T3DS)**\n   - **Үнэ:** 1,249,900₮ (19% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (ELBMOL, CORWHS, CEPAMR салбаруудад)\n   - **Үзүүлэлт:** Угаах жин 8.0кг, Усаа халаадаг, Хэмжээ: 60x60x60см\n   - **Баталгаа:** 12 сар\n\n*Санамж: Electrolux-ийн хатаагчтай холбогч болон Panasonic-ийн 12.5кг загвар одоогоор нөөц түр дууссан байна.*\n\nИлүү олон загвар харах бол:\n[Ангилал: Урдаа хаалгатай угаалгын машин](https://bsb.mn/categories/wm_front_door)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "VEST-WB8B14T3DS",
+        "name": "VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг",
+        "priceFormatted": "1,249,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/VEST-WB8B14T3DS",
+        "category": "Урдаа хаалгатай угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/wm_front_door"
+      },
+      {
+        "code": "LG-F4V5VS0W",
+        "name": "LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W",
+        "priceFormatted": "1,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-F4V5VS0W",
+        "category": "Урдаа хаалгатай угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/wm_front_door"
+      },
+      {
+        "code": "ELEC-E4YHMKP3",
+        "name": "Electrolux E4YHMKP3 Угаалгын машин хатаагчны холбогч",
+        "priceFormatted": "739,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/ELEC-E4YHMKP3",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      },
+      {
+        "code": "PANA-NA-F12AR1HRG",
+        "name": "Panasonic 12.5кг PANA-NA-F12AR1HRG  Бүрэн автомат угаалгын машин",
+        "priceFormatted": "1,899,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/PANA-NA-F12AR1HRG",
+        "category": "Дээрээ хаалгатай угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/wm_top_door"
+      }
+    ],
+    "durationMs": 18094
+  },
+  {
+    "id": "log-1789971696973-51fs",
+    "timestamp": "2026-09-21T06:21:36.973Z",
+    "dialogId": "chat8049",
+    "customerMessage": "ugaalgin mashin",
+    "botAnswer": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [BRW- Орны тумбочка /BRW-LOKSA-KOM1S/](https://bsb.mn/products/by-code/BRW-LOKSA-KOM1S-PA-GROA_B1)\n   • Үнэ: 501,415₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Тавилгын өнгө: цагаан\n\n2. [WOJCIK- Ор 140см /WOJC-ANGE-TYP91-WH-CR_B3/](https://bsb.mn/products/by-code/WOJC-ANGE-TYP91-WH-CR_B3_BURDEL)\n   • Үнэ: 2,238,515₮ (Бэлэн байгаа)\n\n3. [WOJCIK-Avanti-AVAK13 орны тумбочка](https://bsb.mn/products/by-code/WOJC-AVAN-AVAK13-WHITE_B1)\n   • Үнэ: 729,900₮ (Нөөц түр дууссан)\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Орны тумбочка](https://bsb.mn/categories/code_23/bukh-tavilga/orny-tumbochka)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "BRW-LOKSA-KOM1S-PA-GROA_B1",
+        "name": "BRW- Орны тумбочка /BRW-LOKSA-KOM1S/",
+        "priceFormatted": "501,415₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/BRW-LOKSA-KOM1S-PA-GROA_B1",
+        "category": "Орны тумбочка",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/orny-tumbochka"
+      },
+      {
+        "code": "WOJC-ANGE-TYP91-WH-CR_B3_BURDEL",
+        "name": "WOJCIK- Ор 140см /WOJC-ANGE-TYP91-WH-CR_B3/",
+        "priceFormatted": "2,238,515₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/WOJC-ANGE-TYP91-WH-CR_B3_BURDEL",
+        "category": "140x200см/2 хүний ор /",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/or/140x200sm-2-khunii-or"
+      },
+      {
+        "code": "WOJC-AVAN-AVAK13-WHITE_B1",
+        "name": "WOJCIK-Avanti-AVAK13 орны тумбочка",
+        "priceFormatted": "729,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/WOJC-AVAN-AVAK13-WHITE_B1",
+        "category": "Орны тумбочка",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/orny-tumbochka"
+      },
+      {
+        "code": "EON-BED-BELLE-160-200",
+        "name": "EON- Ор 160см /EON-BED-BELLE-160-200/",
+        "priceFormatted": "2,429,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/EON-BED-BELLE-160-200",
+        "category": "160x200см/2 хүний ор/",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/or/160x200sm-2-khunii-or"
+      }
+    ],
+    "durationMs": 10471
+  },
+  {
+    "id": "log-1789971545165-1lkg",
+    "timestamp": "2026-09-21T06:19:05.165Z",
+    "dialogId": "chat78432",
+    "customerMessage": "ugaalgin mashin",
+    "botAnswer": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [YI SHENG-607B-3S Буйдан 184 см](https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1)\n   • Үнэ: 1,499,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн урт: 180-189 см | Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: 3 хүний суудалтай | Оффис буйдангийн материал: арьсан\n\n2. [YI SHENG-607B-1S Кресло](https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1)\n   • Үнэ: 749,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\n3. [YI SHENG-623-1S Кресло](https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1)\n   • Үнэ: 729,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Арьсан буйдан](https://bsb.mn/categories/code_1437/arsan-buidan)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "YISH-607B-3S-PUBLACK-B1",
+        "name": "YI SHENG-607B-3S Буйдан 184 см",
+        "priceFormatted": "1,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-607B-1S-PUBLACK-B1",
+        "name": "YI SHENG-607B-1S Кресло",
+        "priceFormatted": "749,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-623B-1S-PUBLACK-B1",
+        "name": "YI SHENG-623-1S Кресло",
+        "priceFormatted": "729,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-378-SOFA-3S-BEIGE-B1",
+        "name": "YI SHENG-378 Даавуун буйдан/YISH-378-SOFA-3S-BEIGE-B1/",
+        "priceFormatted": "2,239,920₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-378-SOFA-3S-BEIGE-B1",
+        "category": "Даавуун буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/buidan/daavuun-buidan"
+      }
+    ],
+    "durationMs": 8578
+  },
+  {
+    "id": "log-1789971516560-fnuq",
+    "timestamp": "2026-09-21T06:18:36.560Z",
+    "dialogId": "chat78432",
+    "customerMessage": "zuragt",
+    "botAnswer": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [YI SHENG-607B-3S Буйдан 184 см](https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1)\n   • Үнэ: 1,499,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн урт: 180-189 см | Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: 3 хүний суудалтай | Оффис буйдангийн материал: арьсан\n\n2. [YI SHENG-607B-1S Кресло](https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1)\n   • Үнэ: 749,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\n3. [YI SHENG-623-1S Кресло](https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1)\n   • Үнэ: 729,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Арьсан буйдан](https://bsb.mn/categories/code_1437/arsan-buidan)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "YISH-607B-3S-PUBLACK-B1",
+        "name": "YI SHENG-607B-3S Буйдан 184 см",
+        "priceFormatted": "1,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-607B-1S-PUBLACK-B1",
+        "name": "YI SHENG-607B-1S Кресло",
+        "priceFormatted": "749,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-623B-1S-PUBLACK-B1",
+        "name": "YI SHENG-623-1S Кресло",
+        "priceFormatted": "729,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1",
+        "category": "Арьсан буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_1437/arsan-buidan"
+      },
+      {
+        "code": "YISH-378-SOFA-3S-BEIGE-B1",
+        "name": "YI SHENG-378 Даавуун буйдан/YISH-378-SOFA-3S-BEIGE-B1/",
+        "priceFormatted": "2,239,920₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/YISH-378-SOFA-3S-BEIGE-B1",
+        "category": "Даавуун буйдан",
+        "categoryUrl": "https://bsb.mn/categories/code_23/bukh-tavilga/buidan/daavuun-buidan"
+      }
+    ],
+    "durationMs": 19845
+  },
+  {
     "id": "log-1789971444715-xn2x",
     "timestamp": "2026-09-21T06:17:24.715Z",
     "dialogId": "chat78432",

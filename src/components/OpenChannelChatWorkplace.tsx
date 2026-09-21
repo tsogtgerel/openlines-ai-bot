@@ -3496,6 +3496,41 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                     </div>
                   </div>
                 )}
+
+                {/* CRM Context Resolution Rule State */}
+                {selectedDialog.crmContext && (
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5 text-[11px]">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-500 font-medium">Сессийн төлөв:</span>
+                      {selectedDialog.crmContext.state === 'ACTIVE_LEAD' && (
+                        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[10px] bg-blue-50 text-blue-700 border border-blue-200">
+                          Active Lead (Шалгуулах)
+                        </span>
+                      )}
+                      {selectedDialog.crmContext.state === 'ACTIVE_DEAL' && (
+                        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Active Deal (Захиалга)
+                        </span>
+                      )}
+                      {selectedDialog.crmContext.state === 'REPEAT_CUSTOMER' && (
+                        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[10px] bg-purple-50 text-purple-700 border border-purple-200">
+                          Давтан харилцагч
+                        </span>
+                      )}
+                      {selectedDialog.crmContext.state === 'UNKNOWN' && (
+                        <span className="inline-flex items-center gap-1 font-semibold px-2 py-0.5 rounded text-[10px] bg-slate-50 text-slate-600 border border-slate-200">
+                          Шинэ
+                        </span>
+                      )}
+                    </div>
+                    {selectedDialog.crmContext.toneDirective && (
+                      <div className="text-[10px] text-slate-600 bg-slate-50 p-1.5 rounded border border-slate-200">
+                        <span className="font-semibold text-slate-700 block mb-0.5">Ботын өнгө аяс:</span>
+                        {selectedDialog.crmContext.toneDirective}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-between items-center text-slate-500 pt-0.5">

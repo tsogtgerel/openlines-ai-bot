@@ -16,6 +16,10 @@ import {
   SlidersHorizontal,
   RefreshCw,
   Info,
+  UserCheck,
+  RotateCcw,
+  GitMerge,
+  ShieldCheck,
 } from 'lucide-react';
 import { BotConfig, ProductDisplayConfig } from '../types';
 import { FormattedMessageText } from './FormattedMessageText';
@@ -64,6 +68,10 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   );
   const [productSearchLimit, setProductSearchLimit] = useState<number>(
     botConfig?.productSearchLimit ?? 4
+  );
+  const [crmMode, setCrmMode] = useState<'classic' | 'simple'>(botConfig?.crmMode || 'classic');
+  const [sessionContextRuleEnabled, setSessionContextRuleEnabled] = useState<boolean>(
+    botConfig?.sessionContextRuleEnabled ?? true
   );
 
   // MeiliSearch product output & format config
@@ -253,6 +261,8 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
         productSearchEnabled,
         productSearchLimit,
         productConfig,
+        crmMode,
+        sessionContextRuleEnabled,
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
@@ -928,6 +938,108 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                 Та "Шалгах / Preview" товчийг дарж дээрх тохиргоогоор барааны линк болон ангилал ботын хариултад хэрхэн орохыг бодит бүтээгдэхүүнээр харна уу.
               </div>
             )}
+          </div>
+        </div>
+
+        {/* CRM Session Context Resolution Rule Section */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-sky-200 bg-gradient-to-b from-sky-50/50 to-white space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-sky-600 text-white flex items-center justify-center shadow-xs">
+                <UserCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">
+                    Нээлттэй сувгийн CRM сесс тодорхойлох дүрэм
+                  </h4>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-sky-100 text-sky-800 border border-sky-200">
+                    <ShieldCheck className="w-3 h-3 text-sky-600" />
+                    Session Context Rule
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  Open Channel-аар мессеж ирэх үед харилцагчийг утас/сошиал ID-аар нь таньж, Lead/Deal-ийн төлөвийг шалгах
+                </p>
+              </div>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-sky-200 shadow-2xs">
+              <input
+                type="checkbox"
+                checked={sessionContextRuleEnabled}
+                onChange={(e) => setSessionContextRuleEnabled(e.target.checked)}
+                className="w-4 h-4 rounded text-sky-600 focus:ring-sky-500"
+              />
+              <span className="text-xs font-semibold text-slate-800">
+                {sessionContextRuleEnabled ? 'Дүрэм асаалттай' : 'Унтраасан'}
+              </span>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-sky-100">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                CRM Горим (CRM Architecture Mode)
+              </label>
+              <select
+                value={crmMode}
+                onChange={(e) => setCrmMode(e.target.value as 'classic' | 'simple')}
+                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              >
+                <option value="classic">Classic CRM — Давтан сэжим үүсгэх (Repeat Lead)</option>
+                <option value="simple">Simple CRM — Давтан хэлцэл үүсгэх (Repeat Deal)</option>
+              </select>
+              <p className="text-[10px] text-slate-500 mt-1">
+                Бүх Lead/Deal хаагдсан харилцагч дахин хандахад Classic горимд "Давтан Lead", Simple горимд "Давтан Deal" үүсгэнэ.
+              </p>
+            </div>
+
+            <div className="flex flex-col justify-center p-2.5 rounded-xl bg-white border border-sky-100 text-xs text-slate-600 space-y-1">
+              <span className="font-bold text-slate-800 text-[11px] flex items-center gap-1">
+                <RotateCcw className="w-3 h-3 text-sky-600" />
+                Давтан харилцагчийн мэндчилгээ:
+              </span>
+              <p className="text-[11px] text-slate-700 italic bg-slate-50 px-2 py-1 rounded border border-slate-100">
+                "Эргэн тавтай морилно уу! Танд өнөөдөр юугаар туслах вэ?"
+              </p>
+              <span className="text-[10px] text-emerald-700 font-medium">
+                ✓ Нэр, утасны дугаар зэрэг суурь мэдээллийг дахин давтан шалгаахгүй.
+              </span>
+            </div>
+          </div>
+
+          {/* Context Rules Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-sky-100/80 text-xs">
+            <div className="p-3 bg-white rounded-xl border border-blue-100 shadow-2xs">
+              <div className="flex items-center gap-1.5 font-bold text-blue-800 mb-1">
+                <span className="w-2 h-2 rounded-full bg-blue-500" />
+                1. Идэвхтэй Сэжимтэй бол
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Мессежийг уг Active Lead-д холбоно. Шинэ Lead <strong>үүсгэхгүй</strong>. Өмнөх тодруулгаа үргэлжлүүлнэ.
+              </p>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-emerald-100 shadow-2xs">
+              <div className="flex items-center gap-1.5 font-bold text-emerald-800 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                2. Идэвхтэй Хэлцэлтэй бол
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Мессежийг уг Active Deal-д холбоно. Захиалгын статус шалгах эсвэл хариуцсан менежерт дамжуулна.
+              </p>
+            </div>
+
+            <div className="p-3 bg-white rounded-xl border border-purple-100 shadow-2xs">
+              <div className="flex items-center gap-1.5 font-bold text-purple-800 mb-1">
+                <span className="w-2 h-2 rounded-full bg-purple-500" />
+                3. Хаагдсан / Шинэ бол
+              </div>
+              <p className="text-[11px] text-slate-600 leading-snug">
+                Давтан хэрэглэгч гэж үзэн {crmMode === 'classic' ? 'Repeat Lead' : 'Repeat Deal'} үүсгэж, шууд эелдэг угтана.
+              </p>
+            </div>
           </div>
         </div>
 

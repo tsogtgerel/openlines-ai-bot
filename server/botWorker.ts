@@ -27,6 +27,7 @@ import path from 'path';
 import { knowledgeBase, KnowledgeArticle } from './knowledgeBase';
 import { vibeRequest } from './vibeApi';
 import { chatManager } from './chatManager';
+import { crmContextResolver, CrmContextResolution } from './crmContextResolver';
 import {
   meiliProductService,
   FormattedBsbProduct,
@@ -34,7 +35,13 @@ import {
   DEFAULT_PRODUCT_CONFIG,
   BSB_CATEGORIES,
   DetectedProductContext,
+  resolveBsbProductUrl,
+  BsbResolvedUrl,
+  ResolveProductUrlOptions,
 } from './meiliProductService';
+
+export { resolveBsbProductUrl };
+export type { BsbResolvedUrl, ResolveProductUrlOptions };
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'bot_config.json');
@@ -65,6 +72,8 @@ export interface BotConfig {
   meiliUrl?: string; // MeiliSearch URL
   meiliIndex?: string; // MeiliSearch индекс
   productConfig?: ProductDisplayConfig; // Барааны мэдээлэл болон линкний форматын нарийвчилсан тохиргоо
+  crmMode?: 'classic' | 'simple'; // 'classic': creates Repeat Lead, 'simple': creates Repeat Deal
+  sessionContextRuleEnabled?: boolean; // [SESSION CONTEXT RESOLUTION RULE] идэвхтэй эсэх
 }
 
 /**
@@ -161,6 +170,8 @@ const DEFAULT_CONFIG: BotConfig = {
   meiliUrl: 'https://meili.bsb.mn',
   meiliIndex: 'app_bsb_products',
   productConfig: DEFAULT_PRODUCT_CONFIG,
+  crmMode: 'classic',
+  sessionContextRuleEnabled: true,
 };
 
 export class BotWorkerService {
@@ -881,6 +892,54 @@ export class BotWorkerService {
 
     const lowerText = text.toLowerCase();
 
+    // =========================================================================
+    // [SESSION CONTEXT RESOLUTION RULE]
+    // When a message arrives from an Open Channel session:
+    // 1. Identify the CRM Contact via social/phone ID.
+    // 2. Query the Contact's CRM State:
+    //    - IF Active_Lead == TRUE:
+    //        Attach message to Active Lead. Do NOT create a new Lead. 
+    //        Tone: Continue previous qualification.
+    //    - IF Active_Deal == TRUE:
+    //        Attach message to Active Deal. Do NOT create new Deal/Lead.
+    //        Tone: Assist with ongoing order status or forward to Deal owner.
+    //    - IF (All Leads/Deals are CLOSED) OR No active entity:
+    //        Treat as REPEAT customer.
+    //        Create "Repeat Lead" (in Classic CRM) or "Repeat Deal" (in Simple CRM).
+    //        Do NOT ask basic identity questions. Acknowledge return: "Welcome back! How can we assist you today?"
+    // =========================================================================
+    let crmContext: CrmContextResolution | undefined;
+    if (this.config.sessionContextRuleEnabled !== false) {
+      try {
+        const match = dialogId.match(/\d+/);
+        const numericChatId = match ? parseInt(match[0], 10) : undefined;
+        crmContext = await crmContextResolver.resolveSessionContext({
+          dialogId,
+          chatId: numericChatId,
+          customer: existingDialog?.customer,
+          messageText: text,
+          crmMode: this.config.crmMode || 'classic',
+          channelSource: existingDialog?.channelType || 'openlines',
+        });
+
+        if (existingDialog) {
+          existingDialog.crmContext = crmContext;
+          if (crmContext.assignedCrmId) {
+            existingDialog.customer.crmLeadId = crmContext.assignedCrmId;
+          }
+          if (crmContext.contactId) {
+            existingDialog.customer.contactId = crmContext.contactId;
+          }
+          if (crmContext.socialId) {
+            existingDialog.customer.socialId = crmContext.socialId;
+          }
+          existingDialog.customer.isRepeatCustomer = crmContext.isRepeatCustomer;
+        }
+      } catch (crmErr: any) {
+        console.warn('[BotWorker] Session Context Resolution error:', crmErr.message);
+      }
+    }
+
     // 1. Check if user explicitly asked for operator or clicked the operator button
     const isEscalationRequested =
       lowerText === '/operator' ||
@@ -919,7 +978,16 @@ export class BotWorkerService {
     // 2. Check for polite greeting (e.g. "Сайн байна уу", "Өдрийн мэнд") to avoid immediate handoff
     const isGreeting = /^(сайн байна уу|сайн уу|өдрийн мэнд|өглөөний мэнд|оройн мэнд|hi|hello|hey|sn bnu)[!.? ]*$/i.test(text.trim());
     if (isGreeting) {
-      const greetingReply = "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.";
+      let greetingReply = "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.";
+
+      // If REPEAT customer acknowledges greeting: Acknowledge return: "Welcome back! How can we assist you today?"
+      if (crmContext?.state === 'REPEAT_CUSTOMER') {
+        const isEnglish = /^(hi|hello|hey|welcome)/i.test(text.trim());
+        greetingReply = isEnglish
+          ? "Welcome back! How can we assist you today?"
+          : "Тавтай морилно уу! Танд өнөөдөр хэрхэн туслах вэ?";
+      }
+
       await this.sendReply(dialogId, greetingReply, true);
       chatManager.recordBotReply(dialogId, greetingReply, false, this.config.botName);
       this.recordSessionTurn(dialogId, text, greetingReply);
@@ -1062,6 +1130,31 @@ export class BotWorkerService {
         .map((m) => `### ${m.article.title} (Ангилал: ${m.article.category})\n${m.article.content}`)
         .join('\n\n');
 
+      let crmPromptAddition = '';
+      if (crmContext) {
+        if (crmContext.state === 'ACTIVE_LEAD') {
+          crmPromptAddition = `
+--- ХАРИЛЦАГЧИЙН CRM СТАТУС (SESSION CONTEXT RESOLUTION: ACTIVE LEAD) ---
+• Харилцагч нь системд ИДЭВХТЭЙ LEAD-тэй (#LEAD-${crmContext.activeLead?.id}: "${crmContext.activeLead?.title}").
+• Харилцагчийн мессеж уг Active Lead-д автоматаар хавсаргагдсан. ШИНЭ LEAD ҮҮСГЭХГҮЙ.
+• ӨНГӨ АЯС (TONE DIRECTIVE): Continue previous qualification (Өмнөх тодруулга, хэрэгцээ шалгалтыг үргэлжлүүлж хариулна уу).`;
+        } else if (crmContext.state === 'ACTIVE_DEAL') {
+          crmPromptAddition = `
+--- ХАРИЛЦАГЧИЙН CRM СТАТУС (SESSION CONTEXT RESOLUTION: ACTIVE DEAL) ---
+• Харилцагч нь системд ИДЭВХТЭЙ ЗАХИАЛГА / DEAL-тэй (#DEAL-${crmContext.activeDeal?.id}: "${crmContext.activeDeal?.title}").
+• Хариуцсан менежер: ${crmContext.activeDeal?.dealOwnerName || 'Менежер'} (ID: ${crmContext.activeDeal?.assignedById || 'N/A'}).
+• Харилцагчийн мессеж уг Active Deal-д автоматаар хавсаргагдсан. ШИНЭ DEAL/LEAD ҮҮСГЭХГҮЙ.
+• ӨНГӨ АЯС (TONE DIRECTIVE): Assist with ongoing order status or forward to Deal owner (Захиалгын явцын мэдээллээр тусалж эсвэл хариуцсан менежерт шууд холбоно уу).`;
+        } else if (crmContext.state === 'REPEAT_CUSTOMER') {
+          crmPromptAddition = `
+--- ХАРИЛЦАГЧИЙН CRM СТАТУС (SESSION CONTEXT RESOLUTION: REPEAT CUSTOMER) ---
+• Харилцагчийн өмнөх бүх хэлцэл хаагдсан тул ДАВТАН ХАРИЛЦАГЧААР (REPEAT CUSTOMER) үйлчилж байна.
+• Системд ${crmContext.repeatEntityCreated?.title || (this.config.crmMode === 'simple' ? 'Repeat Deal' : 'Repeat Lead')} үүсгэгдсэн.
+• ХАТУУ ШААРДЛАГА: Харилцагчаас нэр, утас, хэн болох зэрэг анхан шатны мэдээллийг БҮҮ асуу (Do NOT ask basic identity questions)!
+• Эргэн ирснийг найрсаг талархан угтана: "Тавтай морилно уу! Танд өнөөдөр хэрхэн туслах вэ?" ("Welcome back! How can we assist you today?").`;
+        }
+      }
+
       const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
       const linkDirectives: string[] = [];
       if (productConfig.includeProductLink !== false) {
@@ -1084,7 +1177,7 @@ export class BotWorkerService {
 7. БСБ Барааны сан эсвэл Үйлчилгээний нөхцөлөөс мэдээлэл олдсон бол [TRANSFER_OPERATOR] гаргахгүй, олдсон албан ёсны мэдээллийг найрсаг танилцуулна.
 8. Өнгө аяс: ${this.config.tone}.
 ${this.config.systemPromptAddition}
-
+${crmPromptAddition ? crmPromptAddition + '\n' : ''}
 ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---\n' + kbContext + '\n\n' : ''}Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
 
       const aiRes = await vibeRequest<any>('POST', '/v1/chat/completions', {
@@ -1105,8 +1198,13 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
             const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
             const price = p.priceFormatted || 'Үнэ тодруулах';
             const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-            const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
-            return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${productLink}`;
+            const resolved = resolveBsbProductUrl(p, {
+              fallbackCategoryUrl: p.categoryUrl,
+              fallbackCategoryName: p.category,
+              categorySlug: p.categorySlug,
+            });
+            const linkLine = resolved.formattedLinkLine;
+            return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${linkLine}`;
           }).join('\n\n');
 
           const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
@@ -1136,15 +1234,25 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
             botAnswer: directProductReply,
             handedOff: false,
             matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-            matchedProducts: matchedProducts.map((p) => ({
-              code: p.productCode,
-              name: p.name,
-              priceFormatted: p.priceFormatted,
-              inStock: p.inStock,
-              productUrl: p.productUrl,
-              category: p.category,
-              categoryUrl: p.categoryUrl,
-            })),
+            matchedProducts: matchedProducts.map((p) => {
+              const res = resolveBsbProductUrl(p, {
+                fallbackCategoryUrl: p.categoryUrl,
+                fallbackCategoryName: p.category,
+                categorySlug: p.categorySlug,
+              });
+              return {
+                code: p.productCode,
+                name: p.name,
+                priceFormatted: p.priceFormatted,
+                inStock: p.inStock,
+                productUrl: res.productUrl || res.url,
+                url: res.url,
+                isProductSpecificUrl: res.isProductSpecific,
+                isCategoryFallbackUrl: res.isCategoryFallback,
+                category: p.category,
+                categoryUrl: res.categoryUrl,
+              };
+            }),
             durationMs: Date.now() - startTime,
           });
 
@@ -1241,8 +1349,13 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
           const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
           const price = p.priceFormatted || 'Үнэ тодруулах';
           const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-          const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
-          return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${productLink}`;
+          const resolved = resolveBsbProductUrl(p, {
+            fallbackCategoryUrl: p.categoryUrl,
+            fallbackCategoryName: p.category,
+            categorySlug: p.categorySlug,
+          });
+          const linkLine = resolved.formattedLinkLine;
+          return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${linkLine}`;
         }).join('\n\n');
 
         const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
@@ -1273,15 +1386,25 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
           botAnswer: directProductReply,
           handedOff: false,
           matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-          matchedProducts: matchedProducts.map((p) => ({
-            code: p.productCode,
-            name: p.name,
-            priceFormatted: p.priceFormatted,
-            inStock: p.inStock,
-            productUrl: p.productUrl,
-            category: p.category,
-            categoryUrl: p.categoryUrl,
-          })),
+          matchedProducts: matchedProducts.map((p) => {
+            const res = resolveBsbProductUrl(p, {
+              fallbackCategoryUrl: p.categoryUrl,
+              fallbackCategoryName: p.category,
+              categorySlug: p.categorySlug,
+            });
+            return {
+              code: p.productCode,
+              name: p.name,
+              priceFormatted: p.priceFormatted,
+              inStock: p.inStock,
+              productUrl: res.productUrl || res.url,
+              url: res.url,
+              isProductSpecificUrl: res.isProductSpecific,
+              isCategoryFallbackUrl: res.isCategoryFallback,
+              category: p.category,
+              categoryUrl: res.categoryUrl,
+            };
+          }),
           durationMs: Date.now() - startTime,
         });
 
@@ -1336,6 +1459,7 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
     channelId: number;
     channelName: string;
     channelType: any;
+    userCode?: string;
   }): Promise<{ answer: string; handedOff: boolean } | null> {
     if (!this.config.botId) {
       return null;
@@ -1345,6 +1469,22 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
       chatManager.getDialogById(params.dialogId) ||
       chatManager.getDialogById(`chat-${params.chatId}`) ||
       chatManager.getDialogById(`chat${params.chatId}`);
+
+    // [SESSION CONTEXT RESOLUTION RULE]
+    // Trigger early CRM identification and state resolution for the Openlines session
+    if (this.config.sessionContextRuleEnabled !== false) {
+      crmContextResolver.resolveSessionContext({
+        dialogId: params.dialogId,
+        chatId: params.chatId,
+        userCode: params.userCode,
+        customer: currentDialog?.customer,
+        messageText: params.text,
+        crmMode: this.config.crmMode || 'classic',
+        channelSource: params.channelType || 'openlines',
+      }).catch((err) => {
+        console.warn('[BotWorker] Early Openline CRM Context Resolution error:', err.message);
+      });
+    }
 
     const isExplicitlyConnected = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
 
@@ -1375,26 +1515,43 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
         return null;
       }
 
-      // Хэрэв бот холбогдохоос өмнө оператортой бичиж байсан хуучин чат бол огт хариулахгүй
-      if (currentDialog.botConnectedAt) {
-        const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
-        const matchingMsg = currentDialog.messages.find(
-          (m) => m.id === `bx-${params.messageId}` || m.id === String(params.messageId) || m.text === params.text
+      // Locate the target message in currentDialog by ID, or fallback to the latest message by text
+      let targetIdx = -1;
+      if (params.messageId) {
+        const idStr = String(params.messageId);
+        targetIdx = currentDialog.messages.findIndex(
+          (m) =>
+            m.id === idStr ||
+            m.id === `bx-${idStr}` ||
+            m.id.replace(/^bx-/, '') === idStr.replace(/^bx-/, '')
         );
-        if (matchingMsg && new Date(matchingMsg.timestamp).getTime() < botConnectedTime - 2000) {
-          console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Message sent before bot was connected (${matchingMsg.timestamp} < ${currentDialog.botConnectedAt})`);
-          return null;
+      }
+      if (targetIdx === -1) {
+        // Fallback: search backwards for the latest message with matching text
+        for (let i = currentDialog.messages.length - 1; i >= 0; i--) {
+          if (currentDialog.messages[i].text === params.text) {
+            targetIdx = i;
+            break;
+          }
         }
       }
 
-      // Мөн уг мессежид аль хэдийн оператор эсвэл бот хариулсан эсэхийг шалгах
-      const matchingMsg = currentDialog.messages.find(
-        (m) => m.id === `bx-${params.messageId}` || m.id === String(params.messageId) || m.text === params.text
-      );
-      if (matchingMsg) {
-        const msgTime = new Date(matchingMsg.timestamp).getTime();
-        const hasAgentOrBotReplied = currentDialog.messages.some(
-          (m) => (m.sender === 'agent' || m.sender === 'bot') && new Date(m.timestamp).getTime() >= msgTime
+      if (targetIdx !== -1) {
+        const targetMsg = currentDialog.messages[targetIdx];
+
+        // Хэрэв бот холбогдохоос өмнө бичигдсэн хуучин мессеж бол алгасна
+        if (currentDialog.botConnectedAt) {
+          const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
+          const targetTime = new Date(targetMsg.timestamp).getTime();
+          if (targetTime < botConnectedTime - 2000) {
+            console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Message sent before bot was connected (${targetMsg.timestamp} < ${currentDialog.botConnectedAt})`);
+            return null;
+          }
+        }
+
+        // Уг мессежээс хойш оператор эсвэл бот аль хэдийн хариулсан эсэхийг дарааллаар нь шалгах
+        const hasAgentOrBotReplied = currentDialog.messages.slice(targetIdx + 1).some(
+          (m) => m.sender === 'agent' || m.sender === 'bot'
         );
         if (hasAgentOrBotReplied) {
           console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Already replied to by agent or bot`);
@@ -1625,20 +1782,29 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
 
 Операторт шууд илгээхэд бэлэн Монгол хариулт:`;
 
-    const mappedProducts = productRes.hits.map((p) => ({
-      id: p.id,
-      code: p.productCode,
-      productCode: p.productCode,
-      name: p.name,
-      brand: p.brand,
-      category: p.category,
-      categorySlug: p.categorySlug,
-      categoryUrl: p.categoryUrl,
-      priceFormatted: p.priceFormatted,
-      inStock: p.inStock,
-      url: p.url, // explicit 'url' field from MeiliSearch document
-      productUrl: p.url,
-    }));
+    const mappedProducts = productRes.hits.map((p) => {
+      const resolved = resolveBsbProductUrl(p, {
+        fallbackCategoryUrl: p.categoryUrl,
+        fallbackCategoryName: p.category,
+        categorySlug: p.categorySlug,
+      });
+      return {
+        id: p.id,
+        code: p.productCode,
+        productCode: p.productCode,
+        name: p.name,
+        brand: p.brand,
+        category: p.category,
+        categorySlug: p.categorySlug,
+        categoryUrl: resolved.categoryUrl,
+        priceFormatted: p.priceFormatted,
+        inStock: p.inStock,
+        url: resolved.url, // standardized URL resolution
+        productUrl: resolved.productUrl || resolved.url,
+        isProductSpecificUrl: resolved.isProductSpecific,
+        isCategoryFallbackUrl: resolved.isCategoryFallback,
+      };
+    });
 
     try {
       const aiRes = await vibeRequest<any>('POST', '/v1/chat/completions', {
@@ -1672,8 +1838,13 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       const items = productRes.hits.slice(0, 3).map((p, idx) => {
         const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
         const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-        const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
-        return `${idx + 1}. ${p.name}\n   • Үнэ: ${p.priceFormatted} (${stock})${specs}${productLink}`;
+        const resolved = resolveBsbProductUrl(p, {
+          fallbackCategoryUrl: p.categoryUrl,
+          fallbackCategoryName: p.category,
+          categorySlug: p.categorySlug,
+        });
+        const linkLine = resolved.formattedLinkLine;
+        return `${idx + 1}. ${p.name}\n   • Үнэ: ${p.priceFormatted} (${stock})${specs}${linkLine}`;
       }).join('\n\n');
 
       const categoryItem = productRes.hits.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
@@ -1730,6 +1901,14 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       matchedArticles: [],
       matchedProducts: [],
     };
+  }
+
+  /**
+   * Standardized URL resolution function that checks BSB product structure,
+   * validates the 'url' field existence, and falls back to category-level link.
+   */
+  public resolveProductUrl(product: any, options?: ResolveProductUrlOptions): BsbResolvedUrl {
+    return resolveBsbProductUrl(product, options);
   }
 }
 

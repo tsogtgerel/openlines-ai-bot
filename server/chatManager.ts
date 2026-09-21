@@ -38,6 +38,8 @@ export interface ChatMessage {
   status?: 'sent' | 'delivered' | 'read'; // Хүргэлтийн төлөв
 }
 
+import { CrmContextResolution } from './crmContextResolver';
+
 /**
  * Харилцагчийн CRM профиль мэдээлэл
  */
@@ -49,6 +51,9 @@ export interface CustomerProfile {
   city?: string; // Хот / Аймаг
   address?: string; // Гэрийн буюу хүргэлтийн хаяг
   crmLeadId?: string; // Bitrix24 CRM Lead дугаар
+  contactId?: number | null; // Bitrix24 CRM Contact ID
+  socialId?: string; // Social ID (Facebook PSID, Telegram ID, Livechat user code, etc.)
+  isRepeatCustomer?: boolean; // Давтан үйлчлүүлэгч эсэх
   totalOrders?: number; // Нийт хийсэн захиалгын тоо
   lastOrderDate?: string; // Сүүлийн захиалгын огноо
   tags?: string[]; // Харилцагчийн шошгууд (ж: VIP, Баталгаа, Тавилга)
@@ -61,6 +66,7 @@ export interface ChatDialog {
   id: string; // Системийн дотоод ID
   dialogId: string; // Bitrix24 буюу сувгийн dialogId
   customer: CustomerProfile; // Харилцагчийн дэлгэрэнгүй мэдээлэл
+  crmContext?: CrmContextResolution; // [SESSION CONTEXT RESOLUTION RULE] үр дүн
   channelId: number | string; // Сувгийн ID
   channelName: string; // Сувгийн нэр (ж: БСБ Онлайн Их Дэлгүүр)
   channelType: 'facebook' | 'instagram' | 'telegram' | 'whatsapp' | 'webchat'; // Сувгийн төрөл
@@ -1306,6 +1312,9 @@ export class ChatManagerService extends EventEmitter {
         ...existing.customer,
         ...newDialog.customer,
         crmLeadId: newDialog.customer?.crmLeadId || existing.customer?.crmLeadId,
+        contactId: newDialog.customer?.contactId ?? existing.customer?.contactId,
+        socialId: newDialog.customer?.socialId || existing.customer?.socialId,
+        isRepeatCustomer: newDialog.customer?.isRepeatCustomer ?? existing.customer?.isRepeatCustomer,
         avatar: newDialog.customer?.avatar || existing.customer?.avatar,
         phone: newDialog.customer?.phone || existing.customer?.phone,
         email: newDialog.customer?.email || existing.customer?.email,
@@ -1318,6 +1327,7 @@ export class ChatManagerService extends EventEmitter {
       this.dialogs[existingIndex] = {
         ...newDialog,
         customer: mergedCustomer,
+        crmContext: newDialog.crmContext || existing.crmContext,
         status: finalStatus,
         closedAt: finalClosedAt,
         reopenedAt: finalReopenedAt,

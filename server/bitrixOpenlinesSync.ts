@@ -154,14 +154,14 @@ export class BitrixOpenlinesSyncService {
           const botConnectedTime = currentDialog.botConnectedAt ? new Date(currentDialog.botConnectedAt).getTime() : 0;
           const isSentBeforeBotConnected = botConnectedTime > 0 && lastMsgTime < botConnectedTime - 2000;
 
-          const hasAgentReplied = visibleMsgs.some(
-            (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() >= lastMsgTime
-          );
-          const hasBotReplied = visibleMsgs.some(
-            (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= lastMsgTime
-          );
+          const lastMsgIdx = currentDialog.messages.map((m) => m.id).lastIndexOf(lastMsg.id);
+          const hasReplied =
+            lastMsgIdx >= 0 &&
+            currentDialog.messages
+              .slice(lastMsgIdx + 1)
+              .some((m) => m.sender === 'agent' || m.sender === 'bot');
 
-          if (!hasBotReplied && !hasAgentReplied && !isSentBeforeBotConnected) {
+          if (!hasReplied && !isSentBeforeBotConnected) {
             botWorker
               .processOpenlineCustomerMessage({
                 chatId: numChatId,
@@ -172,6 +172,7 @@ export class BitrixOpenlinesSyncService {
                 channelId: Number(configId) || 0,
                 channelName,
                 channelType: currentDialog.channelType,
+                userCode: (currentDialog.customer as any)?.socialId,
               })
               .catch((err) => console.error('[OpenlinesSync] syncSingleChat AI Bot error:', err));
           }
@@ -544,14 +545,14 @@ export class BitrixOpenlinesSyncService {
                 const botConnectedTime = chatDialog.botConnectedAt ? new Date(chatDialog.botConnectedAt).getTime() : 0;
                 const isSentBeforeBotConnected = botConnectedTime > 0 && customerTime < botConnectedTime - 2000;
 
-                const hasAgentReplied = chatDialog.messages.some(
-                  (m) => m.sender === 'agent' && new Date(m.timestamp).getTime() >= customerTime
-                );
-                const hasBotReplied = chatDialog.messages.some(
-                  (m) => m.sender === 'bot' && new Date(m.timestamp).getTime() >= customerTime
-                );
+                const lastCustomerIdx = chatDialog.messages.map((m) => m.id).lastIndexOf(lastCustomerMsg.id);
+                const hasReplied =
+                  lastCustomerIdx >= 0 &&
+                  chatDialog.messages
+                    .slice(lastCustomerIdx + 1)
+                    .some((m) => m.sender === 'agent' || m.sender === 'bot');
 
-                if (!hasBotReplied && !hasAgentReplied && !isSentBeforeBotConnected) {
+                if (!hasReplied && !isSentBeforeBotConnected) {
                   botWorker
                     .processOpenlineCustomerMessage({
                       chatId: s.chatId,
@@ -562,6 +563,7 @@ export class BitrixOpenlinesSyncService {
                       channelId: s.configId,
                       channelName,
                       channelType: chatDialog.channelType,
+                      userCode: s.userCode || (chatDialog.customer as any)?.socialId,
                     })
                     .catch((err) => console.error('[OpenlinesSync] AI Bot processing error:', err));
                 }

@@ -71,6 +71,29 @@ export interface FormattedBsbProduct {
   promotionsSummary?: string;
   siteRemainsSummary?: string;
   isService?: boolean;
+  isProductSpecificUrl?: boolean;
+  isCategoryFallbackUrl?: boolean;
+}
+
+export interface BsbResolvedUrl {
+  url: string; // Validated product-specific URL, or category-level fallback URL if missing
+  isProductSpecific: boolean; // True if valid product-specific page exists
+  isCategoryFallback: boolean; // True if product-specific URL was missing/invalid and fell back to category
+  productUrl?: string; // Validated product URL if available
+  categoryUrl: string; // The category-level URL
+  categoryName: string; // Category name
+  productName?: string;
+  productCode?: string;
+  label: string; // "Дэлгэрэнгүй үзэх" or "Ангилал: {categoryName}"
+  markdownLink: string; // e.g. "[Дэлгэрэнгүй үзэх](https://...)" or "[Ангилал: ...](https://...)"
+  formattedLinkLine: string; // e.g. "🔗 Холбоос: https://..." or "📁 [Ангилал: ...](https://...)"
+}
+
+export interface ResolveProductUrlOptions {
+  fallbackCategoryUrl?: string;
+  fallbackCategoryName?: string;
+  categorySlug?: string;
+  baseUrl?: string;
 }
 
 export interface DetectedProductContext {
@@ -469,6 +492,173 @@ const QUESTION_STOP_WORDS = [
   'загварууд',
   'загвар',
 ];
+
+/**
+ * Standardized URL resolution function for BSB products.
+ * Checks the specific BSB product structure (explicitly retrieving 'url' / 'productUrl',
+ * verifying product code, slug, and service flags), validates existence of a product-specific page,
+ * and falls back to a category-level link if the product-specific page is missing.
+ */
+export function resolveBsbProductUrl(
+  product: any,
+  options?: ResolveProductUrlOptions
+): BsbResolvedUrl {
+  const baseUrl = (options?.baseUrl || 'https://bsb.mn').replace(/\/+$/, '');
+
+  if (!product || typeof product !== 'object') {
+    const defaultCatUrl = options?.fallbackCategoryUrl || `${baseUrl}/categories`;
+    const catName = options?.fallbackCategoryName || 'Бараа бүтээгдэхүүн';
+    return {
+      url: defaultCatUrl,
+      isProductSpecific: false,
+      isCategoryFallback: true,
+      categoryUrl: defaultCatUrl,
+      categoryName: catName,
+      label: `Ангилал: ${catName}`,
+      markdownLink: `[Ангилал: ${catName}](${defaultCatUrl})`,
+      formattedLinkLine: `\n   📁 [Ангилал: ${catName}](${defaultCatUrl})`,
+    };
+  }
+
+  // 1. Extract category information from BSB product structure
+  let categoryName =
+    product.category ||
+    product.categoryName ||
+    (Array.isArray(product.categories) && product.categories[0]?.name ? product.categories[0].name : '') ||
+    options?.fallbackCategoryName ||
+    'Бараа бүтээгдэхүүн';
+
+  let categorySlug =
+    product.categorySlug ||
+    options?.categorySlug ||
+    (Array.isArray(product.categories) && product.categories[0]?.slug ? product.categories[0].slug : '');
+
+  const rawCatUrl = typeof product.categoryUrl === 'string' ? product.categoryUrl.trim() : '';
+
+  // Special handling for Sofa / Буйдан active inventory category (category_2287?has_stock=true)
+  const isSofa =
+    (typeof categorySlug === 'string' && (categorySlug.includes('category_2287') || categorySlug.includes('buidan'))) ||
+    categoryName.toLowerCase().includes('буйдан') ||
+    rawCatUrl.includes('buidan') ||
+    rawCatUrl.includes('category_2287');
+
+  let resolvedCategoryUrl = '';
+  if (isSofa) {
+    categorySlug = 'category_2287?has_stock=true';
+    resolvedCategoryUrl = `${baseUrl}/categories/category_2287?has_stock=true`;
+  } else if (rawCatUrl && !rawCatUrl.endsWith('/categories/category') && !rawCatUrl.endsWith('/category')) {
+    resolvedCategoryUrl = rawCatUrl.startsWith('http')
+      ? rawCatUrl
+      : `${baseUrl}${rawCatUrl.startsWith('/') ? '' : '/'}${rawCatUrl}`;
+  } else if (categorySlug && categorySlug.toLowerCase() !== 'category') {
+    resolvedCategoryUrl = `${baseUrl}/categories/${categorySlug}`;
+  } else if (options?.fallbackCategoryUrl) {
+    resolvedCategoryUrl = options.fallbackCategoryUrl;
+  } else {
+    resolvedCategoryUrl = `${baseUrl}/categories`;
+  }
+
+  // Sanitize category URL: eliminate broken singular /category/ or generic /categories/category
+  resolvedCategoryUrl = resolvedCategoryUrl.replace('/category/', '/categories/');
+  if (resolvedCategoryUrl.endsWith('/categories/category') || resolvedCategoryUrl.endsWith('/category')) {
+    resolvedCategoryUrl = `${baseUrl}/categories`;
+  }
+
+  // 2. Explicitly retrieve the 'url' field and examine BSB product structure
+  const rawUrlField = typeof product.url === 'string' && product.url.trim().length > 0 ? product.url.trim() : null;
+  const rawProductUrlField = typeof product.productUrl === 'string' && product.productUrl.trim().length > 0 ? product.productUrl.trim() : null;
+  const candidateUrl = rawUrlField || rawProductUrlField;
+
+  const productCode = (product.productCode || product.code || product.sku || '').trim();
+  const rawName = (product.name || '').toLowerCase();
+  const isServiceOrNonProduct =
+    product.isService === true ||
+    (productCode && (productCode.includes('UGS') || productCode.includes('Voucher') || productCode.includes('VOUCHER'))) ||
+    rawName.includes('холбуулах үйлчилгээ') ||
+    rawName.includes('суурилуулах үйлчилгээ') ||
+    rawName.includes('хүргэлтийн үйлчилгээ');
+
+  // 3. Validate existence of product-specific page
+  let isValidProductUrl = false;
+  let normalizedProductUrl = '';
+
+  if (!isServiceOrNonProduct && candidateUrl) {
+    // Check if candidate URL is an invalid placeholder or generic URL
+    const isInvalidPlaceholder =
+      candidateUrl.includes('/undefined') ||
+      candidateUrl.includes('/null') ||
+      candidateUrl.includes('[object') ||
+      candidateUrl.endsWith('/products/by-code/') ||
+      candidateUrl.endsWith('/products/') ||
+      candidateUrl.endsWith('/product/') ||
+      candidateUrl === baseUrl ||
+      candidateUrl === `${baseUrl}/` ||
+      candidateUrl === `${baseUrl}/products` ||
+      candidateUrl.includes('/categories/');
+
+    if (!isInvalidPlaceholder) {
+      let candidate = candidateUrl;
+      if (candidate.startsWith('/')) {
+        candidate = `${baseUrl}${candidate}`;
+      }
+      if (candidate.includes('/product/') && !candidate.includes('/products/')) {
+        candidate = candidate.replace('/product/', '/products/by-code/');
+      }
+      // Check that it's a valid BSB product route: https://bsb.mn/products/by-code/:code
+      if (/^https?:\/\/[^\s/]+\/products\/(by-code\/)?[^/\s]+/.test(candidate)) {
+        if (!candidate.includes('/products/by-code/')) {
+          candidate = candidate.replace('/products/', '/products/by-code/');
+        }
+        normalizedProductUrl = candidate;
+        isValidProductUrl = true;
+      }
+    }
+  }
+
+  // If candidateUrl was missing or invalid, check if we can safely resolve from a valid productCode
+  if (
+    !isValidProductUrl &&
+    !isServiceOrNonProduct &&
+    productCode &&
+    productCode.length >= 2 &&
+    !productCode.toLowerCase().includes('undefined')
+  ) {
+    normalizedProductUrl = `${baseUrl}/products/by-code/${encodeURIComponent(productCode)}`;
+    isValidProductUrl = true;
+  }
+
+  // 4. Return resolved URL: product-specific page if valid, otherwise fall back to category-level link
+  if (isValidProductUrl && normalizedProductUrl) {
+    return {
+      url: normalizedProductUrl,
+      isProductSpecific: true,
+      isCategoryFallback: false,
+      productUrl: normalizedProductUrl,
+      categoryUrl: resolvedCategoryUrl,
+      categoryName,
+      productName: product.name,
+      productCode,
+      label: 'Дэлгэрэнгүй үзэх',
+      markdownLink: `[Дэлгэрэнгүй үзэх](${normalizedProductUrl})`,
+      formattedLinkLine: `\n   🔗 Холбоос: ${normalizedProductUrl}`,
+    };
+  }
+
+  // Fallback: Product-specific page is missing! Fall back to category-level link.
+  return {
+    url: resolvedCategoryUrl,
+    isProductSpecific: false,
+    isCategoryFallback: true,
+    productUrl: undefined,
+    categoryUrl: resolvedCategoryUrl,
+    categoryName,
+    productName: product.name,
+    productCode,
+    label: `Ангилал: ${categoryName}`,
+    markdownLink: `[Ангилал: ${categoryName}](${resolvedCategoryUrl})`,
+    formattedLinkLine: `\n   📁 [Ангилал: ${categoryName}](${resolvedCategoryUrl})`,
+  };
+}
 
 export class MeiliProductService {
   private meiliUrl: string;
@@ -1700,9 +1890,27 @@ export class MeiliProductService {
       rawName.includes('үйлчилгээ') ||
       rawName.includes('холбуулах');
 
-    // Ensure official URL is explicitly provided from document or official BSB route
-    const rawDocUrl = typeof h.url === 'string' && h.url.trim() ? h.url.trim() : null;
-    const finalProductUrl = rawDocUrl || productUrl;
+    // Standardized URL resolution function: explicitly retrieves 'url', validates existence,
+    // and falls back to category-level link if the product-specific page is missing.
+    const resolvedUrl = resolveBsbProductUrl(
+      {
+        url: h.url,
+        productUrl,
+        code: productCode,
+        productCode,
+        name: rawName,
+        category: categoryName,
+        categorySlug,
+        categoryUrl,
+        isService,
+      },
+      {
+        fallbackCategoryUrl: categoryUrl,
+        fallbackCategoryName: categoryName,
+        categorySlug,
+        baseUrl,
+      }
+    );
 
     return {
       id: h.id || Number(h.objectID) || 0,
@@ -1712,9 +1920,11 @@ export class MeiliProductService {
       brand: brandName,
       category: categoryName,
       categorySlug,
-      categoryUrl,
-      url: finalProductUrl, // explicitly include the correct 'url' field from MeiliSearch document
-      productUrl: finalProductUrl,
+      categoryUrl: resolvedUrl.categoryUrl,
+      url: resolvedUrl.url, // standardized URL (validated product-specific page or category fallback)
+      productUrl: resolvedUrl.productUrl || resolvedUrl.url,
+      isProductSpecificUrl: resolvedUrl.isProductSpecific,
+      isCategoryFallbackUrl: resolvedUrl.isCategoryFallback,
       price: priceMnt,
       priceFormatted: priceMnt > 0 ? `${priceMnt.toLocaleString()}₮` : 'Үнэ тодруулах',
       originalPrice: originalPriceMnt,
@@ -1812,14 +2022,25 @@ export class MeiliProductService {
           details.push(`Урамшуулал/Бэлэг: ${p.promotionsSummary}`);
         }
 
-        // Explicitly format the official 'url' field from MeiliSearch document
-        if (cfg.includeProductLink !== false && p.url) {
-          details.push(`Барааны албан ёсны холбоос ('url' талбар): ${p.url}`);
+        // Explicitly format the official 'url' field from BSB product structure,
+        // validating its existence and falling back to a category-level link if missing.
+        const resolved = resolveBsbProductUrl(p, {
+          fallbackCategoryUrl: p.categoryUrl,
+          fallbackCategoryName: p.category,
+          categorySlug: p.categorySlug,
+        });
+
+        if (cfg.includeProductLink !== false) {
+          if (resolved.isProductSpecific) {
+            details.push(`Барааны албан ёсны холбоос ('url' талбар): ${resolved.url}`);
+          } else {
+            details.push(`Барааны хуудас байхгүй тул ангиллын албан ёсны холбоос ('url' талбар): ${resolved.url}`);
+          }
         }
 
-        if (cfg.includeCategoryLink !== false && p.categoryUrl) {
-          details.push(`Ангилал: ${p.category}`);
-          details.push(`Ангиллын албан ёсны холбоос ('categoryUrl' талбар): ${p.categoryUrl}`);
+        if (cfg.includeCategoryLink !== false && resolved.categoryUrl) {
+          details.push(`Ангилал: ${resolved.categoryName || p.category}`);
+          details.push(`Ангиллын албан ёсны холбоос ('categoryUrl' талбар): ${resolved.categoryUrl}`);
         }
 
         return `[Бараа #${idx + 1}]\n${details.join('\n')}`;
@@ -1917,8 +2138,13 @@ ${rules.join('\n')}
               (p.brand && p.brand !== '-' && lowerLabel.includes(p.brand.toLowerCase()))
           ) || products[0];
 
-        if (matched && matched.url) {
-          return `[${label}](${matched.url})`;
+        if (matched) {
+          const resolved = resolveBsbProductUrl(matched, {
+            fallbackCategoryUrl: matched.categoryUrl,
+            fallbackCategoryName: matched.category,
+            categorySlug: matched.categorySlug,
+          });
+          return `[${label}](${resolved.url})`;
         }
 
         return fullMatch;
@@ -1936,10 +2162,20 @@ ${rules.join('\n')}
           p.slug?.toLowerCase() === slugOrCode.toLowerCase()
       );
       if (found) {
-        return found.url || `https://bsb.mn/products/by-code/${found.productCode}`;
+        const resolved = resolveBsbProductUrl(found, {
+          fallbackCategoryUrl: found.categoryUrl,
+          fallbackCategoryName: found.category,
+          categorySlug: found.categorySlug,
+        });
+        return resolved.url;
       }
-      if (products.length > 0 && products[0].productCode) {
-        return products[0].url || `https://bsb.mn/products/by-code/${products[0].productCode}`;
+      if (products.length > 0) {
+        const resolvedFirst = resolveBsbProductUrl(products[0], {
+          fallbackCategoryUrl: products[0].categoryUrl,
+          fallbackCategoryName: products[0].category,
+          categorySlug: products[0].categorySlug,
+        });
+        return resolvedFirst.url;
       }
       return `https://bsb.mn/products/by-code/${slugOrCode}`;
     });
@@ -2014,6 +2250,14 @@ ${rules.join('\n')}
     }
 
     return text;
+  }
+
+  /**
+   * Standardized URL resolution function that checks BSB product structure,
+   * validates the 'url' field existence, and falls back to category-level link.
+   */
+  public resolveProductUrl(product: any, options?: ResolveProductUrlOptions): BsbResolvedUrl {
+    return resolveBsbProductUrl(product, options);
   }
 }
 

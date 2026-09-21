@@ -215,6 +215,32 @@ export async function crmUpdateLead(leadId: number, fields: { stageId?: string; 
   return await vibeRequest<any>('PATCH', `/v1/leads/${leadId}`, fields);
 }
 
+export async function crmUpdateDeal(dealId: number, fields: { stageId?: string; comments?: string; title?: string; amount?: number }) {
+  return await vibeRequest<any>('PATCH', `/v1/deals/${dealId}`, fields);
+}
+
+export async function crmCreateLead(payload: {
+  title: string;
+  name?: string;
+  phone?: string;
+  contactId?: number | null;
+  comments?: string;
+  statusId?: string;
+  isReturnCustomer?: boolean;
+  assignedById?: number | null;
+}) {
+  return await vibeRequest<any>('POST', '/v1/leads', {
+    title: payload.title,
+    ...(payload.name ? { name: payload.name } : {}),
+    ...(payload.phone ? { phone: payload.phone } : {}),
+    ...(payload.contactId ? { contactId: payload.contactId } : {}),
+    ...(payload.comments ? { comments: payload.comments } : {}),
+    ...(payload.statusId ? { stageId: payload.statusId, statusId: payload.statusId } : {}),
+    ...(payload.isReturnCustomer !== undefined ? { isReturnCustomer: payload.isReturnCustomer } : {}),
+    ...(payload.assignedById ? { assignedById: payload.assignedById } : {}),
+  });
+}
+
 export async function crmGetLead(leadId: number) {
   return await vibeRequest<any>('GET', `/v1/leads/${leadId}`);
 }
@@ -223,6 +249,37 @@ export async function crmGetDeal(dealId: number) {
   return await vibeRequest<any>('GET', `/v1/deals/${dealId}`);
 }
 
+export async function crmGetContact(contactId: number) {
+  return await vibeRequest<any>('GET', `/v1/contacts/${contactId}`);
+}
+
+export async function crmSearchContacts(query: { phone?: string; name?: string; limit?: number }) {
+  let path = `/v1/contacts?limit=${query.limit || 10}`;
+  if (query.phone) path += `&filter[phone]=${encodeURIComponent(query.phone)}`;
+  if (query.name) path += `&filter[name]=${encodeURIComponent(query.name)}`;
+  return await vibeRequest<any[]>('GET', path);
+}
+
+export async function crmCreateContact(payload: {
+  name: string;
+  phone?: string;
+  email?: string;
+  comments?: string;
+  sourceId?: string;
+  originId?: string;
+}) {
+  return await vibeRequest<any>('POST', '/v1/contacts', payload);
+}
+
+export async function crmGetLeadsByContact(contactId: number) {
+  return await vibeRequest<any[]>('GET', `/v1/leads?filter[contactId]=${contactId}&limit=20`);
+}
+
+export async function crmGetDealsByContact(contactId: number) {
+  return await vibeRequest<any[]>('GET', `/v1/deals?filter[contactId]=${contactId}&limit=20`);
+}
+
 export async function crmGetStatuses(entityId: 'STATUS' | 'DEAL_STAGE') {
   return await vibeRequest<any[]>('GET', `/v1/statuses?filter[entityId]=${entityId}`);
 }
+

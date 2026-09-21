@@ -46,6 +46,45 @@ export interface BotConfig {
   meiliUrl?: string;
   meiliIndex?: string;
   productConfig?: ProductDisplayConfig;
+  crmMode?: 'classic' | 'simple'; // 'classic': creates Repeat Lead, 'simple': creates Repeat Deal
+  sessionContextRuleEnabled?: boolean;
+}
+
+export interface CrmContextResolution {
+  state: 'ACTIVE_LEAD' | 'ACTIVE_DEAL' | 'REPEAT_CUSTOMER' | 'UNKNOWN';
+  contactId: number | null;
+  contactName: string;
+  socialId?: string;
+  phone?: string;
+  activeLead?: {
+    id: number;
+    title: string;
+    stageId?: string;
+    statusId?: string;
+    comments?: string;
+    assignedById?: number | null;
+  } | null;
+  activeDeal?: {
+    id: number;
+    title: string;
+    stageId?: string;
+    amount?: number;
+    assignedById?: number | null;
+    dealOwnerName?: string;
+    comments?: string;
+  } | null;
+  isRepeatCustomer: boolean;
+  repeatEntityCreated?: {
+    type: 'lead' | 'deal';
+    id: number;
+    title: string;
+  } | null;
+  assignedCrmId: string;
+  toneDirective: string;
+  resolutionRuleApplied: string;
+  welcomeGreeting?: string;
+  resolvedAt: string;
+  details: string;
 }
 
 export interface AiSessionState {
@@ -102,6 +141,22 @@ export interface BsbProduct {
   promotionsSummary?: string;
   siteRemainsSummary?: string;
   isService?: boolean;
+  isProductSpecificUrl?: boolean;
+  isCategoryFallbackUrl?: boolean;
+}
+
+export interface BsbResolvedUrl {
+  url: string;
+  isProductSpecific: boolean;
+  isCategoryFallback: boolean;
+  productUrl?: string;
+  categoryUrl: string;
+  categoryName: string;
+  productName?: string;
+  productCode?: string;
+  label: string;
+  markdownLink: string;
+  formattedLinkLine: string;
 }
 
 export interface BsbProductTerm {
@@ -250,6 +305,9 @@ export interface CustomerProfile {
   city?: string;
   address?: string;
   crmLeadId?: string;
+  contactId?: number | null;
+  socialId?: string;
+  isRepeatCustomer?: boolean;
   totalOrders?: number;
   lastOrderDate?: string;
   tags?: string[];
@@ -259,6 +317,7 @@ export interface ChatDialog {
   id: string;
   dialogId: string;
   customer: CustomerProfile;
+  crmContext?: CrmContextResolution;
   channelId: number | string;
   channelName: string;
   channelType: 'facebook' | 'instagram' | 'telegram' | 'whatsapp' | 'webchat';

@@ -1,0 +1,184 @@
+{
+  "version": "1.0",
+  "updatedAt": "2026-09-21T08:22:46.215Z",
+  "contacts": [
+    {
+      "id": 686300,
+      "name": "Батзориг",
+      "phone": "99112233",
+      "closedLeadsCount": 0,
+      "closedDealsCount": 0,
+      "updatedAt": "2026-09-21T08:20:53.818Z",
+      "isRepeatCustomer": true,
+      "activeLeadId": 68845,
+      "activeDealId": null,
+      "lastMessageAttachedAt": "2026-09-21T08:20:53.818Z"
+    },
+    {
+      "id": 68269,
+      "name": "НАСАНДОЛГОР",
+      "phone": "88114455",
+      "closedLeadsCount": 0,
+      "closedDealsCount": 0,
+      "updatedAt": "2026-09-21T08:20:54.834Z",
+      "activeLead": {
+        "id": 101,
+        "title": "iPhone 16 лавласан",
+        "stageId": "NEW",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": true,
+      "activeLeadId": 101,
+      "activeDealId": null,
+      "lastMessageAttachedAt": "2026-09-21T08:20:54.834Z"
+    },
+    {
+      "id": 686302,
+      "name": "Төгөлдөр",
+      "phone": "88223344",
+      "closedLeadsCount": 0,
+      "closedDealsCount": 0,
+      "updatedAt": "2026-09-21T08:20:55.753Z",
+      "activeLead": null,
+      "activeDeal": {
+        "id": 202,
+        "title": "MacBook Pro захиалга",
+        "stageId": "EXECUTING",
+        "dealOwnerName": "Болд (Менежер)"
+      },
+      "isRepeatCustomer": true,
+      "activeLeadId": 66025,
+      "activeDealId": null,
+      "lastMessageAttachedAt": "2026-09-21T08:20:55.753Z"
+    },
+    {
+      "id": 686304,
+      "name": "Шинэ Хэрэглэгч",
+      "phone": "28582756",
+      "closedLeadsCount": 0,
+      "closedDealsCount": 0,
+      "updatedAt": "2026-09-21T08:21:32.613Z",
+      "isRepeatCustomer": true,
+      "activeLeadId": null,
+      "activeDealId": 2382,
+      "lastMessageAttachedAt": "2026-09-21T08:21:25.240Z",
+      "activeLead": null,
+      "activeDeal": null
+    },
+    {
+      "id": 655121,
+      "name": "САЙХАНБАЯР",
+      "phone": "99223344",
+      "closedLeadsCount": 0,
+      "closedDealsCount": 0,
+      "updatedAt": "2026-09-21T08:22:46.197Z",
+      "isRepeatCustomer": true,
+      "activeLeadId": 66313,
+      "activeDealId": null,
+      "lastMessageAttachedAt": "2026-09-21T08:22:46.197Z"
+    }
+  ],
+  "dialogContexts": {
+    "test-dialog-1": {
+      "state": "ACTIVE_LEAD",
+      "contactId": 686300,
+      "contactName": "Батзориг",
+      "phone": "99112233",
+      "activeLead": {
+        "id": 68845,
+        "title": "Active Lead #68845",
+        "stageId": "IN_PROCESS",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": false,
+      "repeatEntityCreated": null,
+      "assignedCrmId": "LEAD-68845",
+      "toneDirective": "Continue previous qualification",
+      "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
+      "resolvedAt": "2026-09-21T08:20:53.818Z",
+      "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-68845) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
+    },
+    "test-dialog-2": {
+      "state": "ACTIVE_LEAD",
+      "contactId": 68269,
+      "contactName": "НАСАНДОЛГОР",
+      "phone": "88114455",
+      "activeLead": {
+        "id": 101,
+        "title": "iPhone 16 лавласан",
+        "stageId": "NEW",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": false,
+      "repeatEntityCreated": null,
+      "assignedCrmId": "LEAD-101",
+      "toneDirective": "Continue previous qualification",
+      "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
+      "resolvedAt": "2026-09-21T08:20:54.834Z",
+      "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-101) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
+    },
+    "test-dialog-3": {
+      "state": "ACTIVE_LEAD",
+      "contactId": 686302,
+      "contactName": "Төгөлдөр",
+      "phone": "88223344",
+      "activeLead": {
+        "id": 66025,
+        "title": "Active Lead #66025",
+        "stageId": "IN_PROCESS",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": false,
+      "repeatEntityCreated": null,
+      "assignedCrmId": "LEAD-66025",
+      "toneDirective": "Continue previous qualification",
+      "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
+      "resolvedAt": "2026-09-21T08:20:55.753Z",
+      "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-66025) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
+    },
+    "fresh-chat-28582756": {
+      "state": "REPEAT_CUSTOMER",
+      "contactId": 686304,
+      "contactName": "Шинэ Хэрэглэгч",
+      "phone": "28582756",
+      "activeLead": null,
+      "activeDeal": null,
+      "isRepeatCustomer": true,
+      "repeatEntityCreated": {
+        "type": "deal",
+        "id": 2382,
+        "title": "Repeat Deal: Шинэ Хэрэглэгч"
+      },
+      "assignedCrmId": "DEAL-2382",
+      "toneDirective": "Do NOT ask basic identity questions. Acknowledge return: \"Welcome back! How can we assist you today?\"",
+      "resolutionRuleApplied": "Treat as REPEAT customer. Create \"Repeat Deal\" (in Simple CRM). Do NOT ask basic identity questions. Acknowledge return: \"Welcome back! How can we assist you today?\"",
+      "welcomeGreeting": "Тавтай морилно уу! Танд өнөөдөр хэрхэн туслах вэ?",
+      "resolvedAt": "2026-09-21T08:21:32.613Z",
+      "details": "Бүх өмнөх Lead/Deal хаагдсан эсвэл идэвхтэй бичиглэлгүй тул ДАВТАН ХАРИЛЦАГЧААР тооцов. Repeat Deal үүсгэгдсэн (#2382). Харилцагчаас нэр, утас гэх мэт анхан шатны мэдээллийг асуухгүй, 'Тавтай морилно уу! Танд өнөөдөр хэрхэн туслах вэ?' гэж угтана."
+    },
+    "verify-api-dialog": {
+      "state": "ACTIVE_LEAD",
+      "contactId": 655121,
+      "contactName": "САЙХАНБАЯР",
+      "phone": "99223344",
+      "activeLead": {
+        "id": 66313,
+        "title": "Active Lead #66313",
+        "stageId": "IN_PROCESS",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": false,
+      "repeatEntityCreated": null,
+      "assignedCrmId": "LEAD-66313",
+      "toneDirective": "Continue previous qualification",
+      "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
+      "resolvedAt": "2026-09-21T08:22:46.197Z",
+      "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-66313) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
+    }
+  }
+}

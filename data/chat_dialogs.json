@@ -1,5 +1,549 @@
 [
   {
+    "id": "chat-78600",
+    "dialogId": "chat78600",
+    "customer": {
+      "name": "Guest",
+      "tags": [
+        "LIVECHAT",
+        "Битрикс24 Live"
+      ],
+      "crmLeadId": "LEAD-60112"
+    },
+    "channelId": 1,
+    "channelName": "Бидэнтэй чатлаарай! BSB.mn",
+    "channelType": "webchat",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Онлайн дээр байгаа барааг өөрсдөө очоод хүргэлт хийлгэхгүй авах боломжтой юу? Энэ хямдрал нь дэлгүүр дээр байгаа юу?",
+    "lastMessageTime": "2026-09-21T11:03:21+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-21T11:03:21+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1123574",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #21128 started",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123576",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Data received:",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123578",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123580",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Онлайн дээр байгаа барааг өөрсдөө очоод хүргэлт хийлгэхгүй авах боломжтой юу? Энэ хямдрал нь дэлгүүр дээр байгаа юу?",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123582",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123586",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-21T11:03:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123594",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form completed: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-21T11:03:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123596",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "New contact created",
+        "timestamp": "2026-09-21T11:03:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123598",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-21T11:03:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123632",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-21T11:14:20+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-78584",
+    "dialogId": "chat78584",
+    "customer": {
+      "name": "Nomin Nomin",
+      "crmLeadId": "LEAD-60096",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 11,
+    "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Electrolux Z1230 Z1231 filter",
+    "lastMessageTime": "2026-09-21T10:48:19+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-21T10:47:57+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1123448",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #21124 started",
+        "timestamp": "2026-09-21T10:47:57+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123450",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-21T10:47:57+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123452",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-21T10:47:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123454",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T10:47:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123456",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "Get started",
+        "timestamp": "2026-09-21T10:47:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123458",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-21T10:47:58+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123460",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "",
+        "timestamp": "2026-09-21T10:48:01+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123462",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "hi",
+        "timestamp": "2026-09-21T10:48:02+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123468",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "",
+        "timestamp": "2026-09-21T10:48:17+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123470",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "filter bga yu",
+        "timestamp": "2026-09-21T10:48:17+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123472",
+        "sender": "customer",
+        "senderName": "Nomin Nomin",
+        "text": "Electrolux Z1230 Z1231 filter",
+        "timestamp": "2026-09-21T10:48:19+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-78564",
+    "dialogId": "chat78564",
+    "customer": {
+      "name": "Davaajav Nanjid",
+      "crmLeadId": "LEAD-60086",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 11,
+    "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "125",
+    "assignedAgentName": "Оператор #125",
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Yum asyyya",
+    "lastMessageTime": "2026-09-21T10:47:46+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 0,
+    "createdAt": "2026-09-21T10:33:41+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1123380",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-21T10:33:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123382",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T10:33:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123384",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Hi",
+        "timestamp": "2026-09-21T10:33:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123386",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-21T10:33:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123388",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Zaxialga uguh",
+        "timestamp": "2026-09-21T10:33:45+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123390",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:33:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123392",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:33:47+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123394",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Zurag ilgeesen",
+        "timestamp": "2026-09-21T10:33:48+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123408",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:38:49+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123410",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:38:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123412",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Tuning Zaxialga Odoo",
+        "timestamp": "2026-09-21T10:38:50+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123414",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Odoo Zaxialga xiine",
+        "timestamp": "2026-09-21T10:38:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123416",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Turiin bank xaan bank",
+        "timestamp": "2026-09-21T10:38:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123418",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Xediig shilj bilee",
+        "timestamp": "2026-09-21T10:38:52+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123432",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Xediig shiljyylexeer  bna",
+        "timestamp": "2026-09-21T10:43:19+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123436",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Nomi N picked conversation",
+        "timestamp": "2026-09-21T10:44:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123446",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "Yum asyyya",
+        "timestamp": "2026-09-21T10:47:46+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123466",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:48:09+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123478",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T10:49:07+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123564",
+        "sender": "customer",
+        "senderName": "Davaajav Nanjid",
+        "text": "",
+        "timestamp": "2026-09-21T11:01:31+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
+    "id": "chat-78536",
+    "dialogId": "chat78536",
+    "customer": {
+      "name": "Эрдэнэбилэг Энхбаяр",
+      "crmLeadId": "LEAD-60070",
+      "tags": [
+        "FACEBOOK",
+        "Битрикс24 Live"
+      ]
+    },
+    "channelId": 31,
+    "channelName": "БСБ Мебель - Facebook - Messenger",
+    "channelType": "facebook",
+    "status": "in_progress",
+    "priority": "normal",
+    "assignedAgentId": "4605",
+    "assignedAgentName": "Энхзаяа А.",
+    "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/20021/ff58db95aecdfa09ae61b51b5fd8f63f/main/394/39416f428f082fbe895b4998711540df/avatar.png",
+    "lastMessageText": "95648130",
+    "lastMessageTime": "2026-09-21T10:06:10+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 0,
+    "createdAt": "2026-09-21T10:04:33+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1123234",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #21120 started",
+        "timestamp": "2026-09-21T10:04:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123236",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This Open Channel limits agent's response time. Learn more in this article.",
+        "timestamp": "2026-09-21T10:04:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123238",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-21T10:04:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123240",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T10:04:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123242",
+        "sender": "customer",
+        "senderName": "Эрдэнэбилэг Энхбаяр",
+        "text": "",
+        "timestamp": "2026-09-21T10:04:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123244",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу? Та Монголын хамгийн том тавилгын их дэлгүүр БСБ Мебель-тэй холбогдлоо.",
+        "timestamp": "2026-09-21T10:04:35+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123246",
+        "sender": "customer",
+        "senderName": "Эрдэнэбилэг Энхбаяр",
+        "text": "Энэ зочны унтлагын тавилгууд комоор хэд үү",
+        "timestamp": "2026-09-21T10:04:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123254",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Энхзаяа А. picked conversation",
+        "timestamp": "2026-09-21T10:04:53+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123256",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "hi",
+        "timestamp": "2026-09-21T10:04:55+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123260",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "Сайн байна уу? \nХотын төвд хамгийн өргөн сонголттой ТБД Андуудын замын эсрэг талд \"БСБ ЛАЙФСТАЙЛ\" салбар 99035283 дэлгэрэнгүй мэдээлэл аваарай \nСонголт их төв зам дагуу түгжрэл байхгүй том зогсоолтой урьдчилгаагүй хүүгүй лизингийн нөхцөлтэй. Манай салбарыг сонгон үйлчлүүлээрэй баярлалаа ☺️",
+        "timestamp": "2026-09-21T10:05:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123264",
+        "sender": "agent",
+        "senderName": "Энхзаяа А.",
+        "text": "та дугаараа үлдээнэ үү?",
+        "timestamp": "2026-09-21T10:05:31+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123266",
+        "sender": "customer",
+        "senderName": "Эрдэнэбилэг Энхбаяр",
+        "text": "95648130",
+        "timestamp": "2026-09-21T10:06:10+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123268",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the lead",
+        "timestamp": "2026-09-21T10:06:10+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
     "id": "chat-78466",
     "dialogId": "chat78466",
     "customer": {
@@ -236,99 +780,20 @@
     "channelId": 1,
     "channelName": "Бидэнтэй чатлаарай! BSB.mn",
     "channelType": "webchat",
-    "status": "bot",
+    "status": "closed",
     "priority": "normal",
     "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/2027/ff58db95aecdfa09ae61b51b5fd8f63f/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-    "lastMessageText": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [YI SHENG-607B-3S Буйдан 184 см](https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1)\n   • Үнэ: 1,499,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн урт: 180-189 см | Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: 3 хүний суудалтай | Оффис буйдангийн материал: арьсан\n\n2. [YI SHENG-607B-1S Кресло](https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1)\n   • Үнэ: 749,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\n3. [YI SHENG-623-1S Кресло](https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1)\n   • Үнэ: 729,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Арьсан буйдан](https://bsb.mn/categories/code_1437/arsan-buidan)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
-    "lastMessageTime": "2026-09-21T09:19:28+03:00",
+    "lastMessageText": "Сайн байна уу? БСБ-ын хөргөгч, хөлдөөгчийн сонголттой танилцуулъя.\n\nОдоогоор бидэнд дараах загварууд бэлэн байгаа бөгөөд үнэ болон техникийн үзүүлэлтүүд нь эдгээс хамаарна:\n\n1. **Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/**\n   * Үнэ: 7,499,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0)\n\n2. **ANTUNCLE CF-FCR30 Машины хөргөгч 30л**\n   * Үнэ: 1,099,900₮ (31% хямдарсан)\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ANTU-CF-FCR30)\n\n3. **LG-GC-Q257CAFV LG Side by side 647л**\n   * Үнэ: 4,699,900₮ (24% хямдарсан)\n   * Үзүүлэлт: Нийт багтаамж: 628литр | Өндөр: 180см\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-Q257CAFV)\n\n4. **AEG Хөргөгч 242л OSC-6M199ES**\n   * Үнэ: 7,599,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/AEG-OSC-6M199ES)\n\n📁 [Ангилал: Хөргөгч, хөлдөөгч](https://bsb.mn/categories/ref_freezer)",
+    "lastMessageTime": "2026-09-21T10:03:18+03:00",
     "lastMessageSender": "bot",
     "unreadCount": 0,
     "createdAt": "2026-09-21T08:47:15+03:00",
+    "closedAt": "2026-09-21T11:03:20+03:00",
     "botActive": true,
     "botConnectedAt": "2026-09-21T05:48:00.857Z",
     "messages": [
-      {
-        "id": "bx-1122820",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Conversation #21112 started",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122822",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Data received:",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122824",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122826",
-        "sender": "customer",
-        "senderName": "Guest",
-        "text": "hi",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122828",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122832",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
-        "timestamp": "2026-09-21T08:47:15+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122836",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч picked conversation",
-        "timestamp": "2026-09-21T08:47:38+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122838",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "hi",
-        "timestamp": "2026-09-21T08:47:51+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122844",
-        "sender": "customer",
-        "senderName": "Guest",
-        "text": "hi",
-        "timestamp": "2026-09-21T08:47:56+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1122846",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-21T08:48:05+03:00",
-        "status": "delivered"
-      },
       {
         "id": "bx-1122850",
         "sender": "customer",
@@ -456,8 +921,43 @@
         "text": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [YI SHENG-607B-3S Буйдан 184 см](https://bsb.mn/products/by-code/YISH-607B-3S-PUBLACK-B1)\n   • Үнэ: 1,499,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн урт: 180-189 см | Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: 3 хүний суудалтай | Оффис буйдангийн материал: арьсан\n\n2. [YI SHENG-607B-1S Кресло](https://bsb.mn/products/by-code/YISH-607B-1S-PUBLACK-B1)\n   • Үнэ: 749,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\n3. [YI SHENG-623-1S Кресло](https://bsb.mn/products/by-code/YISH-623B-1S-PUBLACK-B1)\n   • Үнэ: 729,900₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Оффис буйдангийн өнгө: хар | Оффис буйдангийн төрөл: кресло | Оффис буйдангийн материал: арьсан\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Арьсан буйдан](https://bsb.mn/categories/code_1437/arsan-buidan)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
         "timestamp": "2026-09-21T09:19:28+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1123198",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "ugaalgin mashin",
+        "timestamp": "2026-09-21T09:54:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123216",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "test",
+        "timestamp": "2026-09-21T10:00:26+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123224",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? БСБ-ын хөргөгч, хөлдөөгчийн сонголттой танилцуулъя.\n\nОдоогоор бидэнд дараах загварууд бэлэн байгаа бөгөөд үнэ болон техникийн үзүүлэлтүүд нь эдгээс хамаарна:\n\n1. **Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/**\n   * Үнэ: 7,499,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0)\n\n2. **ANTUNCLE CF-FCR30 Машины хөргөгч 30л**\n   * Үнэ: 1,099,900₮ (31% хямдарсан)\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/ANTU-CF-FCR30)\n\n3. **LG-GC-Q257CAFV LG Side by side 647л**\n   * Үнэ: 4,699,900₮ (24% хямдарсан)\n   * Үзүүлэлт: Нийт багтаамж: 628литр | Өндөр: 180см\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-Q257CAFV)\n\n4. **AEG Хөргөгч 242л OSC-6M199ES**\n   * Үнэ: 7,599,900₮\n   * Төлөв: БЭЛЭН БАЙГАА\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/AEG-OSC-6M199ES)\n\n📁 [Ангилал: Хөргөгч, хөлдөөгч](https://bsb.mn/categories/ref_freezer)",
+        "timestamp": "2026-09-21T10:03:18+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123570",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Session closed automatically",
+        "timestamp": "2026-09-21T11:03:20+03:00",
+        "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв.",
+    "closedByAgentId": "15",
+    "closedByAgentName": "Цогтгэрэл Ч"
   },
   {
     "id": "chat-78400",
@@ -12812,7 +13312,7 @@
     "dialogId": "chat8049",
     "customer": {
       "name": "Linos Noto",
-      "crmLeadId": "DEAL-1727",
+      "crmLeadId": "LEAD-60102",
       "tags": [
         "FACEBOOK",
         "Битрикс24 Live"
@@ -12821,205 +13321,192 @@
     "channelId": 11,
     "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
     "channelType": "facebook",
-    "status": "bot",
+    "status": "closed",
     "priority": "normal",
     "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/2027/ff58db95aecdfa09ae61b51b5fd8f63f/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-    "lastMessageText": "Сайн байна уу! БСБ-аас танд зориулж бэлэн байгаа угаалгын машины зарим загваруудыг танилцуулж байна.\n\nТа дараах загваруудыг сонирхож болох юм:\n\n1. **[LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W](https://bsb.mn/products/by-code/LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (17% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (BSBWHS салбарт 75 ширхэг)\n   - **Үзүүлэлт:** Угаах жин 9.0кг\n   - **Баталгаа:** 12 сар\n\n2. **[VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг](https://bsb.mn/products/by-code/VEST-WB8B14T3DS)**\n   - **Үнэ:** 1,249,900₮ (19% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (ELBMOL, CORWHS, CEPAMR салбаруудад)\n   - **Үзүүлэлт:** Угаах жин 8.0кг, Усаа халаадаг, Хэмжээ: 60x60x60см\n   - **Баталгаа:** 12 сар\n\n*Санамж: Electrolux-ийн хатаагчтай холбогч болон Panasonic-ийн 12.5кг загвар одоогоор нөөц түр дууссан байна.*\n\nИлүү олон загвар харах бол:\n[Ангилал: Урдаа хаалгатай угаалгын машин](https://bsb.mn/categories/wm_front_door)",
-    "lastMessageTime": "2026-09-21T09:33:37+03:00",
+    "lastMessageText": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+    "lastMessageTime": "2026-09-21T10:59:34+03:00",
     "lastMessageSender": "bot",
     "unreadCount": 0,
-    "createdAt": "2026-09-21T09:20:02+03:00",
-    "reopenedAt": "2026-09-21T06:20:35.675Z",
+    "createdAt": "2026-09-21T10:59:27+03:00",
+    "closedAt": "2026-09-21T10:58:20+03:00",
     "botActive": true,
-    "botConnectedAt": "2026-09-21T06:20:38.649Z",
+    "botConnectedAt": "2026-09-21T06:53:48.582Z",
     "messages": [
       {
-        "id": "bx-1117796",
+        "id": "bx-1123258",
         "sender": "bot",
         "senderName": "BSB AI Туслах",
-        "text": "Сайн байна уу! Танд юугаар туслах вэ?",
-        "timestamp": "2026-09-18T07:11:23+03:00",
+        "text": "Сайн байна уу? БСБ-аас таны сонирхсон угаалгын машины сонголтуудыг танилцуулж байна.\n\nОдоогоор манай санд дараах загварууд бэлэн байгаа:\n\n1. **LG 11кг LG-F4V3ES6S Бүрэн автомат угаалгын машин**\n   - Үнэ: 1,699,900₮ (15% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-F4V3ES6S)\n\n2. **LG 11кг LG-TW4V7EB1W Бүрэн автомат угаалгын машин**\n   - Үнэ: 1,899,900₮ (21% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V7EB1W)\n\n3. **Panasonic 9кг PANA-NA-V90FC1WSG Бүрэн автомат угаалгын машин хатаагчтай**\n   - Үнэ: 2,599,900₮ (13% хямдарсан)\n   - Үзүүлэлт: Угаах жин 9.0кг, Хатаагчтай, Усаа халаадаг, Хэмжээ: 60x60см\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/PANA-NA-V90FC1WSG)\n\n4. **LG 11кг/7кг LG-TW4V5EG2S Бүрэн автомат хатаагчтай угаалгын машин**\n   - Үнэ: 2,599,900₮ (13% хямдарсан)\n   - Үзүүлэлт: Угаах жин 11кг / Хатаах жин 7кг, Баталгаа 12 сар\n   - Төлөв: Бэлэн байгаа\n   🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-TW4V5EG2S)\n\n📁 [Ангилал: Угаалгын машин](https://bsb.mn/categories/washing_machine)",
+        "timestamp": "2026-09-21T10:05:02+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1117800",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
+        "id": "bx-1123498",
+        "sender": "customer",
+        "senderName": "Linos Noto",
         "text": "hi",
-        "timestamp": "2026-09-18T07:11:50+03:00",
+        "timestamp": "2026-09-21T10:53:28+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1117802",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-18T07:12:01+03:00",
+        "id": "bx-1123500",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+        "timestamp": "2026-09-21T10:53:30+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1117804",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-18T07:12:31+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1117806",
+        "id": "bx-1123502",
         "sender": "agent",
         "senderName": "Цогтгэрэл Ч",
-        "text": "linos",
-        "timestamp": "2026-09-18T07:13:12+03:00",
+        "text": "hello",
+        "timestamp": "2026-09-21T10:53:42+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1117810",
-        "sender": "agent",
-        "senderName": "Цогтгэрэл Ч",
-        "text": "linos",
-        "timestamp": "2026-09-18T07:13:30+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1117812",
+        "id": "bx-1123504",
         "sender": "agent",
         "senderName": "Цогтгэрэл Ч",
         "text": "test",
-        "timestamp": "2026-09-18T07:13:32+03:00",
+        "timestamp": "2026-09-21T10:53:47+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1118354",
+        "id": "bx-1123506",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "Сайн байна уу! БСБ онлайн харилцагчийн үйлчилгээний төвтэй холбогдсонд баярлалаа. Танд ямар бараа, үйлчилгээгээр туслах вэ?",
+        "timestamp": "2026-09-21T10:54:16+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123508",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "Би таны асуусан барааны үлдэгдэл болон дэлгэрэнгүй мэдээллийг системээс шалгаж байна. Түр хүлээнэ үү...",
+        "timestamp": "2026-09-21T10:54:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123510",
+        "sender": "agent",
+        "senderName": "Цогтгэрэл Ч",
+        "text": "Хүлээн авагч: \"БСБ Электроникс\" ХХК\nБанк: ХААН БАНК\nДансны дугаар: 5000000000\nГүйлгээний утга: [Таны утасны дугаар, захиалгын дугаар]",
+        "timestamp": "2026-09-21T10:54:25+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123524",
         "sender": "system",
         "senderName": "Систем",
-        "text": "Session closed automatically",
-        "timestamp": "2026-09-18T11:14:11+03:00",
+        "text": "Бидэнтэй хамт байсанд баярлалаа. Танд амжилт хүсье!",
+        "timestamp": "2026-09-21T10:57:42+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123036",
+        "id": "bx-1123528",
         "sender": "system",
         "senderName": "Систем",
-        "text": "Conversation #21118 started",
-        "timestamp": "2026-09-21T09:20:02+03:00",
+        "text": "Conversation closed.",
+        "timestamp": "2026-09-21T10:58:20+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123038",
+        "id": "bx-1123534",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #21126 started",
+        "timestamp": "2026-09-21T10:59:27+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1123536",
         "sender": "system",
         "senderName": "Систем",
         "text": "This Open Channel limits agent's response time. Learn more in this article.",
-        "timestamp": "2026-09-21T09:20:02+03:00",
+        "timestamp": "2026-09-21T10:59:27+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123040",
+        "id": "bx-1123538",
         "sender": "system",
         "senderName": "Систем",
-        "text": "Deal attached to conversation",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "text": "A new lead was created",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123042",
+        "id": "bx-1123540",
         "sender": "system",
         "senderName": "Систем",
         "text": "Order attached to chat",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123044",
+        "id": "bx-1123542",
         "sender": "system",
         "senderName": "Систем",
         "text": "Contact information saved to the contact",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123046",
+        "id": "bx-1123544",
         "sender": "system",
         "senderName": "Систем",
         "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123048",
+        "id": "bx-1123546",
         "sender": "customer",
         "senderName": "Linos Noto",
         "text": "hi",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123050",
+        "id": "bx-1123548",
         "sender": "system",
         "senderName": "Систем",
         "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
-        "timestamp": "2026-09-21T09:20:04+03:00",
+        "timestamp": "2026-09-21T10:59:29+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123052",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "hi",
-        "timestamp": "2026-09-21T09:20:53+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1123054",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "ugaalgin mashin",
-        "timestamp": "2026-09-21T09:21:21+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1123058",
+        "id": "bx-1123550",
         "sender": "system",
         "senderName": "Систем",
         "text": "Цогтгэрэл Ч picked conversation",
-        "timestamp": "2026-09-21T09:21:27+03:00",
+        "timestamp": "2026-09-21T10:59:33+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123060",
+        "id": "bx-1123552",
         "sender": "system",
         "senderName": "Систем",
         "text": "Цогтгэрэл Ч invited BSB AI Assistant to chat.",
-        "timestamp": "2026-09-21T09:21:28+03:00",
+        "timestamp": "2026-09-21T10:59:33+03:00",
         "status": "delivered"
       },
       {
-        "id": "bx-1123062",
+        "id": "bx-1123554",
         "sender": "bot",
         "senderName": "BSB AI Туслах",
-        "text": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. [BRW- Орны тумбочка /BRW-LOKSA-KOM1S/](https://bsb.mn/products/by-code/BRW-LOKSA-KOM1S-PA-GROA_B1)\n   • Үнэ: 501,415₮ (Бэлэн байгаа)\n   • Үзүүлэлт: Тавилгын өнгө: цагаан\n\n2. [WOJCIK- Ор 140см /WOJC-ANGE-TYP91-WH-CR_B3/](https://bsb.mn/products/by-code/WOJC-ANGE-TYP91-WH-CR_B3_BURDEL)\n   • Үнэ: 2,238,515₮ (Бэлэн байгаа)\n\n3. [WOJCIK-Avanti-AVAK13 орны тумбочка](https://bsb.mn/products/by-code/WOJC-AVAN-AVAK13-WHITE_B1)\n   • Үнэ: 729,900₮ (Нөөц түр дууссан)\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Орны тумбочка](https://bsb.mn/categories/code_23/bukh-tavilga/orny-tumbochka)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
-        "timestamp": "2026-09-21T09:21:29+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1123074",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "угаалгын машин",
-        "timestamp": "2026-09-21T09:33:24+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1123076",
-        "sender": "bot",
-        "senderName": "BSB AI Туслах",
-        "text": "Сайн байна уу! БСБ-аас танд зориулж бэлэн байгаа угаалгын машины зарим загваруудыг танилцуулж байна.\n\nТа дараах загваруудыг сонирхож болох юм:\n\n1. **[LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W](https://bsb.mn/products/by-code/LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (17% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (BSBWHS салбарт 75 ширхэг)\n   - **Үзүүлэлт:** Угаах жин 9.0кг\n   - **Баталгаа:** 12 сар\n\n2. **[VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг](https://bsb.mn/products/by-code/VEST-WB8B14T3DS)**\n   - **Үнэ:** 1,249,900₮ (19% хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (ELBMOL, CORWHS, CEPAMR салбаруудад)\n   - **Үзүүлэлт:** Угаах жин 8.0кг, Усаа халаадаг, Хэмжээ: 60x60x60см\n   - **Баталгаа:** 12 сар\n\n*Санамж: Electrolux-ийн хатаагчтай холбогч болон Panasonic-ийн 12.5кг загвар одоогоор нөөц түр дууссан байна.*\n\nИлүү олон загвар харах бол:\n[Ангилал: Урдаа хаалгатай угаалгын машин](https://bsb.mn/categories/wm_front_door)",
-        "timestamp": "2026-09-21T09:33:37+03:00",
+        "text": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+        "timestamp": "2026-09-21T10:59:34+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв.",
+    "closedByAgentId": "15",
+    "closedByAgentName": "Цогтгэрэл Ч"
   },
   {
     "id": "chat-76622",

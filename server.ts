@@ -35,6 +35,7 @@ import { bitrixOpenlinesSync } from './server/bitrixOpenlinesSync';
 import { inquiryAnalyticsService } from './server/inquiryAnalyticsService';
 import { typingManager } from './server/typingManager';
 import { meiliProductService } from './server/meiliProductService';
+import { crmContextResolver } from './server/crmContextResolver';
 
 // .env файлын тохиргоог ачааллах
 dotenv.config();
@@ -394,6 +395,22 @@ async function startServer() {
           config: activeConfig,
         },
       });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/products/resolve-url
+   * Standardized URL resolution endpoint: checks specific BSB product structure,
+   * explicitly retrieves 'url', validates existence of product-specific page,
+   * and falls back to category-level link if missing.
+   */
+  app.post('/api/products/resolve-url', (req, res) => {
+    try {
+      const { product, options } = req.body || {};
+      const resolved = meiliProductService.resolveProductUrl(product, options);
+      res.json({ success: true, data: resolved });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
@@ -1831,6 +1848,77 @@ async function startServer() {
           dealStages: defaultDealStages,
         },
       });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/crm/session-context/:dialogId
+   * Чат сессийн одоогийн шийдвэрлэсэн CRM төлөв (Active Lead, Active Deal, Repeat Customer)-ийг авах.
+   */
+  app.get('/api/crm/session-context/:dialogId', async (req, res) => {
+    try {
+      const dialogId = req.params.dialogId;
+      const dialog = chatManager.getDialogById(dialogId);
+      const cached = crmContextResolver.getCachedContext(dialogId);
+
+      if (cached) {
+        return res.json({ success: true, data: cached });
+      }
+
+      if (dialog) {
+        const match = dialogId.match(/\d+/);
+        const numericChatId = match ? parseInt(match[0], 10) : undefined;
+        const botCfg = botWorker.getConfig();
+        const resolved = await crmContextResolver.resolveSessionContext({
+          dialogId,
+          chatId: numericChatId,
+          customer: dialog.customer,
+          messageText: dialog.lastMessageText || '',
+          crmMode: botCfg.crmMode || 'classic',
+          channelSource: dialog.channelType || 'openlines',
+        });
+        return res.json({ success: true, data: resolved });
+      }
+
+      res.status(404).json({ success: false, error: { message: 'Dialog not found' } });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/crm/resolve-session-context
+   * [SESSION CONTEXT RESOLUTION RULE] гаднаас эсвэл тестийн зорилгоор гар аргаар дуудах.
+   */
+  app.post('/api/crm/resolve-session-context', async (req, res) => {
+    try {
+      const { dialogId, chatId, userCode, customer, messageText, crmMode, channelSource } = req.body;
+      const botCfg = botWorker.getConfig();
+      const resolved = await crmContextResolver.resolveSessionContext({
+        dialogId: dialogId || `chat${chatId || Date.now()}`,
+        chatId: chatId ? Number(chatId) : undefined,
+        userCode,
+        customer,
+        messageText: messageText || '',
+        crmMode: crmMode || botCfg.crmMode || 'classic',
+        channelSource: channelSource || 'openlines',
+      });
+      res.json({ success: true, data: resolved });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * GET /api/crm/contacts
+   * Системд бүртгэгдсэн болон кэшлэгдсэн CRM харилцагчдын жагсаалт.
+   */
+  app.get('/api/crm/contacts', (req, res) => {
+    try {
+      const contacts = crmContextResolver.getAllStoredContacts();
+      res.json({ success: true, count: contacts.length, data: contacts });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
