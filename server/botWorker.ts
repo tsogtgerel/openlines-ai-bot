@@ -27,7 +27,12 @@ import path from 'path';
 import { knowledgeBase, KnowledgeArticle } from './knowledgeBase';
 import { vibeRequest } from './vibeApi';
 import { chatManager } from './chatManager';
-import { meiliProductService, FormattedBsbProduct } from './meiliProductService';
+import {
+  meiliProductService,
+  FormattedBsbProduct,
+  ProductDisplayConfig,
+  DEFAULT_PRODUCT_CONFIG,
+} from './meiliProductService';
 
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CONFIG_FILE = path.join(DATA_DIR, 'bot_config.json');
@@ -53,8 +58,11 @@ export interface BotConfig {
   model: string; // Ашиглах AI загвар (ж: bitrix/bitrixgpt-5.5)
   botAssignmentMode: 'manual_only' | 'all_chats'; // 'manual_only': зөвхөн операторын заасан чатад, 'all_chats': сувгийн бүх чатад
   enableProductSearch?: boolean; // MeiliSearch барааны сангаас автоматаар хайх
+  productSearchEnabled?: boolean; // UI-тай нийцтэй талбар
+  productSearchLimit?: number; // Нэг хариултанд авах барааны тоо (1-8)
   meiliUrl?: string; // MeiliSearch URL
   meiliIndex?: string; // MeiliSearch индекс
+  productConfig?: ProductDisplayConfig; // Барааны мэдээлэл болон линкний форматын нарийвчилсан тохиргоо
 }
 
 /**
@@ -69,7 +77,15 @@ export interface DialogLog {
   handedOff: boolean;
   handoffReason?: 'keyword' | 'low_confidence' | 'ai_error' | 'user_button' | 'model_declined';
   matchedArticles: { id: string; title: string; score: number }[];
-  matchedProducts?: { code: string; name: string; priceFormatted: string; inStock: boolean }[];
+  matchedProducts?: {
+    code: string;
+    name: string;
+    priceFormatted: string;
+    inStock: boolean;
+    productUrl?: string;
+    category?: string;
+    categoryUrl?: string;
+  }[];
   durationMs: number;
 }
 
@@ -106,8 +122,11 @@ const DEFAULT_CONFIG: BotConfig = {
   model: 'bitrix/bitrixgpt-5.5',
   botAssignmentMode: 'manual_only',
   enableProductSearch: true,
+  productSearchEnabled: true,
+  productSearchLimit: 4,
   meiliUrl: 'https://meili.bsb.mn',
   meiliIndex: 'app_bsb_products',
+  productConfig: DEFAULT_PRODUCT_CONFIG,
 };
 
 export class BotWorkerService {
@@ -506,9 +525,14 @@ export class BotWorkerService {
 
     // 3. Search MeiliSearch Product Database (https://meili.bsb.mn)
     let matchedProducts: FormattedBsbProduct[] = [];
-    if (this.config.enableProductSearch !== false) {
+    const isProdSearchActive = this.config.productSearchEnabled !== false && this.config.enableProductSearch !== false;
+    if (isProdSearchActive) {
       try {
-        const prodResult = await meiliProductService.searchProducts(sanitizedText, { limit: 4 });
+        const prodLimit = this.config.productSearchLimit || 4;
+        const prodResult = await meiliProductService.searchProducts(sanitizedText, {
+          limit: prodLimit,
+          config: this.config.productConfig,
+        });
         matchedProducts = prodResult.hits;
       } catch (prodErr) {
         console.warn('[BotWorker] MeiliSearch query failed:', prodErr);
@@ -548,12 +572,21 @@ export class BotWorkerService {
     // 6. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
     try {
       const productContext = matchedProducts.length > 0
-        ? meiliProductService.formatForPrompt(matchedProducts)
+        ? meiliProductService.formatForPrompt(matchedProducts, this.config.productConfig)
         : '';
 
       const kbContext = matchedKb
         .map((m) => `### ${m.article.title} (Ангилал: ${m.article.category})\n${m.article.content}`)
         .join('\n\n');
+
+      const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
+      const linkDirectives: string[] = [];
+      if (productConfig.includeProductLink !== false) {
+        linkDirectives.push('Хэрэглэгч бараа асуусан бол хариултандаа тухайн барааны шууд хуудасны линкийг [Бараа үзэх](URL) эсвэл [Барааны бүтэн нэр](URL) хэлбэрээр тодорхой заавал хавсаргана.');
+      }
+      if (productConfig.includeCategoryLink !== false) {
+        linkDirectives.push('Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, ангиллын линкийг [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно.');
+      }
 
       const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
 Хэрэглэгчийн асуултад БСБ Барааны мэдээллийн сан (MeiliSearch https://meili.bsb.mn) болон Мэдээллийн санд үндэслэн Монгол хэлээр маш тодорхой, эелдэг, найрсаг хариулна уу.
@@ -561,9 +594,10 @@ export class BotWorkerService {
 ДҮРЭМ ЖУРАМ:
 1. Бараа, бүтээгдэхүүн, үнэ, загвар, техникийн үзүүлэлт, бэлэн байгаа эсэхийг асуусан бол "БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН"-аас олдсон бодит бүтээгдэхүүний брэнд, нэр, үнэ (₮-өөр), бэлэн байгаа эсэх төлөв, гол техникийн үзүүлэлтийг тодорхой дурдаж хариулна.
 2. Хэрэв барааны нөөц дууссан ("Одоогоор нөөц дууссан") байвал "Одоогоор нөөц түр дууссан байна" гэдгийг тодорхой мэдэгдэнэ.
-3. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), хүргэлт, салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
-4. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
-5. Өнгө аяс: ${this.config.tone}.
+3. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Барааны мэдээллийг тодорхой дурдана.'}
+4. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), хүргэлт, салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
+5. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
+6. Өнгө аяс: ${this.config.tone}.
 ${this.config.systemPromptAddition}
 
 ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛЛИЙН САНГИЙН ХЭСГҮҮД ---\n' + kbContext + '\n\n' : ''}Хэрэв хэрэглэгчийн асуултын хариулт дээрх хэсгүүдэд огт байхгүй эсвэл хангалтгүй бол зөвхөн яг энэ үгийг гаргана уу: [TRANSFER_OPERATOR]`;
@@ -594,7 +628,15 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
           handedOff: true,
           handoffReason: 'model_declined',
           matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-          matchedProducts: matchedProducts.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
+          matchedProducts: matchedProducts.map((p) => ({
+            code: p.productCode,
+            name: p.name,
+            priceFormatted: p.priceFormatted,
+            inStock: p.inStock,
+            productUrl: p.productUrl,
+            category: p.category,
+            categoryUrl: p.categoryUrl,
+          })),
           durationMs: Date.now() - startTime,
         });
 
@@ -613,7 +655,15 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         botAnswer: aiContent,
         handedOff: false,
         matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-        matchedProducts: matchedProducts.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
+        matchedProducts: matchedProducts.map((p) => ({
+          code: p.productCode,
+          name: p.name,
+          priceFormatted: p.priceFormatted,
+          inStock: p.inStock,
+          productUrl: p.productUrl,
+          category: p.category,
+          categoryUrl: p.categoryUrl,
+        })),
         durationMs: Date.now() - startTime,
       });
 

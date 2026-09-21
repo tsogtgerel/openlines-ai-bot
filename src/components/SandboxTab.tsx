@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Bot, User, Headphones, CheckCircle, AlertTriangle, Sparkles, RefreshCw, Database } from 'lucide-react';
+import { FormattedMessageText } from './FormattedMessageText';
 
 interface SandboxMessage {
   id: string;
@@ -188,7 +189,7 @@ export const SandboxTab: React.FC = () => {
                         : 'bg-blue-600 text-white rounded-tr-xs'
                     }`}
                   >
-                    <p>{m.text}</p>
+                    <FormattedMessageText text={m.text} isOperator={!isBot} />
 
                     {/* Inline Button (like in Bitrix24 Openline chat) */}
                     {m.keyboard && m.keyboard.length > 0 && (

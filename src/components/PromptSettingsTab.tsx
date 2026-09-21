@@ -1,11 +1,46 @@
 import React, { useState } from 'react';
-import { Sliders, Save, Sparkles, AlertCircle, Check, Database, Package, CheckCircle2 } from 'lucide-react';
-import { BotConfig } from '../types';
+import {
+  Sliders,
+  Save,
+  Sparkles,
+  AlertCircle,
+  Check,
+  Database,
+  Package,
+  CheckCircle2,
+  ExternalLink,
+  Link,
+  Layers,
+  Tag,
+  Eye,
+  SlidersHorizontal,
+  RefreshCw,
+  Info,
+} from 'lucide-react';
+import { BotConfig, ProductDisplayConfig } from '../types';
+import { FormattedMessageText } from './FormattedMessageText';
 
 interface PromptSettingsTabProps {
   botConfig: BotConfig | null;
   onUpdateConfig: (updates: Partial<BotConfig>) => Promise<void>;
 }
+
+const DEFAULT_PRODUCT_CONFIG: ProductDisplayConfig = {
+  websiteBaseUrl: 'https://bsb.mn',
+  productUrlPattern: 'https://bsb.mn/product/{slug}',
+  categoryUrlPattern: 'https://bsb.mn/category/{slug}',
+  includeProductLink: true,
+  includeCategoryLink: true,
+  includePrice: true,
+  includeStock: true,
+  includeBrand: true,
+  includeSpecs: true,
+  includeWarranty: true,
+  includePromotions: true,
+  includeImage: false,
+  linkStyle: 'markdown',
+  outputFormatTemplate: 'category_focused',
+};
 
 export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   botConfig,
@@ -30,8 +65,156 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   const [productSearchLimit, setProductSearchLimit] = useState<number>(
     botConfig?.productSearchLimit ?? 4
   );
+
+  // MeiliSearch product output & format config
+  const [productConfig, setProductConfig] = useState<ProductDisplayConfig>({
+    ...DEFAULT_PRODUCT_CONFIG,
+    ...(botConfig?.productConfig || {}),
+  });
+
   const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // Live preview state
+  const [previewQuery, setPreviewQuery] = useState('iPhone 16');
+  const [previewLoading, setPreviewLoading] = useState(false);
+  const [previewPromptText, setPreviewPromptText] = useState<string | null>(null);
+  const [previewSampleAnswer, setPreviewSampleAnswer] = useState<string | null>(null);
+  const [activePreviewTab, setActivePreviewTab] = useState<'answer' | 'prompt'>('answer');
+
+  const updateProductConfig = <K extends keyof ProductDisplayConfig>(
+    key: K,
+    val: ProductDisplayConfig[K]
+  ) => {
+    setProductConfig((prev) => ({ ...prev, [key]: val }));
+  };
+
+  const applyPreset = (type: 'category_focused' | 'standard' | 'rich' | 'compact') => {
+    if (type === 'category_focused') {
+      setProductConfig((prev) => ({
+        ...prev,
+        includeProductLink: true,
+        includeCategoryLink: true,
+        includePrice: true,
+        includeStock: true,
+        includeBrand: true,
+        includeSpecs: true,
+        includeWarranty: true,
+        includePromotions: true,
+        outputFormatTemplate: 'category_focused',
+        linkStyle: 'markdown',
+      }));
+    } else if (type === 'standard') {
+      setProductConfig((prev) => ({
+        ...prev,
+        includeProductLink: true,
+        includeCategoryLink: false,
+        includePrice: true,
+        includeStock: true,
+        includeBrand: true,
+        includeSpecs: true,
+        includeWarranty: false,
+        includePromotions: false,
+        outputFormatTemplate: 'standard',
+        linkStyle: 'markdown',
+      }));
+    } else if (type === 'rich') {
+      setProductConfig((prev) => ({
+        ...prev,
+        includeProductLink: true,
+        includeCategoryLink: true,
+        includePrice: true,
+        includeStock: true,
+        includeBrand: true,
+        includeSpecs: true,
+        includeWarranty: true,
+        includePromotions: true,
+        outputFormatTemplate: 'rich',
+        linkStyle: 'markdown',
+      }));
+    } else if (type === 'compact') {
+      setProductConfig((prev) => ({
+        ...prev,
+        includeProductLink: true,
+        includeCategoryLink: false,
+        includePrice: true,
+        includeStock: true,
+        includeBrand: false,
+        includeSpecs: false,
+        includeWarranty: false,
+        includePromotions: false,
+        outputFormatTemplate: 'compact',
+        linkStyle: 'markdown',
+      }));
+    }
+  };
+
+  const handleRunPreview = async () => {
+    if (!previewQuery.trim()) return;
+    setPreviewLoading(true);
+    try {
+      const res = await fetch('/api/products/format-preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          query: previewQuery.trim(),
+          config: productConfig,
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data) {
+        setPreviewPromptText(data.data.promptText);
+
+        // Generate realistic simulated bot answer according to template
+        const hits = data.data.hits || [];
+        if (hits.length === 0) {
+          setPreviewSampleAnswer(`Уучлаарай, "${previewQuery}" түлхүүр үгээр барааны мэдээллийн санд одоогоор бэлэн бараа олдсонгүй.`);
+        } else {
+          const top = hits[0];
+          let sample = `Сайн байна уу! Таны асуусан **${top.name}**-ийн мэдээллийг хүргэж байна:\n\n`;
+          if (productConfig.includePrice) {
+            sample += `• **Үнэ:** ${top.priceFormatted}${top.hasDiscount ? ` (хямдарсан, үндсэн үнэ: ${top.originalPriceFormatted})` : ''}\n`;
+          }
+          if (productConfig.includeStock) {
+            sample += `• **Төлөв:** ${top.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан'}${top.siteRemainsSummary ? ` (${top.siteRemainsSummary})` : ''}\n`;
+          }
+          if (productConfig.includeWarranty && top.warrantyMonth) {
+            sample += `• **Баталгаа:** ${top.warrantyMonth}\n`;
+          }
+          if (productConfig.includePromotions && top.promotionsSummary) {
+            sample += `• **Урамшуулал:** ${top.promotionsSummary}\n`;
+          }
+          if (productConfig.includeSpecs && top.attributesSummary) {
+            sample += `• **Үзүүлэлт:** ${top.attributesSummary}\n`;
+          }
+
+          if (productConfig.includeProductLink && top.productUrl) {
+            if (productConfig.linkStyle === 'markdown') {
+              sample += `\n🛒 [Барааг дэлгэрэнгүй үзэх](${top.productUrl})\n`;
+            } else if (productConfig.linkStyle === 'bracket') {
+              sample += `\n🔗 Барааны хуудас: [${top.productUrl}]\n`;
+            } else {
+              sample += `\nБарааны холбоос: ${top.productUrl}\n`;
+            }
+          }
+
+          if (productConfig.includeCategoryLink && top.categoryUrl) {
+            if (productConfig.linkStyle === 'markdown') {
+              sample += `📁 [Ангилал: ${top.category || 'Ижил төстэй бараанууд'}](${top.categoryUrl})\n`;
+            } else {
+              sample += `Ангиллын холбоос: ${top.categoryUrl}\n`;
+            }
+          }
+
+          setPreviewSampleAnswer(sample);
+        }
+      }
+    } catch (e: any) {
+      console.error('Preview error:', e);
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +233,7 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
         botAssignmentMode,
         productSearchEnabled,
         productSearchLimit,
+        productConfig,
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
@@ -293,16 +477,17 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
           />
         </div>
 
-        {/* MeiliSearch BSB Product Database Integration */}
-        <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center shadow-xs">
-                <Database className="w-4 h-4" />
+        {/* MeiliSearch BSB Product Database Integration & Output Formatting */}
+        <div className="p-4 sm:p-5 rounded-2xl border border-indigo-200 bg-gradient-to-b from-indigo-50/50 to-white space-y-4">
+          {/* Header */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-xs">
+                <Database className="w-5 h-5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h4 className="text-xs font-bold text-slate-900">
+                  <h4 className="text-xs sm:text-sm font-bold text-slate-900">
                     БСБ Барааны Мэдээллийн Сан (MeiliSearch)
                   </h4>
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
@@ -316,7 +501,7 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
               </div>
             </div>
 
-            <label className="flex items-center gap-2 cursor-pointer select-none">
+            <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-lg border border-indigo-100 shadow-2xs">
               <input
                 type="checkbox"
                 checked={productSearchEnabled}
@@ -324,28 +509,384 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                 className="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500"
               />
               <span className="text-xs font-semibold text-slate-800">
-                {productSearchEnabled ? 'Идэвхтэй' : 'Идэвхгүй'}
+                {productSearchEnabled ? 'Барааны хайлт асаалттай' : 'Унтраасан'}
               </span>
             </label>
           </div>
 
           <p className="text-[11px] text-slate-600 leading-relaxed">
-            Хэрэглэгч барааны үнэ, загвар, нөөц (жишээ: iPhone 16, Panasonic ТВ, угаалгын машин)-ийн талаар лавлахад бот MeiliSearch-ээс бодит үнэ, хямдрал, бэлэн байгаа төлөвийг шалгаж хариултандаа тусгана.
+            Хэрэглэгч бараа лавлахад MeiliSearch-ээс бодит үнэ, нөөц, техникийн үзүүлэлтийг шүүж, хариултандаа <strong>тухайн барааны шууд линк</strong> болон <strong>ижил төрлийн барааны ангиллын линкийг</strong> хамт илгээх тохиргоог эндээс удирдана.
           </p>
 
-          <div className="flex items-center justify-between pt-2 border-t border-indigo-100/80 text-xs">
-            <span className="text-slate-600 font-medium">Хариултад хамгийн ихдээ хавсаргах барааны тоо:</span>
+          {/* Quick Presets */}
+          <div className="pt-2 border-t border-indigo-100/80">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-600" />
+                Бэлэн загварууд (Presets):
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <button
+                type="button"
+                onClick={() => applyPreset('category_focused')}
+                className={`px-3 py-2 rounded-xl text-left text-xs border transition-all ${
+                  productConfig.outputFormatTemplate === 'category_focused' && productConfig.includeCategoryLink
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <div className="font-bold flex items-center justify-between">
+                  <span>Бараа + Ангилал</span>
+                  <CheckCircle2 className="w-3 h-3" />
+                </div>
+                <div className={`text-[10px] mt-0.5 ${productConfig.outputFormatTemplate === 'category_focused' && productConfig.includeCategoryLink ? 'text-indigo-100' : 'text-slate-400'}`}>
+                  Барааны & ангиллын линк
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('standard')}
+                className={`px-3 py-2 rounded-xl text-left text-xs border transition-all ${
+                  productConfig.outputFormatTemplate === 'standard' && !productConfig.includeCategoryLink
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <div className="font-bold">Стандарт линк</div>
+                <div className={`text-[10px] mt-0.5 ${productConfig.outputFormatTemplate === 'standard' && !productConfig.includeCategoryLink ? 'text-indigo-100' : 'text-slate-400'}`}>
+                  Зөвхөн барааны линк
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('rich')}
+                className={`px-3 py-2 rounded-xl text-left text-xs border transition-all ${
+                  productConfig.outputFormatTemplate === 'rich'
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <div className="font-bold">Дэлгэрэнгүй</div>
+                <div className={`text-[10px] mt-0.5 ${productConfig.outputFormatTemplate === 'rich' ? 'text-indigo-100' : 'text-slate-400'}`}>
+                  Үзүүлэлт, баталгаа, линкүүд
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => applyPreset('compact')}
+                className={`px-3 py-2 rounded-xl text-left text-xs border transition-all ${
+                  productConfig.outputFormatTemplate === 'compact'
+                    ? 'bg-indigo-600 text-white border-indigo-700 shadow-xs'
+                    : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
+                }`}
+              >
+                <div className="font-bold">Товч мэдээлэл</div>
+                <div className={`text-[10px] mt-0.5 ${productConfig.outputFormatTemplate === 'compact' ? 'text-indigo-100' : 'text-slate-400'}`}>
+                  Зөвхөн нэр, үнэ, линк
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* 1. Fields to include */}
+          <div className="pt-3 border-t border-indigo-100/80 space-y-2">
+            <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Tag className="w-3.5 h-3.5 text-indigo-600" />
+              1. Хариултад багтаах мэдээллийн талбарууд:
+            </h5>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeProductLink}
+                  onChange={(e) => updateProductConfig('includeProductLink', e.target.checked)}
+                  className="w-4 h-4 rounded text-blue-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Барааны шууд хуудасны линк</span>
+                  <span className="text-[10px] text-slate-500">Жишээ: [Бараа үзэх](https://bsb.mn/product/slug)</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeCategoryLink}
+                  onChange={(e) => updateProductConfig('includeCategoryLink', e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Барааны ангиллын линк</span>
+                  <span className="text-[10px] text-slate-500">Жишээ: [Ангилал: Зурагт](https://bsb.mn/category/tv)</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includePrice}
+                  onChange={(e) => updateProductConfig('includePrice', e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Үнэ & Хямдралын хувь</span>
+                  <span className="text-[10px] text-slate-500">Үндсэн болон хямдарсан үнэ (₮-өөр)</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeStock}
+                  onChange={(e) => updateProductConfig('includeStock', e.target.checked)}
+                  className="w-4 h-4 rounded text-emerald-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Нөөц & Салбарын үлдэгдэл</span>
+                  <span className="text-[10px] text-slate-500">Бэлэн байгаа эсэх, дэлгүүрийн байршил</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeSpecs}
+                  onChange={(e) => updateProductConfig('includeSpecs', e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Техникийн гол үзүүлэлтүүд</span>
+                  <span className="text-[10px] text-slate-500">Хэмжээ, багтаамж, процессор гэх мэт</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeWarranty}
+                  onChange={(e) => updateProductConfig('includeWarranty', e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Баталгаат хугацаа</span>
+                  <span className="text-[10px] text-slate-500">Жишээ: 12 сар, 24 сар</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includePromotions}
+                  onChange={(e) => updateProductConfig('includePromotions', e.target.checked)}
+                  className="w-4 h-4 rounded text-rose-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Урамшуулал & Бэлэгтэй худалдаа</span>
+                  <span className="text-[10px] text-slate-500">Дагалдах бэлэг, онцгой купон</span>
+                </div>
+              </label>
+
+              <label className="flex items-center gap-2 p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={productConfig.includeBrand}
+                  onChange={(e) => updateProductConfig('includeBrand', e.target.checked)}
+                  className="w-4 h-4 rounded text-indigo-600"
+                />
+                <div>
+                  <span className="font-bold text-slate-800 block">Брэндийн нэр</span>
+                  <span className="text-[10px] text-slate-500">Apple, Samsung, Panasonic, Electrolux</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          {/* 2. URL & Link Pattern Customization */}
+          <div className="pt-3 border-t border-indigo-100/80 space-y-3">
+            <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+              <Link className="w-3.5 h-3.5 text-indigo-600" />
+              2. Холбоосын хаяг & Загвар (URL Patterns):
+            </h5>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Вэбсайт домэйн (Base URL)
+                </label>
+                <input
+                  type="text"
+                  value={productConfig.websiteBaseUrl}
+                  onChange={(e) => updateProductConfig('websiteBaseUrl', e.target.value)}
+                  placeholder="https://bsb.mn"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Барааны линк загвар
+                </label>
+                <input
+                  type="text"
+                  value={productConfig.productUrlPattern}
+                  onChange={(e) => updateProductConfig('productUrlPattern', e.target.value)}
+                  placeholder="https://bsb.mn/product/{slug}"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">{'{slug}'} нь барааны нэрээр солигдоно</span>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-700 mb-1">
+                  Ангиллын линк загвар
+                </label>
+                <input
+                  type="text"
+                  value={productConfig.categoryUrlPattern}
+                  onChange={(e) => updateProductConfig('categoryUrlPattern', e.target.value)}
+                  placeholder="https://bsb.mn/category/{slug}"
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
+                />
+                <span className="text-[10px] text-slate-400 mt-0.5 block">{'{slug}'} нь ангиллын нэрээр солигдоно</span>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Link Style & Quantity */}
+          <div className="pt-3 border-t border-indigo-100/80 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex items-center gap-3">
+              <span className="font-semibold text-slate-700">Линк харуулах хэлбэр:</span>
+              <div className="flex items-center gap-1.5 bg-white p-1 rounded-lg border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => updateProductConfig('linkStyle', 'markdown')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition ${
+                    productConfig.linkStyle === 'markdown'
+                      ? 'bg-indigo-600 text-white font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  [Товчлуур / Markdown]
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateProductConfig('linkStyle', 'bracket')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition ${
+                    productConfig.linkStyle === 'bracket'
+                      ? 'bg-indigo-600 text-white font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  🔗 Хаалтан дотор
+                </button>
+                <button
+                  type="button"
+                  onClick={() => updateProductConfig('linkStyle', 'plain')}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition ${
+                    productConfig.linkStyle === 'plain'
+                      ? 'bg-indigo-600 text-white font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Шууд URL бичвэр
+                </button>
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
+              <span className="text-slate-600 font-medium">Хариултад хавсаргах барааны тоо:</span>
               <input
                 type="number"
                 min="1"
                 max="8"
                 value={productSearchLimit}
                 onChange={(e) => setProductSearchLimit(Math.max(1, Math.min(8, parseInt(e.target.value) || 4)))}
-                className="w-16 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-center font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                className="w-14 px-2 py-1 bg-white border border-slate-300 rounded-lg text-xs text-center font-bold text-slate-800 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
               />
               <span className="text-slate-400 text-[11px]">бараа</span>
             </div>
+          </div>
+
+          {/* 4. Live Format Preview & Verification Tool */}
+          <div className="pt-3 border-t border-indigo-100/80 bg-indigo-100/30 -mx-4 -mb-4 sm:-mx-5 sm:-mb-5 p-4 sm:p-5 rounded-b-2xl space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Eye className="w-4 h-4 text-indigo-700" />
+                <span className="text-xs font-bold text-indigo-950">
+                  Шууд туршилт & Хариултын Live Preview:
+                </span>
+              </div>
+
+              <div className="flex items-center gap-1.5 bg-white p-0.5 rounded-lg border border-indigo-200 text-[11px]">
+                <button
+                  type="button"
+                  onClick={() => setActivePreviewTab('answer')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                    activePreviewTab === 'answer' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Хэрэглэгчид очих хариулт
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActivePreviewTab('prompt')}
+                  className={`px-2.5 py-1 rounded-md font-semibold transition ${
+                    activePreviewTab === 'prompt' ? 'bg-indigo-600 text-white' : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  AI Prompt-д очих бүтэц
+                </button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={previewQuery}
+                onChange={(e) => setPreviewQuery(e.target.value)}
+                placeholder="Жишээ: iPhone 16, зурагт, угаалгын машин..."
+                className="flex-1 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <button
+                type="button"
+                onClick={handleRunPreview}
+                disabled={previewLoading || !previewQuery.trim()}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 shrink-0"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${previewLoading ? 'animate-spin' : ''}`} />
+                {previewLoading ? 'Шалгаж байна...' : 'Шалгах / Preview'}
+              </button>
+            </div>
+
+            {/* Preview Output Box */}
+            {previewSampleAnswer && activePreviewTab === 'answer' && (
+              <div className="p-3.5 bg-white border border-indigo-200 rounded-xl shadow-xs text-xs text-slate-800 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-100 text-[11px] text-slate-500">
+                  <span className="font-bold text-indigo-900 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    Ботын өгөх бодит хариулт (товчлуур болон линкүүдтэй):
+                  </span>
+                  <span className="text-[10px] text-slate-400">MeiliSearch бодит өгөгдөл</span>
+                </div>
+                <FormattedMessageText text={previewSampleAnswer} />
+              </div>
+            )}
+
+            {previewPromptText && activePreviewTab === 'prompt' && (
+              <div className="p-3.5 bg-slate-900 border border-slate-800 rounded-xl shadow-xs text-xs text-emerald-400 font-mono overflow-x-auto max-h-48 whitespace-pre-wrap leading-relaxed animate-in fade-in duration-150">
+                {previewPromptText}
+              </div>
+            )}
+
+            {!previewSampleAnswer && (
+              <div className="text-[11px] text-indigo-900/70 italic flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                Та "Шалгах / Preview" товчийг дарж дээрх тохиргоогоор барааны линк болон ангилал ботын хариултад хэрхэн орохыг бодит бүтээгдэхүүнээр харна уу.
+              </div>
+            )}
           </div>
         </div>
 

@@ -7,6 +7,23 @@ export interface KnowledgeArticle {
   updatedAt: string;
 }
 
+export interface ProductDisplayConfig {
+  websiteBaseUrl: string; // e.g. "https://bsb.mn"
+  productUrlPattern: string; // e.g. "https://bsb.mn/product/{slug}" or "https://bsb.mn/{slug}"
+  categoryUrlPattern: string; // e.g. "https://bsb.mn/category/{slug}" or "https://bsb.mn/c/{slug}"
+  includeProductLink: boolean; // Барааны шууд линкийг хариултад оруулах
+  includeCategoryLink: boolean; // Барааны ангиллын линкийг хариултад оруулах
+  includePrice: boolean; // Үнэ, хямдралын мэдээллийг оруулах
+  includeStock: boolean; // Бэлэн байгаа эсэх нөөцийг оруулах
+  includeBrand: boolean; // Брэндийн нэр оруулах
+  includeSpecs: boolean; // Техникийн гол үзүүлэлтүүд оруулах
+  includeWarranty: boolean; // Баталгаат хугацааг дурдах
+  includePromotions: boolean; // Бэлэгтэй худалдаа, урамшууллыг дурдах
+  includeImage: boolean; // Зургийн линкийг оруулах
+  linkStyle: 'markdown' | 'bracket' | 'plain' | 'button'; // Линкний формат: [Бараа үзэх](url), 🔗 Үзэх: url, гэх мэт
+  outputFormatTemplate: 'rich' | 'standard' | 'compact' | 'category_focused'; // Хариултын бүтцийн загвар
+}
+
 export interface BotConfig {
   botId: number | null;
   botCode: string;
@@ -24,8 +41,11 @@ export interface BotConfig {
   model: string;
   botAssignmentMode?: 'manual_only' | 'all_chats';
   enableProductSearch?: boolean;
+  productSearchEnabled?: boolean;
+  productSearchLimit?: number;
   meiliUrl?: string;
   meiliIndex?: string;
+  productConfig?: ProductDisplayConfig;
 }
 
 export interface BsbProduct {
@@ -35,6 +55,8 @@ export interface BsbProduct {
   name: string;
   brand: string;
   category: string;
+  categorySlug?: string;
+  categoryUrl?: string;
   price: number;
   priceFormatted: string;
   originalPrice?: number;
@@ -48,6 +70,10 @@ export interface BsbProduct {
   descriptionSummary: string;
   imageUrl?: string;
   slug?: string;
+  productUrl?: string;
+  warrantyMonth?: string;
+  promotionsSummary?: string;
+  siteRemainsSummary?: string;
   isService?: boolean;
 }
 

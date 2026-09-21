@@ -9,6 +9,40 @@
  * операторт шуурхай өгөх үүрэгтэй.
  */
 
+export interface ProductDisplayConfig {
+  websiteBaseUrl: string; // e.g. "https://bsb.mn"
+  productUrlPattern: string; // e.g. "https://bsb.mn/product/{slug}"
+  categoryUrlPattern: string; // e.g. "https://bsb.mn/category/{slug}"
+  includeProductLink: boolean; // Барааны шууд линкийг хариултад оруулах
+  includeCategoryLink: boolean; // Барааны ангиллын линкийг хариултад оруулах
+  includePrice: boolean; // Үнэ, хямдралын мэдээллийг оруулах
+  includeStock: boolean; // Бэлэн байгаа эсэх нөөцийг оруулах
+  includeBrand: boolean; // Брэндийн нэр оруулах
+  includeSpecs: boolean; // Техникийн гол үзүүлэлтүүд оруулах
+  includeWarranty: boolean; // Баталгаат хугацааг дурдах
+  includePromotions: boolean; // Бэлэгтэй худалдаа, урамшууллыг дурдах
+  includeImage: boolean; // Зургийн линкийг оруулах
+  linkStyle: 'markdown' | 'bracket' | 'plain' | 'button'; // Линкний формат: [Бараа үзэх](url), 🔗 Үзэх: url, гэх мэт
+  outputFormatTemplate: 'rich' | 'standard' | 'compact' | 'category_focused'; // Хариултын бүтцийн загвар
+}
+
+export const DEFAULT_PRODUCT_CONFIG: ProductDisplayConfig = {
+  websiteBaseUrl: 'https://bsb.mn',
+  productUrlPattern: 'https://bsb.mn/product/{slug}',
+  categoryUrlPattern: 'https://bsb.mn/category/{slug}',
+  includeProductLink: true,
+  includeCategoryLink: true,
+  includePrice: true,
+  includeStock: true,
+  includeBrand: true,
+  includeSpecs: true,
+  includeWarranty: true,
+  includePromotions: true,
+  includeImage: true,
+  linkStyle: 'markdown',
+  outputFormatTemplate: 'rich',
+};
+
 export interface FormattedBsbProduct {
   id: number;
   code: string;
@@ -16,6 +50,8 @@ export interface FormattedBsbProduct {
   name: string;
   brand: string;
   category: string;
+  categorySlug?: string;
+  categoryUrl?: string;
   price: number; // MNT
   priceFormatted: string; // e.g. "4,499,900₮"
   originalPrice?: number;
@@ -29,6 +65,10 @@ export interface FormattedBsbProduct {
   descriptionSummary: string;
   imageUrl?: string;
   slug?: string;
+  productUrl?: string;
+  warrantyMonth?: string;
+  promotionsSummary?: string;
+  siteRemainsSummary?: string;
   isService?: boolean;
 }
 
@@ -131,10 +171,9 @@ export class MeiliProductService {
   }
 
   public async checkHealth(): Promise<{ isConnected: boolean; totalProducts: number }> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 3500);
-
       const res = await fetch(`${this.meiliUrl}/indexes/${this.indexName}/search`, {
         method: 'POST',
         headers: {
@@ -145,20 +184,20 @@ export class MeiliProductService {
         signal: controller.signal,
       });
 
-      clearTimeout(timeout);
-
       if (res.ok) {
         const data = await res.json();
         this.isConnected = true;
-        this.totalProductsCount = data.estimatedTotalHits || data.totalHits || 7300;
+        this.totalProductsCount = data.estimatedTotalHits || data.totalHits || 7339;
         this.lastHealthCheck = Date.now();
         return { isConnected: true, totalProducts: this.totalProductsCount };
       }
       this.isConnected = false;
       return { isConnected: false, totalProducts: this.totalProductsCount };
-    } catch (e) {
+    } catch {
       this.isConnected = false;
       return { isConnected: false, totalProducts: this.totalProductsCount };
+    } finally {
+      clearTimeout(timeout);
     }
   }
 
@@ -324,6 +363,7 @@ export class MeiliProductService {
       limit?: number;
       inStockOnly?: boolean;
       requirePhysicalProduct?: boolean;
+      config?: ProductDisplayConfig;
     } = {}
   ): Promise<MeiliSearchResult> {
     const limit = options.limit || 5;
@@ -341,10 +381,11 @@ export class MeiliProductService {
     }
 
     const startTime = Date.now();
+    let timeout: NodeJS.Timeout | null = null;
 
     try {
       const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 4000);
+      timeout = setTimeout(() => controller.abort(), 8000);
 
       // Perform MeiliSearch search
       const response = await fetch(`${this.meiliUrl}/indexes/${this.indexName}/search`, {
@@ -360,8 +401,6 @@ export class MeiliProductService {
         signal: controller.signal,
       });
 
-      clearTimeout(timeout);
-
       if (!response.ok) {
         console.warn(`[MeiliProductService] Search failed with status ${response.status}`);
         return { hits: [], total: 0, query: searchQuery, processingTimeMs: Date.now() - startTime };
@@ -373,28 +412,36 @@ export class MeiliProductService {
       // If initial cleaned query yielded 0 results, try original query or first keywords
       let finalHits = rawHits;
       if (finalHits.length === 0 && searchQuery !== query.trim()) {
-        const fallbackRes = await fetch(`${this.meiliUrl}/indexes/${this.indexName}/search`, {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${this.apiKey}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            q: query.trim().split(' ').slice(0, 3).join(' '),
-            limit: limit * 2,
-          }),
-        }).catch(() => null);
+        try {
+          const fallbackController = new AbortController();
+          const fallbackTimeout = setTimeout(() => fallbackController.abort(), 4000);
+          const fallbackRes = await fetch(`${this.meiliUrl}/indexes/${this.indexName}/search`, {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${this.apiKey}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              q: query.trim().split(' ').slice(0, 3).join(' '),
+              limit: limit * 2,
+            }),
+            signal: fallbackController.signal,
+          });
+          clearTimeout(fallbackTimeout);
 
-        if (fallbackRes && fallbackRes.ok) {
-          const fallbackData = await fallbackRes.json();
-          if (fallbackData.hits && fallbackData.hits.length > 0) {
-            finalHits = fallbackData.hits;
+          if (fallbackRes.ok) {
+            const fallbackData = await fallbackRes.json();
+            if (fallbackData.hits && fallbackData.hits.length > 0) {
+              finalHits = fallbackData.hits;
+            }
           }
+        } catch {
+          // Gracefully continue with original hits
         }
       }
 
       // Format hits
-      let formatted = finalHits.map((h) => this.formatHit(h));
+      let formatted = finalHits.map((h) => this.formatHit(h, options.config));
 
       // Separate services vs physical products (Vouchers/installation services usually have code containing 'UGS' or 'Voucher' or price < 90,000 without brand)
       if (options.requirePhysicalProduct !== false) {
@@ -430,8 +477,15 @@ export class MeiliProductService {
       this.cache.set(cacheKey, { result: finalResult, timestamp: Date.now() });
       return finalResult;
     } catch (err: any) {
-      console.error('[MeiliProductService] Error querying MeiliSearch:', err.message || err);
+      const isAbort = err?.name === 'AbortError' || err?.message?.includes('aborted');
+      if (isAbort) {
+        console.warn(`[MeiliProductService] Search for "${searchQuery}" timed out or was cancelled, continuing gracefully.`);
+      } else {
+        console.warn(`[MeiliProductService] Search notice:`, err?.message || err);
+      }
       return { hits: [], total: 0, query: searchQuery, processingTimeMs: Date.now() - startTime };
+    } finally {
+      if (timeout) clearTimeout(timeout);
     }
   }
 
@@ -464,10 +518,11 @@ export class MeiliProductService {
   /**
    * Helper to format raw MeiliSearch hit into clean UI & Prompt friendly object
    */
-  private formatHit(h: any): FormattedBsbProduct {
+  public formatHit(h: any, config?: ProductDisplayConfig): FormattedBsbProduct {
     const rawName = h.translations?.mn_MN?.name || h.name || h.productCode || '';
     const brandName = h.brand?.name || (h.brand?.code ? String(h.brand.code).toUpperCase() : '-');
     const categoryName = h.mainTaxon?.name || h.productTaxons?.[0]?.name || 'Цахилгаан бараа';
+    const categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || '';
 
     // Primary variant pricing
     const primaryVariant = h.variants?.[0] || {};
@@ -518,6 +573,43 @@ export class MeiliProductService {
       h.images?.[0]?.path ||
       h.images?.[0]?.originalImagePath;
 
+    const slug = h.slug || h.translations?.mn_MN?.slug || h.productCode || '';
+    const baseUrl = (config?.websiteBaseUrl || 'https://bsb.mn').replace(/\/+$/, '');
+
+    // Product URL calculation based on configured pattern
+    const prodPattern = config?.productUrlPattern || `${baseUrl}/product/{slug}`;
+    const productUrl = prodPattern
+      .replace('{slug}', slug)
+      .replace('{code}', h.productCode || h.code || '')
+      .replace('{id}', String(h.id || ''));
+
+    // Category URL calculation based on configured pattern
+    const catPattern = config?.categoryUrlPattern || `${baseUrl}/category/{slug}`;
+    const categoryUrl = categorySlug
+      ? catPattern.replace('{slug}', categorySlug).replace('{code}', h.mainTaxon?.code || '')
+      : `${baseUrl}/category`;
+
+    // Warranty
+    const warrantyMonth = h.warrantyMonth ? `${h.warrantyMonth} сар` : undefined;
+
+    // Promotions & Badges
+    let promotionsSummary: string | undefined;
+    if (Array.isArray(h.promotionBadge) && h.promotionBadge.length > 0) {
+      promotionsSummary = h.promotionBadge.map((b: any) => b.badgeText || b.name).filter(Boolean).join(', ');
+    } else if (Array.isArray(h.cartPromotions) && h.cartPromotions.length > 0) {
+      promotionsSummary = h.cartPromotions.map((p: any) => p.name || p.code).filter(Boolean).join(', ');
+    }
+
+    // Site Remains (Store branch inventory)
+    let siteRemainsSummary: string | undefined;
+    const remains = h.siteRemains || primaryVariant.siteRemains;
+    if (Array.isArray(remains) && remains.length > 0) {
+      const positiveRemains = remains.filter((r: any) => r && r.qty > 0).slice(0, 3);
+      if (positiveRemains.length > 0) {
+        siteRemainsSummary = positiveRemains.map((r: any) => `${r.siteCode || 'Салбар'}: ${r.qty}ш`).join(', ');
+      }
+    }
+
     const isService =
       (h.productCode && h.productCode.includes('UGS')) ||
       (h.productCode && h.productCode.includes('Voucher')) ||
@@ -531,6 +623,8 @@ export class MeiliProductService {
       name: rawName.trim(),
       brand: brandName,
       category: categoryName,
+      categorySlug,
+      categoryUrl,
       price: priceMnt,
       priceFormatted: priceMnt > 0 ? `${priceMnt.toLocaleString()}₮` : 'Үнэ тодруулах',
       originalPrice: originalPriceMnt,
@@ -543,7 +637,11 @@ export class MeiliProductService {
       attributesSummary,
       descriptionSummary,
       imageUrl,
-      slug: h.slug,
+      slug,
+      productUrl,
+      warrantyMonth,
+      promotionsSummary,
+      siteRemainsSummary,
       isService,
     };
   }
@@ -579,12 +677,15 @@ export class MeiliProductService {
   }
 
   /**
-   * Format products into a concise, structured section for the AI System Prompt.
+   * Format products into a concise, structured section for the AI System Prompt
+   * with exact link and category instructions tailored to the user's configuration.
    */
-  public formatForPrompt(products: FormattedBsbProduct[]): string {
+  public formatForPrompt(products: FormattedBsbProduct[], config?: ProductDisplayConfig): string {
     if (!products || products.length === 0) {
       return '';
     }
+
+    const cfg = config || DEFAULT_PRODUCT_CONFIG;
 
     const itemsText = products
       .map((p, idx) => {
@@ -593,26 +694,74 @@ export class MeiliProductService {
           ? `${p.priceFormatted} (Хямдарсан, үндсэн үнэ: ${p.originalPriceFormatted}, -${p.promotionPercentage || ''}%)`
           : p.priceFormatted;
 
-        const details = [
-          `Барааны нэр: ${p.brand !== '-' ? p.brand + ' ' : ''}${p.name}`,
-          `Код: ${p.productCode}`,
-          `Үнэ: ${priceStr}`,
-          `Төлөв/Нөөц: ${stockStr}`,
-        ];
+        const details: string[] = [];
 
-        if (p.attributesSummary) {
+        if (cfg.includeBrand !== false && p.brand && p.brand !== '-') {
+          details.push(`Брэнд: ${p.brand}`);
+        }
+        details.push(`Барааны нэр: ${p.name}`);
+        details.push(`Код: ${p.productCode}`);
+
+        if (cfg.includePrice !== false) {
+          details.push(`Үнэ: ${priceStr}`);
+        }
+
+        if (cfg.includeStock !== false) {
+          const remainInfo = p.siteRemainsSummary ? ` (Салбарууд: ${p.siteRemainsSummary})` : '';
+          details.push(`Төлөв/Нөөц: ${stockStr}${remainInfo}`);
+        }
+
+        if (cfg.includeSpecs !== false && p.attributesSummary) {
           details.push(`Үзүүлэлтүүд: ${p.attributesSummary}`);
         }
 
-        if (p.descriptionSummary) {
-          details.push(`Тайлбар: ${p.descriptionSummary.slice(0, 150)}`);
+        if (cfg.includeWarranty !== false && p.warrantyMonth) {
+          details.push(`Баталгаат хугацаа: ${p.warrantyMonth}`);
+        }
+
+        if (cfg.includePromotions !== false && p.promotionsSummary) {
+          details.push(`Урамшуулал/Бэлэг: ${p.promotionsSummary}`);
+        }
+
+        if (cfg.includeProductLink !== false && p.productUrl) {
+          details.push(`Барааны шууд линк: ${p.productUrl}`);
+        }
+
+        if (cfg.includeCategoryLink !== false && p.categoryUrl) {
+          details.push(`Ангилал: ${p.category}`);
+          details.push(`Ангиллын линк: ${p.categoryUrl}`);
         }
 
         return `[Бараа #${idx + 1}]\n${details.join('\n')}`;
       })
       .join('\n\n');
 
-    return `--- БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН (MeiliSearch https://meili.bsb.mn) ---\n${itemsText}\n--------------------------------------------------------------`;
+    // Dynamic formatting rules for AI
+    const rules: string[] = [];
+    if (cfg.includeProductLink !== false) {
+      if (cfg.linkStyle === 'markdown') {
+        rules.push('1. БАРААНЫ ШУУД ЛИНК: Хэрэглэгч бараа асуусан бол хариултандаа тухайн барааны нэр эсвэл [Бараа үзэх](URL) холбоосоор дээрх "Барааны шууд линк"-ийг заавал дарж үзэх боломжтойгоор хавсаргана уу.');
+      } else if (cfg.linkStyle === 'plain') {
+        rules.push('1. БАРААНЫ ШУУД ЛИНК: Барааны бүтэн URL хаягийг хариултандаа текстээр тодорхой зааж өгнө үү.');
+      } else {
+        rules.push('1. БАРААНЫ ШУУД ЛИНК: Барааны холбоосыг 🔗 [Бараа үзэх](URL) хэлбэрээр хавсаргана уу.');
+      }
+    }
+
+    if (cfg.includeCategoryLink !== false) {
+      rules.push('2. АНГИЛЛЫН ЛИНК: Хэрэглэгчид тухайн төрөл/ангиллын бусад загваруудыг харах боломжийг олгож, ангиллын холбоосыг [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно уу.');
+    }
+
+    if (cfg.includeStock !== false) {
+      rules.push('3. ТӨЛӨВ: Бараа бэлэн байгаа бол дэлгүүрт бэлэн байгааг, хэрэв нөөц дууссан бол түр дууссаныг тодорхой дурдана.');
+    }
+
+    return `--- БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН (MeiliSearch https://meili.bsb.mn) ---
+${itemsText}
+
+ХАРИУЛТЫН ФОРМАТЫН ТУСГАЙ ЗААВАР:
+${rules.join('\n')}
+--------------------------------------------------------------`;
   }
 }
 

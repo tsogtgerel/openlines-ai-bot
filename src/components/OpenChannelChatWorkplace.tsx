@@ -52,6 +52,7 @@ import {
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig, TypingUser } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
 import { ProductSearchModal } from './ProductSearchModal';
+import { FormattedMessageText } from './FormattedMessageText';
 import {
   playIncomingMessageSound,
   playOutgoingMessageSound,
@@ -2938,7 +2939,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                             <span>BSB AI Туслахын автомат хариулт</span>
                           </div>
                         )}
-                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                        <FormattedMessageText text={msg.text} isOperator={!isCustomer && !isBot} />
 
                         {/* Inline Keyboard (if bot returned buttons) */}
                         {msg.keyboard && msg.keyboard.length > 0 && (

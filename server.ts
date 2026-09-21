@@ -361,8 +361,39 @@ async function startServer() {
       const q = (req.query.q as string) || '';
       const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 10;
       const inStockOnly = req.query.inStockOnly === 'true';
-      const result = await meiliProductService.searchProducts(q, { limit, inStockOnly });
-      res.json({ success: true, data: result });
+      const botConfig = botWorker.getConfig();
+      const result = await meiliProductService.searchProducts(q, {
+        limit,
+        inStockOnly,
+        config: botConfig.productConfig,
+      });
+      res.json({ success: true, data: result, config: botConfig.productConfig });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
+   * POST /api/products/format-preview
+   * Өгөгдсөн тохиргоогоор барааны мэдээлэл болон линк AI prompt-д хэрхэн орохыг урьдчилан харах.
+   */
+  app.post('/api/products/format-preview', async (req, res) => {
+    try {
+      const { query = 'зурагт', config } = req.body || {};
+      const activeConfig = config || botWorker.getConfig().productConfig;
+      const searchRes = await meiliProductService.searchProducts(query, {
+        limit: 3,
+        config: activeConfig,
+      });
+      const promptText = meiliProductService.formatForPrompt(searchRes.hits, activeConfig);
+      res.json({
+        success: true,
+        data: {
+          hits: searchRes.hits,
+          promptText,
+          config: activeConfig,
+        },
+      });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
     }
