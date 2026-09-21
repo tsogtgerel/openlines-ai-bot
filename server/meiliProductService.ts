@@ -937,11 +937,12 @@ export class MeiliProductService {
     // Normalize spacing
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
 
-    // Remove common question prefixes and suffixes
-    let lower = cleaned.toLowerCase();
-    for (const phrase of QUESTION_STOP_WORDS) {
-      const regex = new RegExp(`\\b${phrase}\\b`, 'gi');
-      cleaned = cleaned.replace(regex, ' ');
+    // Remove common question prefixes and suffixes using Cyrillic-aware word boundaries
+    const sortedStopWords = [...QUESTION_STOP_WORDS].sort((a, b) => b.length - a.length);
+    for (const phrase of sortedStopWords) {
+      const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(`(^|[^a-zA-Zа-яёөүА-ЯЁӨҮ0-9])${escaped}(?=[^a-zA-Zа-яёөүА-ЯЁӨҮ0-9]|$)`, 'gi');
+      cleaned = cleaned.replace(regex, '$1 ');
     }
 
     cleaned = cleaned.replace(/\s+/g, ' ').trim();
@@ -1466,6 +1467,84 @@ export class MeiliProductService {
   }
 
   /**
+   * Intelligently resolves the most accurate, specific, and official category for a product
+   */
+  public resolveCategory(h: any, rawName: string): { name: string; slug: string } {
+    const lowerName = (rawName || '').toLowerCase();
+
+    // 1. Check if category represents Sofa / Буйдан
+    const isSofa =
+      lowerName.includes('буйдан') ||
+      lowerName.includes('sofa') ||
+      (Array.isArray(h.productTaxons) &&
+        h.productTaxons.some(
+          (t: any) =>
+            (t.name && t.name.toLowerCase().includes('буйдан')) ||
+            (t.slug && t.slug.toLowerCase().includes('buidan')) ||
+            t.code === 'category_2287' ||
+            t.code === 'category_4029'
+        ));
+
+    if (isSofa) {
+      return { name: 'Буйдан', slug: 'category_2287?has_stock=true' };
+    }
+
+    // 2. Direct BSB_CATEGORIES keyword check against product title
+    for (const cat of BSB_CATEGORIES) {
+      if (cat.keywords.some((kw) => this.matchesCategoryKeyword(lowerName, kw))) {
+        // If product has a specific matching taxon (e.g. front-door washing machine), use it if valid
+        const matchedTaxon = Array.isArray(h.productTaxons)
+          ? h.productTaxons.find((t: any) => {
+              if (!t?.name || !t?.slug) return false;
+              const n = t.name.toLowerCase();
+              return cat.keywords.some((kw) => this.matchesCategoryKeyword(n, kw));
+            })
+          : null;
+        if (matchedTaxon && matchedTaxon.slug !== 'category') {
+          return { name: matchedTaxon.name, slug: matchedTaxon.slug };
+        }
+        return { name: cat.name, slug: cat.slug };
+      }
+    }
+
+    // 3. Inspect mainTaxon if valid and not a dummy root 'category'
+    const mainValid =
+      h.mainTaxon &&
+      h.mainTaxon.name &&
+      h.mainTaxon.slug &&
+      String(h.mainTaxon.code).toLowerCase() !== 'category' &&
+      String(h.mainTaxon.slug).toLowerCase() !== 'category' &&
+      String(h.mainTaxon.name).toLowerCase() !== 'category';
+
+    if (mainValid) {
+      return { name: h.mainTaxon.name, slug: h.mainTaxon.slug || h.mainTaxon.code };
+    }
+
+    // 4. Inspect valid taxons from productTaxons
+    const validTaxons = Array.isArray(h.productTaxons)
+      ? h.productTaxons.filter((t: any) => {
+          if (!t || !t.name || !t.slug) return false;
+          const lowerSlug = String(t.slug).toLowerCase();
+          const lowerName = String(t.name).toLowerCase();
+          const lowerCode = String(t.code || '').toLowerCase();
+          if (lowerSlug === 'category' || lowerName === 'category' || lowerCode === 'category') return false;
+          if (lowerCode.endsWith('_brand') || lowerCode.endsWith('_group')) return false;
+          if (lowerSlug.includes('/brendeer') || lowerSlug.includes('/baraany-bulgeer')) return false;
+          if (lowerSlug.includes('banner') || lowerSlug.includes('kollekts') || lowerSlug.includes('collection')) return false;
+          if (lowerName === 'брэндээр' || lowerName === 'барааны бүлгээр' || lowerName === 'бүлгээр') return false;
+          return true;
+        })
+      : [];
+
+    if (validTaxons.length > 0) {
+      const leaf = validTaxons[validTaxons.length - 1];
+      return { name: leaf.name, slug: leaf.slug || leaf.code };
+    }
+
+    return { name: 'Цахилгаан бараа', slug: 'electronics' };
+  }
+
+  /**
    * Helper to format raw MeiliSearch hit into clean UI & Prompt friendly object
    */
   public formatHit(h: any, config?: ProductDisplayConfig): FormattedBsbProduct {
@@ -1481,8 +1560,9 @@ export class MeiliProductService {
 
     const rawName = h.translations?.mn_MN?.name || h.name || productCode || '';
     const brandName = h.brand?.name || (h.brand?.code ? String(h.brand.code).toUpperCase() : '-');
-    let categoryName = h.mainTaxon?.name || h.productTaxons?.[0]?.name || 'Цахилгаан бараа';
-    let categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || h.mainTaxon?.code || '';
+    const resolvedCat = this.resolveCategory(h, rawName);
+    const categoryName = resolvedCat.name;
+    let categorySlug = resolvedCat.slug;
 
     // Primary variant pricing
     const primaryVariant = h.variants?.[0] || {};
@@ -1567,27 +1647,9 @@ export class MeiliProductService {
       productUrl = productUrl.replace('/undefined', `/${productCode}`);
     }
 
-    // Check if category represents Sofa / Буйдан
-    const isSofaCategory =
-      categoryName.toLowerCase().includes('буйдан') ||
-      rawName.toLowerCase().includes('буйдан') ||
-      categorySlug.toLowerCase().includes('buidan') ||
-      categorySlug.includes('2287') ||
-      categorySlug.includes('code_23/bukh-tavilga/buidan') ||
-      categorySlug.includes('code_2287') ||
-      h.mainTaxon?.code === 'category_2287' ||
-      h.mainTaxon?.code === 'category_4029' ||
-      (Array.isArray(h.productTaxons) &&
-        h.productTaxons.some(
-          (t: any) =>
-            t.code === 'category_2287' ||
-            t.code === 'category_4029' ||
-            (t.name && t.name.toLowerCase().includes('буйдан')) ||
-            (t.slug && t.slug.toLowerCase().includes('buidan'))
-        ));
-
+    // Build official category URL
     let categoryUrl: string;
-    if (isSofaCategory) {
+    if (categorySlug.includes('category_2287') || categorySlug.includes('buidan') || categoryName.toLowerCase().includes('буйдан')) {
       categorySlug = 'category_2287?has_stock=true';
       categoryUrl = `${baseUrl}/categories/category_2287?has_stock=true`;
     } else {
@@ -1597,11 +1659,14 @@ export class MeiliProductService {
         catPattern = catPattern.replace('/category/', '/categories/');
       }
 
-      categoryUrl = categorySlug
-        ? catPattern
-            .replace('{slug}', categorySlug)
-            .replace('{code}', h.mainTaxon?.code || categorySlug)
-        : `${baseUrl}/categories`;
+      // If categorySlug somehow ended up as dummy root 'category', fix to electronics
+      if (!categorySlug || categorySlug.toLowerCase() === 'category') {
+        categorySlug = 'electronics';
+      }
+
+      categoryUrl = catPattern
+        .replace('{slug}', categorySlug)
+        .replace('{code}', categorySlug);
 
       if (categoryUrl.includes('/category/') && !categoryUrl.includes('/categories/')) {
         categoryUrl = categoryUrl.replace('/category/', '/categories/');
@@ -1764,17 +1829,11 @@ export class MeiliProductService {
     // Dynamic formatting rules for AI
     const rules: string[] = [];
     if (cfg.includeProductLink !== false) {
-      if (cfg.linkStyle === 'markdown') {
-        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Хэрэглэгчийн асуусан барааны хувьд дээрх "Барааны албан ёсны холбоос (\'url\' талбар)" дээр өгөгдсөн бодит хаягийг [Бараа үзэх](URL) эсвэл [Барааны нэр](URL) хэлбэрээр Markdown холбоос болгон заавал хавсаргана уу (URL дээр { } хаалт бичихгүй, яг хаягийг нь тавина).');
-      } else if (cfg.linkStyle === 'plain') {
-        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Дээрх "Барааны албан ёсны холбоос (\'url\' талбар)" дээр өгөгдсөн хаягийг хариултандаа текстээр тодорхой зааж өгнө үү.');
-      } else {
-        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Барааны холбоосыг 🔗 [Бараа үзэх](URL) хэлбэрээр хавсаргана уу.');
-      }
+      rules.push("1. БАРААНЫ ХОЛБООС ('url' талбар): Бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС барааны албан ёсны холбоосыг дараагийн мөрөнд нь тусад нь '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр заавал хавсаргана уу. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны дэлгэрэнгүй мэдээллийнх нь араас тусад нь мөр болгож тавина.");
     }
 
     if (cfg.includeCategoryLink !== false) {
-      rules.push('2. АНГИЛЛЫН ХОЛБООС: Хэрэглэгчид тухайн төрөл/ангиллын бусад загваруудыг харах боломжийг олгож, ангиллын холбоосыг дээрх "Ангиллын албан ёсны холбоос (\'categoryUrl\' талбар)"-аас ашиглан [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно уу.');
+      rules.push("2. АНГИЛЛЫН ХОЛБООС ('categoryUrl' талбар): Хариултын төгсгөлд хэрэглэгчид тухайн ангиллын бусад бүх загварыг үзэх боломж олгож, ангиллын холбоосыг дээрх 'categoryUrl'-аас ашиглан 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр санал болгоно уу.");
     }
 
     if (cfg.includeStock !== false) {
@@ -1902,8 +1961,35 @@ ${rules.join('\n')}
     // 5. Fix singular /category/ -> /categories/
     text = text.replace(/https?:\/\/bsb\.mn\/category\//gi, 'https://bsb.mn/categories/');
 
+    // 5.1. Replace broken generic /categories/category with real product category
+    if (products.length > 0 && products[0].categoryUrl && !products[0].categoryUrl.endsWith('/categories/category')) {
+      text = text.replace(/https?:\/\/bsb\.mn\/categories\/category(?=[)\s\]]|$)/gi, products[0].categoryUrl);
+      if (products[0].category && products[0].category.toLowerCase() !== 'category') {
+        text = text.replace(/\[Ангилал:\s*Category\]/gi, `[Ангилал: ${products[0].category}]`);
+      }
+    }
+
     // 6. Clean any trailing slashes inside product URLs before closing brackets or markdown
     text = text.replace(/(https?:\/\/bsb\.mn\/products\/by-code\/[A-Za-z0-9_\-]+)\/+([)\s*\]])/g, '$1$2');
+
+    // 6.1. Move product links that were wrapped around product titles to the end of the product info block
+    // e.g., 1. [LG 11kg LG-F4V3ES6S](url)\n   • Үнэ: ... -> 1. LG 11kg LG-F4V3ES6S\n   • Үнэ: ...\n   🔗 Холбоос: url
+    const blocks = text.split(/\n\n+/);
+    const movedBlocks = blocks.map((block) => {
+      const match = block.match(/^(\s*(?:\d+[\.\)]|\-|\*|•)\s*)\[([^\]\n]+)\]\((https?:\/\/bsb\.mn\/products\/by-code\/[^\s)]+)\)([\s\S]*)$/);
+      if (match) {
+        const bullet = match[1];
+        const title = match[2];
+        const url = match[3];
+        const rest = match[4].trimEnd();
+        if (rest.includes(url)) {
+          return bullet + title + rest;
+        }
+        return `${bullet}${title}${rest}\n   🔗 Холбоос: ${url}`;
+      }
+      return block;
+    });
+    text = movedBlocks.join('\n\n');
 
     // 7. Ensure primary product link exists if enabled in config and products were found
     const cfg = config || DEFAULT_PRODUCT_CONFIG;
@@ -1911,7 +1997,7 @@ ${rules.join('\n')}
       const primaryUrl = products[0].url;
       const hasUrlAlready = text.includes(primaryUrl) || text.includes(products[0].productCode);
       if (!hasUrlAlready && !text.includes('products/by-code/')) {
-        text += `\n\n🛒 [${products[0].name} дэлгэрэнгүй үзэх](${primaryUrl})`;
+        text += `\n\n🔗 Холбоос: ${primaryUrl}`;
       }
     }
 
@@ -1919,8 +2005,11 @@ ${rules.join('\n')}
     if (cfg.includeCategoryLink !== false && products.length > 0 && products[0].categoryUrl) {
       const catUrl = products[0].categoryUrl;
       const hasCatAlready = text.includes(catUrl) || text.includes('/categories/');
-      if (!hasCatAlready) {
-        text += `\n📁 [Ангилал: ${products[0].category}](${catUrl})`;
+      if (!hasCatAlready && !catUrl.endsWith('/categories/category')) {
+        const catName = products[0].category && products[0].category.toLowerCase() !== 'category'
+          ? products[0].category
+          : 'Бараа бүтээгдэхүүн';
+        text += `\n📁 [Ангилал: ${catName}](${catUrl})`;
       }
     }
 

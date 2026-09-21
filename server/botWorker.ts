@@ -1065,10 +1065,10 @@ export class BotWorkerService {
       const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
       const linkDirectives: string[] = [];
       if (productConfig.includeProductLink !== false) {
-        linkDirectives.push('Хэрэглэгч бараа асуусан бол дээрх MeiliSearch баримтаас олдсон бодит \'url\' талбарын хаягийг [Бараа үзэх]({url}) эсвэл [Барааны нэр]({url}) хэлбэрээр заавал хавсаргана. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.');
+        linkDirectives.push("Хэрэглэгч бараа асуусан бол бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС MeiliSearch баримтаас олдсон бодит 'url' талбарын хаягийг '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр дараагийн мөрөнд нь тусад нь заавал хавсаргана. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны мэдээллийнх нь араас тусад нь мөр болгож тавина. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.");
       }
       if (productConfig.includeCategoryLink !== false) {
-        linkDirectives.push('Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх \'categoryUrl\' талбарын холбоосыг [Ангилал: {Нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.');
+        linkDirectives.push("Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх 'categoryUrl' талбарын холбоосыг 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.");
       }
 
       const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
@@ -1105,12 +1105,22 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
             const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
             const price = p.priceFormatted || 'Үнэ тодруулах';
             const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-            return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${price} (${stock})${specs}`;
+            const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
+            return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${productLink}`;
           }).join('\n\n');
 
-          const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category);
-          const categoryLinkPart = categoryItem
-            ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+          const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
+          const categoryName = detectedProductContext?.detectedCategory || categoryItem?.category || 'Бараа бүтээгдэхүүн';
+          let categoryUrl = detectedProductContext?.categorySlug
+            ? (detectedProductContext.categorySlug.includes('category_2287') ? 'https://bsb.mn/categories/category_2287?has_stock=true' : `https://bsb.mn/categories/${detectedProductContext.categorySlug}`)
+            : (categoryItem?.categoryUrl || 'https://bsb.mn/categories');
+
+          if (categoryUrl.endsWith('/categories/category') || categoryUrl.endsWith('/category')) {
+            categoryUrl = 'https://bsb.mn/categories';
+          }
+
+          const categoryLinkPart = categoryUrl
+            ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryName}](${categoryUrl})`
             : '';
 
           const directProductReply = `Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n${itemsList}${categoryLinkPart}\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!`;
@@ -1231,12 +1241,22 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
           const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
           const price = p.priceFormatted || 'Үнэ тодруулах';
           const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-          return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${price} (${stock})${specs}`;
+          const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
+          return `${idx + 1}. ${p.name}\n   • Үнэ: ${price} (${stock})${specs}${productLink}`;
         }).join('\n\n');
 
-        const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category);
-        const categoryLinkPart = categoryItem
-          ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+        const categoryItem = matchedProducts.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
+        const categoryName = detectedProductContext?.detectedCategory || categoryItem?.category || 'Бараа бүтээгдэхүүн';
+        let categoryUrl = detectedProductContext?.categorySlug
+          ? (detectedProductContext.categorySlug.includes('category_2287') ? 'https://bsb.mn/categories/category_2287?has_stock=true' : `https://bsb.mn/categories/${detectedProductContext.categorySlug}`)
+          : (categoryItem?.categoryUrl || 'https://bsb.mn/categories');
+
+        if (categoryUrl.endsWith('/categories/category') || categoryUrl.endsWith('/category')) {
+          categoryUrl = 'https://bsb.mn/categories';
+        }
+
+        const categoryLinkPart = categoryUrl
+          ? `\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: ${categoryName}](${categoryUrl})`
           : '';
 
         const directProductReply = `Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n${itemsList}${categoryLinkPart}\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!`;
@@ -1652,12 +1672,22 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       const items = productRes.hits.slice(0, 3).map((p, idx) => {
         const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
         const specs = p.attributesSummary ? `\n   • Үзүүлэлт: ${p.attributesSummary}` : '';
-        return `${idx + 1}. [${p.name}](${p.url})\n   • Үнэ: ${p.priceFormatted} (${stock})${specs}`;
+        const productLink = p.url ? `\n   🔗 Холбоос: ${p.url}` : '';
+        return `${idx + 1}. ${p.name}\n   • Үнэ: ${p.priceFormatted} (${stock})${specs}${productLink}`;
       }).join('\n\n');
 
-      const categoryItem = productRes.hits.find((p) => p.categoryUrl && p.category);
-      const catPart = categoryItem
-        ? `\n\n📁 [Ангилал: ${categoryItem.category}](${categoryItem.categoryUrl})`
+      const categoryItem = productRes.hits.find((p) => p.categoryUrl && p.category && p.category.toLowerCase() !== 'category');
+      const categoryName = productRes.detectedContext?.detectedCategory || categoryItem?.category || 'Бараа бүтээгдэхүүн';
+      let categoryUrl = productRes.detectedContext?.categorySlug
+        ? (productRes.detectedContext.categorySlug.includes('category_2287') ? 'https://bsb.mn/categories/category_2287?has_stock=true' : `https://bsb.mn/categories/${productRes.detectedContext.categorySlug}`)
+        : (categoryItem?.categoryUrl || 'https://bsb.mn/categories');
+
+      if (categoryUrl.endsWith('/categories/category') || categoryUrl.endsWith('/category')) {
+        categoryUrl = 'https://bsb.mn/categories';
+      }
+
+      const catPart = categoryUrl
+        ? `\n\n📁 [Ангилал: ${categoryName}](${categoryUrl})`
         : '';
 
       return {
