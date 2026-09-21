@@ -7,12 +7,12 @@
       "name": "Цогтгэрэл Ч",
       "role": "Мэдээллийн технологийн захирал",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-      "status": "offline",
+      "status": "online",
       "email": "tsogtgerel@bsb.mn",
       "phone": "+976 75100272",
-      "isClockedIn": false,
+      "isClockedIn": true,
       "isOnBreak": false,
-      "activeShiftId": null,
+      "activeShiftId": "shift-bx-1700",
       "assignedChannelIds": [
         1,
         3,
@@ -49,10 +49,9 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 16,
+      "activeSessions": 32,
       "accessRole": "admin",
-      "canAccessAllChannels": true,
-      "bitrixWorkdayStatus": "CLOSED"
+      "canAccessAllChannels": true
     },
     {
       "id": "bx-121",
@@ -112,8 +111,7 @@
       ],
       "activeSessions": 1,
       "accessRole": "agent",
-      "canAccessAllChannels": false,
-      "bitrixWorkdayStatus": "EXPIRED"
+      "canAccessAllChannels": false
     },
     {
       "id": "bx-125",
@@ -497,7 +495,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 296,
+      "activeSessions": 260,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -521,7 +519,7 @@
         "БСБ Оффис Мебель - Facebook - Messenger",
         "БСБ Оффис Мебель - Facebook - Comments"
       ],
-      "activeSessions": 6,
+      "activeSessions": 2,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -699,7 +697,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 21,
+      "activeSessions": 3,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -855,7 +853,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 6,
+      "activeSessions": 0,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1157,7 +1155,7 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 3,
+      "activeSessions": 6,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1317,6 +1315,22 @@
     }
   ],
   "shifts": [
+    {
+      "id": "shift-bx-1700",
+      "agentId": "bx-15",
+      "agentName": "Цогтгэрэл Ч",
+      "date": "2026-09-21",
+      "clockInTime": "2026-09-21T09:07:38+08:00",
+      "clockOutTime": null,
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "totalBreakSeconds": 114,
+      "workedSeconds": 7,
+      "chatsResolved": 0,
+      "bitrixWorkdayStatus": "OPENED",
+      "bitrixWorkdayId": 1700,
+      "bitrixDuration": "00:00:00"
+    },
     {
       "id": "shift-bx-1682",
       "agentId": "bx-15",

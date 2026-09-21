@@ -27,8 +27,8 @@ interface PromptSettingsTabProps {
 
 const DEFAULT_PRODUCT_CONFIG: ProductDisplayConfig = {
   websiteBaseUrl: 'https://bsb.mn',
-  productUrlPattern: 'https://bsb.mn/product/{slug}',
-  categoryUrlPattern: 'https://bsb.mn/category/{slug}',
+  productUrlPattern: 'https://bsb.mn/products/by-code/{code}',
+  categoryUrlPattern: 'https://bsb.mn/categories/{slug}',
   includeProductLink: true,
   includeCategoryLink: true,
   includePrice: true,
@@ -67,9 +67,28 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   );
 
   // MeiliSearch product output & format config
-  const [productConfig, setProductConfig] = useState<ProductDisplayConfig>({
-    ...DEFAULT_PRODUCT_CONFIG,
-    ...(botConfig?.productConfig || {}),
+  const [productConfig, setProductConfig] = useState<ProductDisplayConfig>(() => {
+    const raw: ProductDisplayConfig = {
+      ...DEFAULT_PRODUCT_CONFIG,
+      ...(botConfig?.productConfig || {}),
+    };
+    // Auto-heal legacy /product/ or /category/ patterns
+    if (
+      raw.productUrlPattern.includes('/product/{slug}') ||
+      raw.productUrlPattern.includes('/product/{code}') ||
+      raw.productUrlPattern.includes('/products/{slug}') ||
+      raw.productUrlPattern === 'https://bsb.mn/product/{slug}'
+    ) {
+      raw.productUrlPattern = 'https://bsb.mn/products/by-code/{code}';
+    }
+    if (
+      raw.categoryUrlPattern.includes('/category/{slug}') ||
+      raw.categoryUrlPattern.includes('/category/') ||
+      raw.categoryUrlPattern === 'https://bsb.mn/category/{slug}'
+    ) {
+      raw.categoryUrlPattern = 'https://bsb.mn/categories/{slug}';
+    }
+    return raw;
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -607,8 +626,8 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                   className="w-4 h-4 rounded text-blue-600"
                 />
                 <div>
-                  <span className="font-bold text-slate-800 block">Барааны шууд хуудасны линк</span>
-                  <span className="text-[10px] text-slate-500">Жишээ: [Бараа үзэх](https://bsb.mn/product/slug)</span>
+                  <span className="font-bold text-slate-800 block">Барааны шууд хуудасны линк ('url')</span>
+                  <span className="text-[10px] text-slate-500">Жишээ: [Бараа үзэх](https://bsb.mn/products/by-code/12345)</span>
                 </div>
               </label>
 
@@ -620,8 +639,8 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                   className="w-4 h-4 rounded text-amber-600"
                 />
                 <div>
-                  <span className="font-bold text-slate-800 block">Барааны ангиллын линк</span>
-                  <span className="text-[10px] text-slate-500">Жишээ: [Ангилал: Зурагт](https://bsb.mn/category/tv)</span>
+                  <span className="font-bold text-slate-800 block">Барааны ангиллын линк ('categoryUrl')</span>
+                  <span className="text-[10px] text-slate-500">Жишээ: [Ангилал: Зурагт](https://bsb.mn/categories/tv)</span>
                 </div>
               </label>
 
@@ -707,10 +726,28 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
 
           {/* 2. URL & Link Pattern Customization */}
           <div className="pt-3 border-t border-indigo-100/80 space-y-3">
-            <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-              <Link className="w-3.5 h-3.5 text-indigo-600" />
-              2. Холбоосын хаяг & Загвар (URL Patterns):
-            </h5>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                <Link className="w-3.5 h-3.5 text-indigo-600" />
+                2. Холбоосын хаяг & Загвар (URL Patterns):
+              </h5>
+              <button
+                type="button"
+                onClick={() => {
+                  setProductConfig((prev) => ({
+                    ...prev,
+                    websiteBaseUrl: 'https://bsb.mn',
+                    productUrlPattern: 'https://bsb.mn/products/by-code/{code}',
+                    categoryUrlPattern: 'https://bsb.mn/categories/{slug}',
+                  }));
+                }}
+                className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 px-2.5 py-1 rounded-lg border border-indigo-200 transition-colors flex items-center gap-1"
+              >
+                <CheckCircle2 className="w-3 h-3 text-indigo-600" />
+                BSB албан ёсны холбоос сэргээх (/products/by-code/:code)
+              </button>
+            </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
               <div>
                 <label className="block text-[11px] font-semibold text-slate-700 mb-1">
@@ -733,10 +770,12 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                   type="text"
                   value={productConfig.productUrlPattern}
                   onChange={(e) => updateProductConfig('productUrlPattern', e.target.value)}
-                  placeholder="https://bsb.mn/product/{slug}"
+                  placeholder="https://bsb.mn/products/by-code/{code}"
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
                 />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">{'{slug}'} нь барааны нэрээр солигдоно</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  <span className="text-emerald-700 font-semibold">{'{code}'}</span> нь BSB барааны кодоор (жишээ: APPL-MY373X) солигдоно
+                </span>
               </div>
 
               <div>
@@ -747,10 +786,12 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
                   type="text"
                   value={productConfig.categoryUrlPattern}
                   onChange={(e) => updateProductConfig('categoryUrlPattern', e.target.value)}
-                  placeholder="https://bsb.mn/category/{slug}"
+                  placeholder="https://bsb.mn/categories/{slug}"
                   className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs font-mono"
                 />
-                <span className="text-[10px] text-slate-400 mt-0.5 block">{'{slug}'} нь ангиллын нэрээр солигдоно</span>
+                <span className="text-[10px] text-slate-500 mt-0.5 block">
+                  <span className="text-emerald-700 font-semibold">{'{slug}'}</span> нь ангиллаар (жишээ: mobile, tv, ref_freezer) солигдоно
+                </span>
               </div>
             </div>
           </div>

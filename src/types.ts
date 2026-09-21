@@ -9,8 +9,8 @@ export interface KnowledgeArticle {
 
 export interface ProductDisplayConfig {
   websiteBaseUrl: string; // e.g. "https://bsb.mn"
-  productUrlPattern: string; // e.g. "https://bsb.mn/product/{slug}" or "https://bsb.mn/{slug}"
-  categoryUrlPattern: string; // e.g. "https://bsb.mn/category/{slug}" or "https://bsb.mn/c/{slug}"
+  productUrlPattern: string; // e.g. "https://bsb.mn/products/by-code/{code}" (BSB official endpoint)
+  categoryUrlPattern: string; // e.g. "https://bsb.mn/categories/{slug}"
   includeProductLink: boolean; // Барааны шууд линкийг хариултад оруулах
   includeCategoryLink: boolean; // Барааны ангиллын линкийг хариултад оруулах
   includePrice: boolean; // Үнэ, хямдралын мэдээллийг оруулах
@@ -70,6 +70,7 @@ export interface BsbProduct {
   descriptionSummary: string;
   imageUrl?: string;
   slug?: string;
+  url?: string;
   productUrl?: string;
   warrantyMonth?: string;
   promotionsSummary?: string;

@@ -152,7 +152,38 @@ export class BotWorkerService {
     try {
       if (fs.existsSync(CONFIG_FILE)) {
         const raw = fs.readFileSync(CONFIG_FILE, 'utf-8');
-        this.config = { ...DEFAULT_CONFIG, ...JSON.parse(raw) };
+        const parsed = JSON.parse(raw);
+        this.config = { ...DEFAULT_CONFIG, ...parsed };
+
+        // Auto-migrate any legacy broken URL patterns in config to official working BSB endpoints
+        if (this.config.productConfig) {
+          let updated = false;
+          const currentProdPattern = this.config.productConfig.productUrlPattern || '';
+          if (
+            currentProdPattern.includes('/product/{slug}') ||
+            currentProdPattern.includes('/product/{code}') ||
+            currentProdPattern.includes('/products/{slug}') ||
+            currentProdPattern === 'https://bsb.mn/product/{slug}'
+          ) {
+            this.config.productConfig.productUrlPattern = 'https://bsb.mn/products/by-code/{code}';
+            updated = true;
+          }
+
+          const currentCatPattern = this.config.productConfig.categoryUrlPattern || '';
+          if (
+            currentCatPattern.includes('/category/{slug}') ||
+            currentCatPattern.includes('/category/') ||
+            currentCatPattern === 'https://bsb.mn/category/{slug}'
+          ) {
+            this.config.productConfig.categoryUrlPattern = 'https://bsb.mn/categories/{slug}';
+            updated = true;
+          }
+
+          if (updated) {
+            console.log('[BotWorker] Auto-migrated bot_config.json to official BSB product URL patterns (/products/by-code/:code)');
+            this.saveConfig();
+          }
+        }
       } else {
         this.saveConfig();
       }
@@ -523,13 +554,15 @@ export class BotWorkerService {
       return { answer: greetingReply, handedOff: false };
     }
 
-    // 3. Search MeiliSearch Product Database (https://meili.bsb.mn)
+    // 3. Search MeiliSearch Product Database (https://meili.bsb.mn) using conversation context
     let matchedProducts: FormattedBsbProduct[] = [];
     const isProdSearchActive = this.config.productSearchEnabled !== false && this.config.enableProductSearch !== false;
     if (isProdSearchActive) {
       try {
         const prodLimit = this.config.productSearchLimit || 4;
-        const prodResult = await meiliProductService.searchProducts(sanitizedText, {
+        const dialogData = chatManager.getDialog(dialogId);
+        const prevMessages = dialogData ? dialogData.messages.slice(-8) : [];
+        const prodResult = await meiliProductService.searchByConversation(sanitizedText, prevMessages, {
           limit: prodLimit,
           config: this.config.productConfig,
         });
@@ -582,10 +615,10 @@ export class BotWorkerService {
       const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
       const linkDirectives: string[] = [];
       if (productConfig.includeProductLink !== false) {
-        linkDirectives.push('Хэрэглэгч бараа асуусан бол хариултандаа тухайн барааны шууд хуудасны линкийг [Бараа үзэх](URL) эсвэл [Барааны бүтэн нэр](URL) хэлбэрээр тодорхой заавал хавсаргана.');
+        linkDirectives.push('Хэрэглэгч бараа асуусан бол дээрх MeiliSearch баримтаас олдсон бодит \'url\' талбарын хаягийг [Бараа үзэх]({url}) эсвэл [Барааны нэр]({url}) хэлбэрээр заавал хавсаргана. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.');
       }
       if (productConfig.includeCategoryLink !== false) {
-        linkDirectives.push('Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, ангиллын линкийг [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно.');
+        linkDirectives.push('Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх \'categoryUrl\' талбарын холбоосыг [Ангилал: {Нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.');
       }
 
       const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
@@ -643,16 +676,23 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         return { answer: transferText, handedOff: true };
       }
 
+      // Sanitize product and category links to guarantee they are 100% valid official BSB.mn links
+      const sanitizedAiContent = meiliProductService.sanitizeAiResponseLinks(
+        aiContent,
+        matchedProducts,
+        this.config.productConfig
+      );
+
       // Send the AI answer with inline keyboard
-      await this.sendReply(dialogId, aiContent, true);
-      chatManager.recordBotReply(dialogId, aiContent, false, this.config.botName);
+      await this.sendReply(dialogId, sanitizedAiContent, true);
+      chatManager.recordBotReply(dialogId, sanitizedAiContent, false, this.config.botName);
 
       this.addLog({
         id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
         timestamp: new Date().toISOString(),
         dialogId,
         customerMessage: text,
-        botAnswer: aiContent,
+        botAnswer: sanitizedAiContent,
         handedOff: false,
         matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
         matchedProducts: matchedProducts.map((p) => ({
@@ -667,7 +707,7 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
         durationMs: Date.now() - startTime,
       });
 
-      return { answer: aiContent, handedOff: false };
+      return { answer: sanitizedAiContent, handedOff: false };
     } catch (err: any) {
       console.error('[BotWorker] AI completion error:', err);
       // Fallback behavior on AI error
@@ -870,14 +910,54 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
     return this.leaveChat(dialogId);
   }
 
-  async suggestDraftResponse(query: string): Promise<{
+  async suggestDraftResponse(
+    query: string,
+    options?: {
+      dialogId?: string;
+      conversation?: Array<{ sender?: string; text?: string }> | string[];
+      limit?: number;
+    }
+  ): Promise<{
     suggestion: string;
     matchedArticles: { id: string; title: string; score: number }[];
-    matchedProducts?: { code: string; name: string; priceFormatted: string; inStock: boolean }[];
+    matchedProducts?: Array<{
+      id?: number;
+      code: string;
+      productCode: string;
+      name: string;
+      brand?: string;
+      category?: string;
+      categorySlug?: string;
+      categoryUrl?: string;
+      priceFormatted: string;
+      inStock: boolean;
+      url: string; // explicitly include the correct 'url' field from MeiliSearch document
+      productUrl: string;
+    }>;
+    detectedContext?: any;
   }> {
+    let conversationHistory = options?.conversation;
+    if (!conversationHistory && options?.dialogId) {
+      const dialog = chatManager.getDialog(options.dialogId);
+      if (dialog && dialog.messages) {
+        conversationHistory = dialog.messages.slice(-8);
+      }
+    }
+
     const [matchedKb, productRes] = await Promise.all([
       Promise.resolve(knowledgeBase.search(query, 3)),
-      meiliProductService.searchProducts(query, { limit: 3 }).catch(() => ({ hits: [] })),
+      meiliProductService
+        .searchByConversation(query, conversationHistory, {
+          limit: options?.limit || 4,
+          config: this.config.productConfig,
+        })
+        .catch(() => ({
+          hits: [],
+          total: 0,
+          query,
+          processingTimeMs: 0,
+          detectedContext: undefined as any,
+        })),
     ]);
 
     const kbContext = matchedKb
@@ -885,12 +965,17 @@ ${productContext ? productContext + '\n\n' : ''}${kbContext ? '--- МЭДЭЭЛ�
       .join('\n\n');
 
     const productContext = productRes.hits.length > 0
-      ? meiliProductService.formatForPrompt(productRes.hits)
+      ? meiliProductService.formatForPrompt(productRes.hits, this.config.productConfig)
       : '';
 
     const prompt = `Та бол БСБ компанийн харилцагчийн үйлчилгээний операторт туслах хиймэл оюун ухаан юм.
 Оператор хэрэглэгчийн доорх асуултад шууд илгээх боломжтой, эелдэг найрсаг, тодорхой, мэргэжлийн хариултын нооргийг Монгол хэлээр боловсруулж өгнө үү.
 Хэрэв бараа, бүтээгдэхүүн, үнэ, загвар, нөөц асуусан бол БСБ Барааны сангаас (MeiliSearch) олдсон бодит бүтээгдэхүүний нэр, үнэ, бэлэн байгаа эсэх мэдээллийг оруулан хариулна.
+
+ЧУХАЛ ШААРДЛАГА - ХОЛБООС (URL):
+- Барааны линкийг [Бараа үзэх](URL) эсвэл [Барааны нэр](URL) хэлбэрээр оруулахдаа дээрх MeiliSearch-ийн бодит 'url' талбарын хаягийг (https://bsb.mn/products/by-code/...) хаалтгүйгээр яг хуулж тавина.
+- Өөрөө дур мэдэн буруу /product/ эсвэл ерөнхий холбоос зохиохыг ХАТУУ ХОРИГЛОНО.
+- Төгсгөлд нь ангиллын холбоос байгаа бол [Ангилал: {Нэр}](URL) гэж санал болгоно уу.
 
 --- ХЭРЭГЛЭГЧИЙН АСУУЛТ ---
 ${query}
@@ -899,6 +984,21 @@ ${productContext ? productContext + '\n\n' : ''}--- МЭДЭЭЛЛИЙН САН�
 ${kbContext || 'Одоогоор мэдээллийн сангаас шууд тохирох нийтлэл олдсонгүй.'}
 
 Операторт шууд илгээхэд бэлэн Монгол хариулт:`;
+
+    const mappedProducts = productRes.hits.map((p) => ({
+      id: p.id,
+      code: p.productCode,
+      productCode: p.productCode,
+      name: p.name,
+      brand: p.brand,
+      category: p.category,
+      categorySlug: p.categorySlug,
+      categoryUrl: p.categoryUrl,
+      priceFormatted: p.priceFormatted,
+      inStock: p.inStock,
+      url: p.url, // explicit 'url' field from MeiliSearch document
+      productUrl: p.url,
+    }));
 
     try {
       const aiRes = await vibeRequest<any>('POST', '/v1/chat/completions', {
@@ -912,10 +1012,16 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       const rawAny = aiRes as any;
       const content = (rawAny.choices?.[0]?.message?.content || rawAny.data?.choices?.[0]?.message?.content || '').trim();
       if (content) {
+        const sanitizedDraft = meiliProductService.sanitizeAiResponseLinks(
+          content,
+          productRes.hits,
+          this.config.productConfig
+        );
         return {
-          suggestion: content,
+          suggestion: sanitizedDraft,
           matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-          matchedProducts: productRes.hits.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
+          matchedProducts: mappedProducts,
+          detectedContext: productRes.detectedContext,
         };
       }
     } catch (e) {
@@ -926,9 +1032,10 @@ ${kbContext || 'Одоогоор мэдээллийн сангаас шууд т
       const p = productRes.hits[0];
       const stockText = p.inStock ? 'Бэлэн байна' : 'Одоогоор нөөц дууссан';
       return {
-        suggestion: `Сайн байна уу! Танд ${p.name} барааны үнэ ${p.priceFormatted} (${stockText}). Дэлгэрэнгүй мэдээлэл авахыг хүсвэл би шалгаж өгөх боломжтой байна.`,
+        suggestion: `Сайн байна уу! Танд ${p.name} барааны үнэ ${p.priceFormatted} (${stockText}).\n\n🛒 [Бараа үзэх](${p.url})`,
         matchedArticles: matchedKb.map((m) => ({ id: m.article.id, title: m.article.title, score: m.score })),
-        matchedProducts: productRes.hits.map((p) => ({ code: p.productCode, name: p.name, priceFormatted: p.priceFormatted, inStock: p.inStock })),
+        matchedProducts: mappedProducts,
+        detectedContext: productRes.detectedContext,
       };
     }
 

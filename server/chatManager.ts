@@ -685,6 +685,10 @@ export class ChatManagerService extends EventEmitter {
     );
   }
 
+  getDialog(id: string): ChatDialog | undefined {
+    return this.getDialogById(id);
+  }
+
   sendMessage(
     dialogId: string,
     message: {

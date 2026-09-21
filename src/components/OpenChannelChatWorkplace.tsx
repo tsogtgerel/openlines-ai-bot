@@ -1515,7 +1515,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // AI Suggestion based on customer last message
+  // AI Suggestion based on customer last message and conversation context
   const handleAISuggest = async () => {
     if (!selectedDialog) return;
     const lastCustomerMsg = [...selectedDialog.messages].reverse().find((m) => m.sender === 'customer');
@@ -1526,7 +1526,14 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       const res = await fetch('/api/chats/ai-suggest', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ query: queryText }),
+        body: JSON.stringify({
+          query: queryText,
+          dialogId: selectedDialog.dialogId || selectedDialog.id,
+          conversation: (selectedDialog.messages || []).map((m) => ({
+            sender: m.sender,
+            text: m.text,
+          })),
+        }),
       }).then((r) => r.json());
 
       if (res.success && res.data?.suggestion) {

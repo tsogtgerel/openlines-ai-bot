@@ -28,8 +28,8 @@ export interface ProductDisplayConfig {
 
 export const DEFAULT_PRODUCT_CONFIG: ProductDisplayConfig = {
   websiteBaseUrl: 'https://bsb.mn',
-  productUrlPattern: 'https://bsb.mn/product/{slug}',
-  categoryUrlPattern: 'https://bsb.mn/category/{slug}',
+  productUrlPattern: 'https://bsb.mn/products/by-code/{code}',
+  categoryUrlPattern: 'https://bsb.mn/categories/{slug}',
   includeProductLink: true,
   includeCategoryLink: true,
   includePrice: true,
@@ -38,9 +38,9 @@ export const DEFAULT_PRODUCT_CONFIG: ProductDisplayConfig = {
   includeSpecs: true,
   includeWarranty: true,
   includePromotions: true,
-  includeImage: true,
+  includeImage: false,
   linkStyle: 'markdown',
-  outputFormatTemplate: 'rich',
+  outputFormatTemplate: 'category_focused',
 };
 
 export interface FormattedBsbProduct {
@@ -52,6 +52,8 @@ export interface FormattedBsbProduct {
   category: string;
   categorySlug?: string;
   categoryUrl?: string;
+  url: string; // explicitly include the correct 'url' field from MeiliSearch document
+  productUrl: string;
   price: number; // MNT
   priceFormatted: string; // e.g. "4,499,900₮"
   originalPrice?: number;
@@ -65,11 +67,27 @@ export interface FormattedBsbProduct {
   descriptionSummary: string;
   imageUrl?: string;
   slug?: string;
-  productUrl?: string;
   warrantyMonth?: string;
   promotionsSummary?: string;
   siteRemainsSummary?: string;
   isService?: boolean;
+}
+
+export interface DetectedProductContext {
+  exactCode?: string;
+  detectedBrand?: string;
+  detectedCategory?: string;
+  categorySlug?: string;
+  detectedSpecs?: string[];
+  preciseQuery: string;
+  isFollowUpQuery: boolean;
+  originalQuery: string;
+}
+
+export interface ConversationMessageInput {
+  sender?: string;
+  text?: string;
+  time?: string;
 }
 
 export interface MeiliSearchResult {
@@ -82,6 +100,140 @@ export interface MeiliSearchResult {
 const DEFAULT_MEILI_URL = 'https://meili.bsb.mn';
 const DEFAULT_MEILI_API_KEY = '1TkoJ[9Qa|14/&7Q';
 const DEFAULT_MEILI_INDEX = 'app_bsb_products';
+
+export const BSB_BRANDS: Array<{ name: string; aliases: string[] }> = [
+  { name: 'Samsung', aliases: ['samsung', 'самсунг'] },
+  { name: 'Apple', aliases: ['apple', 'аппл', 'айфон', 'iphone', 'ipad', 'айпад', 'macbook', 'макбүүк', 'airpods'] },
+  { name: 'LG', aliases: ['lg', 'элжи'] },
+  { name: 'Panasonic', aliases: ['panasonic', 'панасоник'] },
+  { name: 'Sony', aliases: ['sony', 'сони', 'playstation', 'ps5'] },
+  { name: 'Toshiba', aliases: ['toshiba', 'тошиба'] },
+  { name: 'Electrolux', aliases: ['electrolux', 'электролюкс'] },
+  { name: 'Philips', aliases: ['philips', 'phil', 'филипс'] },
+  { name: 'Karcher', aliases: ['karcher', 'кэрхэр'] },
+  { name: 'Delonghi', aliases: ['delonghi', 'делонги'] },
+  { name: 'TCL', aliases: ['tcl'] },
+  { name: 'Haier', aliases: ['haier', 'хайер'] },
+  { name: 'Lenovo', aliases: ['lenovo', 'леново', 'ideapad', 'thinkpad'] },
+  { name: 'Dell', aliases: ['dell', 'делл', 'inspiron', 'vostro'] },
+  { name: 'Asus', aliases: ['asus', 'асус', 'zenbook', 'rog'] },
+  { name: 'HP', aliases: ['hp', 'эйчпи', 'pavilion', 'envy'] },
+  { name: 'Xiaomi', aliases: ['xiaomi', 'redmi', 'шаоми', 'редми'] },
+  { name: 'Sharp', aliases: ['sharp', 'шарп'] },
+  { name: 'Beko', aliases: ['beko', 'беко'] },
+  { name: 'Midea', aliases: ['midea', 'мидеа'] },
+  { name: 'Bosch', aliases: ['bosch', 'бош'] },
+  { name: 'Tefal', aliases: ['tefal', 'тефал'] },
+  { name: 'Rowenta', aliases: ['rowenta', 'ровента'] },
+  { name: 'Tekpoint', aliases: ['tekpoint'] },
+  { name: 'Luxell', aliases: ['luxell'] },
+  { name: 'Vestel', aliases: ['vestel', 'vest'] },
+  { name: 'Tecno', aliases: ['tecno', 'текно'] },
+];
+
+export const BSB_CATEGORIES: Array<{
+  name: string;
+  slug: string;
+  keywords: string[];
+  canonicalSearchTerm: string;
+}> = [
+  {
+    name: 'Хөргөгч',
+    slug: 'ref_two_doors',
+    keywords: ['хөргөгч', 'хөлдөөгч', 'хөргүүр', 'хөргөгчний', 'refrigerator', 'fridge', 'freezer', 'side by side', '2 хаалгатай'],
+    canonicalSearchTerm: 'хөргөгч',
+  },
+  {
+    name: 'Угаалгын машин',
+    slug: 'washing_machine',
+    keywords: ['угаалгын машин', 'угаалга', 'угаагч', 'хатаагч', 'washing machine', 'washer', 'dryer', 'автомат угаалгын'],
+    canonicalSearchTerm: 'угаалгын машин',
+  },
+  {
+    name: 'Телевизор',
+    slug: 'tv',
+    keywords: ['зурагт', 'телевизор', 'тв', 'tv', 'oled', 'qled', 'led tv', 'smart tv', 'ухаалаг зурагт'],
+    canonicalSearchTerm: 'зурагт',
+  },
+  {
+    name: 'Гар утас',
+    slug: 'mobile',
+    keywords: ['гар утас', 'утас', 'смартфон', 'phone', 'smartphone', 'mobile', 'айфон', 'iphone', 'galaxy', 'redmi'],
+    canonicalSearchTerm: 'гар утас',
+  },
+  {
+    name: 'Компьютер, Ноутбук',
+    slug: 'computer',
+    keywords: ['ноутбук', 'зөөврийн компьютер', 'компьютер', 'laptop', 'notebook', 'macbook', 'зөөврийн', 'суурин компьютер', 'десктоп'],
+    canonicalSearchTerm: 'ноутбук',
+  },
+  {
+    name: 'Тоос сорогч',
+    slug: 'vacuum_cleaner_washer',
+    keywords: ['тоос сорогч', 'тоос сорогчийн', 'робот тоос сорогч', 'vacuum', 'cleaner'],
+    canonicalSearchTerm: 'тоос сорогч',
+  },
+  {
+    name: 'Плитк, зуух',
+    slug: 'hob',
+    keywords: ['плитка', 'плитк', 'индукц', 'зуух', 'шарах шүүгээ', 'печь', 'хийн плитк', 'hob', 'oven'],
+    canonicalSearchTerm: 'плитк',
+  },
+  {
+    name: 'Агаар цэвэршүүлэгч',
+    slug: 'air_purifier_all',
+    keywords: ['агаар цэвэршүүлэгч', 'агаар чийгшүүлэгч', 'шүүлтүүр', 'air purifier', 'purifier'],
+    canonicalSearchTerm: 'агаар цэвэршүүлэгч',
+  },
+  {
+    name: 'Будаа агшаагч',
+    slug: 'rice_cooker',
+    keywords: ['будаа агшаагч', 'битүү чанагч', 'rice cooker', 'pressure cooker'],
+    canonicalSearchTerm: 'будаа агшаагч',
+  },
+  {
+    name: 'Буйдан',
+    slug: 'code_2287',
+    keywords: ['буйдан', 'диван', 'булангийн буйдан', 'ор болдог буйдан', 'sofa', 'couch'],
+    canonicalSearchTerm: 'буйдан',
+  },
+  {
+    name: 'Ор, матрас',
+    slug: 'code_23/bukh-tavilga/or',
+    keywords: ['ор', 'матрас', 'унтлагын ор', 'bed', 'mattress'],
+    canonicalSearchTerm: 'ор',
+  },
+  {
+    name: 'Ширээ, сандал',
+    slug: 'code_23/bukh-tavilga/shiree-sandal',
+    keywords: ['ширээ', 'сандал', 'ажлын ширээ', 'хоолны ширээ', 'оффис ширээ', 'table', 'chair', 'desk'],
+    canonicalSearchTerm: 'ширээ сандал',
+  },
+  {
+    name: 'Данх, ус буцалгагч',
+    slug: 'kettle',
+    keywords: ['данх', 'ус буцалгагч', 'чайник', 'kettle'],
+    canonicalSearchTerm: 'данх',
+  },
+  {
+    name: 'Индүү',
+    slug: 'iron',
+    keywords: ['индүү', 'уурын индүү', 'iron', 'steamer'],
+    canonicalSearchTerm: 'индүү',
+  },
+  {
+    name: 'Чихэвч',
+    slug: 'audio',
+    keywords: ['чихэвч', 'airpods', 'earbuds', 'headphone', 'headset', 'чихэвчний'],
+    canonicalSearchTerm: 'чихэвч',
+  },
+  {
+    name: 'Кофе чанагч',
+    slug: 'coffee_maker',
+    keywords: ['кофе чанагч', 'кофе машин', 'espresso', 'coffee maker'],
+    canonicalSearchTerm: 'кофе чанагч',
+  },
+];
 
 // Stop-words and common question phrases in Mongolian customer chats
 const QUESTION_STOP_WORDS = [
@@ -355,6 +507,171 @@ export class MeiliProductService {
   }
 
   /**
+   * Intelligently detects product name, exact code, brand, category, or specifications
+   * from the entire ongoing conversation history (customer + previous agent messages).
+   */
+  public detectConversationProductContext(
+    query: string,
+    conversation?: Array<{ sender?: string; text?: string }> | string[]
+  ): DetectedProductContext {
+    const rawQuery = (query || '').trim();
+    const cleanQuery = this.extractCleanSearchQuery(rawQuery);
+
+    // Normalize messages into a chronological list
+    const messages: string[] = [];
+    if (Array.isArray(conversation)) {
+      for (const item of conversation) {
+        if (typeof item === 'string' && item.trim()) {
+          messages.push(item.trim());
+        } else if (item && typeof (item as any).text === 'string' && (item as any).text.trim()) {
+          messages.push((item as any).text.trim());
+        }
+      }
+    }
+    if (rawQuery && !messages.includes(rawQuery)) {
+      messages.push(rawQuery);
+    }
+
+    let exactCode: string | undefined;
+    let detectedBrand: string | undefined;
+    let detectedCategoryObj: { name: string; slug: string; canonicalSearchTerm: string } | undefined;
+    const detectedSpecs: string[] = [];
+
+    // Scan backwards from newest to oldest message
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      const lower = msg.toLowerCase();
+
+      // 1. Detect explicit product code like PANA-TH-65NX950M, APPL-MY373X, LG-GC-B277BPUM
+      if (!exactCode) {
+        const codeMatch = msg.match(/\b([A-Za-z0-9]{3,}-[A-Za-z0-9\-]+)\b/);
+        if (codeMatch && !codeMatch[1].toLowerCase().includes('wi-fi') && codeMatch[1].length >= 5) {
+          exactCode = codeMatch[1];
+        }
+      }
+
+      // 2. Detect brand
+      if (!detectedBrand) {
+        for (const brand of BSB_BRANDS) {
+          if (brand.aliases.some((alias) => new RegExp(`\\b${alias}\\b`, 'i').test(lower))) {
+            detectedBrand = brand.name;
+            break;
+          }
+        }
+      }
+
+      // 3. Detect category
+      if (!detectedCategoryObj) {
+        for (const cat of BSB_CATEGORIES) {
+          if (cat.keywords.some((kw) => lower.includes(kw))) {
+            detectedCategoryObj = {
+              name: cat.name,
+              slug: cat.slug,
+              canonicalSearchTerm: cat.canonicalSearchTerm,
+            };
+            break;
+          }
+        }
+      }
+
+      // 4. Detect specs (e.g. 55 инч, 65, 128gb, 256gb, 512gb, 1tb, 8кг, 2 хаалгатай, side by side, pro max)
+      const specMatches = msg.match(/\b(32|43|50|55|65|75|85|128gb|256gb|512gb|1tb|64gb|7кг|8кг|9кг|10кг|7kg|8kg|9kg|10kg|pro|max|plus|ultra|air|oled|qled|2 хаалгатай|хоёр хаалгатай|side by side)\b/gi);
+      if (specMatches) {
+        for (const s of specMatches) {
+          const norm = s.trim();
+          if (!detectedSpecs.some((existing) => existing.toLowerCase() === norm.toLowerCase())) {
+            detectedSpecs.push(norm);
+          }
+        }
+      }
+    }
+
+    // Determine if query is a follow-up inquiry (e.g. "Үнэ нь хэд вэ?", "Бэлэн байна уу?", "55 инч нь", "Линк өгөөч")
+    const isFollowUpPattern = /^(үнэ|хэд|хэдтэй|бэлэн|байгаа|байна|хямдрал|өнгө|загвар|үзэх|линк|холбоос|аль|аль нь|санал|мэдээлэл|хэмжээ|хүргэлт|лизинг|storepay)/i;
+    const isFollowUpQuery =
+      cleanQuery.length < 4 ||
+      isFollowUpPattern.test(cleanQuery) ||
+      cleanQuery === 'үнэ' ||
+      cleanQuery === 'бэлэн' ||
+      (detectedCategoryObj !== undefined && !cleanQuery.includes(detectedCategoryObj.canonicalSearchTerm) && cleanQuery.split(' ').length <= 2);
+
+    let preciseQuery = cleanQuery;
+
+    if (exactCode) {
+      preciseQuery = exactCode;
+    } else if (isFollowUpQuery || cleanQuery.length < 4) {
+      // Build precise query from conversation context: Brand + Specs + Category
+      const parts: string[] = [];
+      if (detectedBrand) parts.push(detectedBrand);
+      if (detectedSpecs.length > 0) parts.push(detectedSpecs.slice(0, 2).join(' '));
+      if (detectedCategoryObj) {
+        const currentStr = parts.join(' ').toLowerCase();
+        if (!currentStr.includes(detectedCategoryObj.canonicalSearchTerm)) {
+          parts.push(detectedCategoryObj.canonicalSearchTerm);
+        }
+      }
+      preciseQuery = parts.join(' ').trim() || cleanQuery || rawQuery;
+    } else {
+      // If query has a specific product search like "iPhone 16" or "Karcher AD-4", keep it but enrich if brand is missing
+      if (detectedBrand && !cleanQuery.toLowerCase().includes(detectedBrand.toLowerCase()) && !cleanQuery.toLowerCase().includes('iphone')) {
+        preciseQuery = `${detectedBrand} ${cleanQuery}`.trim();
+      } else {
+        preciseQuery = cleanQuery;
+      }
+    }
+
+    return {
+      exactCode,
+      detectedBrand,
+      detectedCategory: detectedCategoryObj?.name,
+      categorySlug: detectedCategoryObj?.slug,
+      detectedSpecs,
+      preciseQuery: preciseQuery || rawQuery,
+      isFollowUpQuery,
+      originalQuery: rawQuery,
+    };
+  }
+
+  /**
+   * Performs an intelligent, context-aware MeiliSearch query using product names,
+   * product codes, or categories detected throughout the chat conversation history.
+   */
+  public async searchByConversation(
+    query: string,
+    conversation?: Array<{ sender?: string; text?: string }> | string[],
+    options: {
+      limit?: number;
+      inStockOnly?: boolean;
+      requirePhysicalProduct?: boolean;
+      config?: ProductDisplayConfig;
+    } = {}
+  ): Promise<MeiliSearchResult & { detectedContext: DetectedProductContext }> {
+    const detectedContext = this.detectConversationProductContext(query, conversation);
+
+    // 1. Try search with precise query
+    let result = await this.searchProducts(detectedContext.preciseQuery, options);
+
+    // 2. If exact code was detected but yielded 0 results, try original query
+    if (result.hits.length === 0 && detectedContext.exactCode && detectedContext.preciseQuery !== query) {
+      result = await this.searchProducts(query, options);
+    }
+
+    // 3. If still 0 hits and a category was detected, search canonical category term
+    if (result.hits.length === 0 && detectedContext.detectedCategory) {
+      const catTerm = BSB_CATEGORIES.find((c) => c.name === detectedContext.detectedCategory)?.canonicalSearchTerm;
+      if (catTerm) {
+        const fallbackQ = detectedContext.detectedBrand ? `${detectedContext.detectedBrand} ${catTerm}` : catTerm;
+        result = await this.searchProducts(fallbackQ, options);
+      }
+    }
+
+    return {
+      ...result,
+      detectedContext,
+    };
+  }
+
+  /**
    * Search MeiliSearch product index with fallback query logic and ranking.
    */
   public async searchProducts(
@@ -519,10 +836,20 @@ export class MeiliProductService {
    * Helper to format raw MeiliSearch hit into clean UI & Prompt friendly object
    */
   public formatHit(h: any, config?: ProductDisplayConfig): FormattedBsbProduct {
-    const rawName = h.translations?.mn_MN?.name || h.name || h.productCode || '';
+    // In MeiliSearch app_bsb_products index, the primary BSB item code is stored in `h.code` (or `h.variants[0].code`)
+    const productCode = String(
+      h.code ||
+      h.productCode ||
+      h.variants?.[0]?.code ||
+      h.variants?.[0]?.productCode ||
+      h.objectID ||
+      ''
+    ).trim().replace(/\/+$/, '');
+
+    const rawName = h.translations?.mn_MN?.name || h.name || productCode || '';
     const brandName = h.brand?.name || (h.brand?.code ? String(h.brand.code).toUpperCase() : '-');
     const categoryName = h.mainTaxon?.name || h.productTaxons?.[0]?.name || 'Цахилгаан бараа';
-    const categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || '';
+    const categorySlug = h.mainTaxon?.slug || h.productTaxons?.[0]?.slug || h.mainTaxon?.code || '';
 
     // Primary variant pricing
     const primaryVariant = h.variants?.[0] || {};
@@ -573,21 +900,55 @@ export class MeiliProductService {
       h.images?.[0]?.path ||
       h.images?.[0]?.originalImagePath;
 
-    const slug = h.slug || h.translations?.mn_MN?.slug || h.productCode || '';
+    const slug = h.slug || h.translations?.mn_MN?.slug || productCode;
     const baseUrl = (config?.websiteBaseUrl || 'https://bsb.mn').replace(/\/+$/, '');
 
-    // Product URL calculation based on configured pattern
-    const prodPattern = config?.productUrlPattern || `${baseUrl}/product/{slug}`;
-    const productUrl = prodPattern
-      .replace('{slug}', slug)
-      .replace('{code}', h.productCode || h.code || '')
-      .replace('{id}', String(h.id || ''));
+    // Official BSB.mn product page route is https://bsb.mn/products/by-code/:productCode
+    // Handle both new {code} and backward-compatible {slug} or custom patterns
+    let prodPattern = config?.productUrlPattern || `${baseUrl}/products/by-code/{code}`;
+    
+    // Auto-heal legacy or invalid patterns containing singular /product/ or wrong placeholder
+    if (prodPattern.includes('/product/{slug}') || prodPattern.endsWith('/product/{code}')) {
+      prodPattern = prodPattern
+        .replace('/product/{slug}', '/products/by-code/{code}')
+        .replace('/product/{code}', '/products/by-code/{code}');
+    }
+    if (prodPattern.includes('/products/{slug}')) {
+      prodPattern = prodPattern.replace('/products/{slug}', '/products/by-code/{code}');
+    }
+    if (prodPattern.endsWith('/product/')) {
+      prodPattern = `${prodPattern}by-code/{code}`;
+    }
 
-    // Category URL calculation based on configured pattern
-    const catPattern = config?.categoryUrlPattern || `${baseUrl}/category/{slug}`;
-    const categoryUrl = categorySlug
-      ? catPattern.replace('{slug}', categorySlug).replace('{code}', h.mainTaxon?.code || '')
-      : `${baseUrl}/category`;
+    let productUrl = prodPattern
+      .replace('{code}', productCode)
+      .replace('{productCode}', productCode)
+      .replace('{slug}', productCode || slug)
+      .replace('{id}', String(h.id || h.objectID || ''));
+
+    // Final safety check: if URL somehow still contains singular /product/ instead of /products/by-code/
+    if (productUrl.includes('/product/') && !productUrl.includes('/products/')) {
+      productUrl = productUrl.replace('/product/', '/products/by-code/');
+    }
+    if (productUrl.includes('/undefined')) {
+      productUrl = productUrl.replace('/undefined', `/${productCode}`);
+    }
+
+    // Official BSB.mn category page route is https://bsb.mn/categories/:categorySlug
+    let catPattern = config?.categoryUrlPattern || `${baseUrl}/categories/{slug}`;
+    if (catPattern.includes('/category/{slug}') || catPattern.includes('/category/')) {
+      catPattern = catPattern.replace('/category/', '/categories/');
+    }
+
+    let categoryUrl = categorySlug
+      ? catPattern
+          .replace('{slug}', categorySlug)
+          .replace('{code}', h.mainTaxon?.code || categorySlug)
+      : `${baseUrl}/categories`;
+
+    if (categoryUrl.includes('/category/') && !categoryUrl.includes('/categories/')) {
+      categoryUrl = categoryUrl.replace('/category/', '/categories/');
+    }
 
     // Warranty
     const warrantyMonth = h.warrantyMonth ? `${h.warrantyMonth} сар` : undefined;
@@ -611,20 +972,26 @@ export class MeiliProductService {
     }
 
     const isService =
-      (h.productCode && h.productCode.includes('UGS')) ||
-      (h.productCode && h.productCode.includes('Voucher')) ||
+      (productCode && productCode.includes('UGS')) ||
+      (productCode && productCode.includes('Voucher')) ||
       rawName.includes('үйлчилгээ') ||
       rawName.includes('холбуулах');
 
+    // Ensure official URL is explicitly provided from document or official BSB route
+    const rawDocUrl = typeof h.url === 'string' && h.url.trim() ? h.url.trim() : null;
+    const finalProductUrl = rawDocUrl || productUrl;
+
     return {
-      id: h.id || Number(h.objectID),
-      code: h.code || h.productCode,
-      productCode: h.productCode || h.code,
+      id: h.id || Number(h.objectID) || 0,
+      code: productCode,
+      productCode: productCode,
       name: rawName.trim(),
       brand: brandName,
       category: categoryName,
       categorySlug,
       categoryUrl,
+      url: finalProductUrl, // explicitly include the correct 'url' field from MeiliSearch document
+      productUrl: finalProductUrl,
       price: priceMnt,
       priceFormatted: priceMnt > 0 ? `${priceMnt.toLocaleString()}₮` : 'Үнэ тодруулах',
       originalPrice: originalPriceMnt,
@@ -638,7 +1005,6 @@ export class MeiliProductService {
       descriptionSummary,
       imageUrl,
       slug,
-      productUrl,
       warrantyMonth,
       promotionsSummary,
       siteRemainsSummary,
@@ -700,7 +1066,7 @@ export class MeiliProductService {
           details.push(`Брэнд: ${p.brand}`);
         }
         details.push(`Барааны нэр: ${p.name}`);
-        details.push(`Код: ${p.productCode}`);
+        details.push(`Барааны код: ${p.productCode}`);
 
         if (cfg.includePrice !== false) {
           details.push(`Үнэ: ${priceStr}`);
@@ -723,13 +1089,14 @@ export class MeiliProductService {
           details.push(`Урамшуулал/Бэлэг: ${p.promotionsSummary}`);
         }
 
-        if (cfg.includeProductLink !== false && p.productUrl) {
-          details.push(`Барааны шууд линк: ${p.productUrl}`);
+        // Explicitly format the official 'url' field from MeiliSearch document
+        if (cfg.includeProductLink !== false && p.url) {
+          details.push(`Барааны албан ёсны холбоос ('url' талбар): ${p.url}`);
         }
 
         if (cfg.includeCategoryLink !== false && p.categoryUrl) {
           details.push(`Ангилал: ${p.category}`);
-          details.push(`Ангиллын линк: ${p.categoryUrl}`);
+          details.push(`Ангиллын албан ёсны холбоос ('categoryUrl' талбар): ${p.categoryUrl}`);
         }
 
         return `[Бараа #${idx + 1}]\n${details.join('\n')}`;
@@ -740,21 +1107,23 @@ export class MeiliProductService {
     const rules: string[] = [];
     if (cfg.includeProductLink !== false) {
       if (cfg.linkStyle === 'markdown') {
-        rules.push('1. БАРААНЫ ШУУД ЛИНК: Хэрэглэгч бараа асуусан бол хариултандаа тухайн барааны нэр эсвэл [Бараа үзэх](URL) холбоосоор дээрх "Барааны шууд линк"-ийг заавал дарж үзэх боломжтойгоор хавсаргана уу.');
+        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Хэрэглэгчийн асуусан барааны хувьд дээрх "Барааны албан ёсны холбоос (\'url\' талбар)" дээр өгөгдсөн бодит хаягийг [Бараа үзэх](URL) эсвэл [Барааны нэр](URL) хэлбэрээр Markdown холбоос болгон заавал хавсаргана уу (URL дээр { } хаалт бичихгүй, яг хаягийг нь тавина).');
       } else if (cfg.linkStyle === 'plain') {
-        rules.push('1. БАРААНЫ ШУУД ЛИНК: Барааны бүтэн URL хаягийг хариултандаа текстээр тодорхой зааж өгнө үү.');
+        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Дээрх "Барааны албан ёсны холбоос (\'url\' талбар)" дээр өгөгдсөн хаягийг хариултандаа текстээр тодорхой зааж өгнө үү.');
       } else {
-        rules.push('1. БАРААНЫ ШУУД ЛИНК: Барааны холбоосыг 🔗 [Бараа үзэх](URL) хэлбэрээр хавсаргана уу.');
+        rules.push('1. БАРААНЫ ШУУД ХОЛБООС (\'url\' талбар): Барааны холбоосыг 🔗 [Бараа үзэх](URL) хэлбэрээр хавсаргана уу.');
       }
     }
 
     if (cfg.includeCategoryLink !== false) {
-      rules.push('2. АНГИЛЛЫН ЛИНК: Хэрэглэгчид тухайн төрөл/ангиллын бусад загваруудыг харах боломжийг олгож, ангиллын холбоосыг [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно уу.');
+      rules.push('2. АНГИЛЛЫН ХОЛБООС: Хэрэглэгчид тухайн төрөл/ангиллын бусад загваруудыг харах боломжийг олгож, ангиллын холбоосыг дээрх "Ангиллын албан ёсны холбоос (\'categoryUrl\' талбар)"-аас ашиглан [Ангилал: {Нэр}](URL) хэлбэрээр хариултын төгсгөлд санал болгоно уу.');
     }
 
     if (cfg.includeStock !== false) {
       rules.push('3. ТӨЛӨВ: Бараа бэлэн байгаа бол дэлгүүрт бэлэн байгааг, хэрэв нөөц дууссан бол түр дууссаныг тодорхой дурдана.');
     }
+
+    rules.push('4. ХАТУУ ШААРДЛАГА: Зөвхөн дээр өгөгдсөн MeiliSearch баримтын бодит \'url\' талбарын хаягийг (https://bsb.mn/products/by-code/...) яг хуулж тавина. Өөрөө дур мэдэн буруу /product/ эсвэл ерөнхий холбоос зохиож ТАС ХОРИГЛОНО!');
 
     return `--- БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН (MeiliSearch https://meili.bsb.mn) ---
 ${itemsText}
@@ -762,6 +1131,115 @@ ${itemsText}
 ХАРИУЛТЫН ФОРМАТЫН ТУСГАЙ ЗААВАР:
 ${rules.join('\n')}
 --------------------------------------------------------------`;
+  }
+
+  /**
+   * Sanitizes and guarantees that any URLs in AI response strictly conform
+   * to official working BSB.mn links (/products/by-code/:code and /categories/:slug).
+   */
+  public sanitizeAiResponseLinks(
+    aiContent: string,
+    products: FormattedBsbProduct[],
+    config?: ProductDisplayConfig
+  ): string {
+    if (!aiContent) return aiContent;
+
+    let text = aiContent;
+
+    // 0. Remove any accidental curly braces or quotes around URLs (e.g., ({https://...}) -> (https://...))
+    text = text.replace(/\]\(\s*\{+(https?:\/\/[^}\s)]+)\}+\s*\)/g, ']($1)');
+    text = text.replace(/\{+(https?:\/\/bsb\.mn\/[^}\s]+)\}+/g, '$1');
+
+    // 1. Replace any markdown link [label](url) that has incorrect, generic, or hallucinated URL with the matched product's exact 'url'
+    if (products.length > 0) {
+      text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (fullMatch, label, url) => {
+        // If it's already an exact official product url or category url from our hits
+        if (products.some((p) => p.url === url || p.productUrl === url || p.categoryUrl === url)) {
+          return fullMatch;
+        }
+
+        const lowerLabel = label.toLowerCase();
+        // If label refers to category
+        if ((lowerLabel.includes('ангилал') || lowerLabel.includes('төрөл')) && products[0].categoryUrl) {
+          return `[${label}](${products[0].categoryUrl})`;
+        }
+
+        // Match against best fitting product
+        const matched =
+          products.find(
+            (p) =>
+              lowerLabel.includes(p.name.toLowerCase().slice(0, 15)) ||
+              lowerLabel.includes(p.code.toLowerCase()) ||
+              (p.brand && p.brand !== '-' && lowerLabel.includes(p.brand.toLowerCase()))
+          ) || products[0];
+
+        if (matched && matched.url) {
+          return `[${label}](${matched.url})`;
+        }
+
+        return fullMatch;
+      });
+    }
+
+    // 2. Fix any singular /product/ occurrences -> /products/by-code/
+    text = text.replace(/https?:\/\/bsb\.mn\/product\/by-code\//gi, 'https://bsb.mn/products/by-code/');
+    text = text.replace(/https?:\/\/bsb\.mn\/product\/([a-zA-Z0-9_\-]+)/gi, (_match, slugOrCode) => {
+      // Find if slugOrCode corresponds to any matched product
+      const found = products.find(
+        (p) =>
+          p.productCode.toLowerCase() === slugOrCode.toLowerCase() ||
+          p.code.toLowerCase() === slugOrCode.toLowerCase() ||
+          p.slug?.toLowerCase() === slugOrCode.toLowerCase()
+      );
+      if (found) {
+        return found.url || `https://bsb.mn/products/by-code/${found.productCode}`;
+      }
+      if (products.length > 0 && products[0].productCode) {
+        return products[0].url || `https://bsb.mn/products/by-code/${products[0].productCode}`;
+      }
+      return `https://bsb.mn/products/by-code/${slugOrCode}`;
+    });
+
+    // 3. Fix /products/ without /by-code/ if followed by product code
+    text = text.replace(
+      /https?:\/\/bsb\.mn\/products\/(?!by-code\/)([A-Za-z0-9]+-[A-Za-z0-9\-]+)/gi,
+      'https://bsb.mn/products/by-code/$1'
+    );
+
+    // 4. Fix /undefined in product links
+    if (products.length > 0 && products[0].productCode) {
+      text = text.replace(
+        /https?:\/\/bsb\.mn\/products\/by-code\/undefined/gi,
+        products[0].url || `https://bsb.mn/products/by-code/${products[0].productCode}`
+      );
+    }
+
+    // 5. Fix singular /category/ -> /categories/
+    text = text.replace(/https?:\/\/bsb\.mn\/category\//gi, 'https://bsb.mn/categories/');
+
+    // 6. Clean any trailing slashes inside product URLs before closing brackets or markdown
+    text = text.replace(/(https?:\/\/bsb\.mn\/products\/by-code\/[A-Za-z0-9_\-]+)\/+([)\s*\]])/g, '$1$2');
+
+    // 7. Ensure primary product link exists if enabled in config and products were found
+    const cfg = config || DEFAULT_PRODUCT_CONFIG;
+    if (cfg.includeProductLink !== false && products.length > 0 && products[0].url) {
+      const primaryUrl = products[0].url;
+      const hasUrlAlready = text.includes(primaryUrl) || text.includes(products[0].productCode);
+      if (!hasUrlAlready && !text.includes('products/by-code/')) {
+        text += `\n\n🛒 [${products[0].name} дэлгэрэнгүй үзэх](${primaryUrl})`;
+      }
+    }
+
+    // 8. Ensure category link exists if enabled and not present
+    if (cfg.includeCategoryLink !== false && products.length > 0 && products[0].categoryUrl) {
+      const catUrl = products[0].categoryUrl;
+      const hasCatAlready = text.includes(catUrl) || text.includes('/categories/');
+      if (!hasCatAlready) {
+        text += `\n📁 [Ангилал: ${products[0].category}](${catUrl})`;
+      }
+    }
+
+    return text;
   }
 }
 

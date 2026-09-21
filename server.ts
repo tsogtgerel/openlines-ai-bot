@@ -1625,11 +1625,14 @@ async function startServer() {
    */
   app.post('/api/chats/ai-suggest', async (req, res) => {
     try {
-      const { query } = req.body;
+      const { query, dialogId, conversation } = req.body;
       if (!query) {
         return res.status(400).json({ success: false, error: { message: 'Query is required for AI suggestion' } });
       }
-      const suggestion = await botWorker.suggestDraftResponse(query);
+      const suggestion = await botWorker.suggestDraftResponse(query, {
+        dialogId,
+        conversation,
+      });
       res.json({ success: true, data: suggestion });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });

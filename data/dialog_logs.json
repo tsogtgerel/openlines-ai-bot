@@ -1,5 +1,397 @@
 [
   {
+    "id": "log-1789955202582-wur0",
+    "timestamp": "2026-09-21T01:46:42.582Z",
+    "dialogId": "sim-1789955199966",
+    "customerMessage": "Угаалгын машин үнэ хэд вэ?",
+    "botAnswer": "Таны сонирхсон угаалгын машины загваруудын мэдээллийг доор харуулав.\n\nБидний санал болгож буй угаалгын машин:\n\n1. **[LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W](https://bsb.mn/products/by-code/LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (Хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Техникийн үзүүлэлт:** Угаах жин 9.0кг\n\n2. **[VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг](https://bsb.mn/products/by-code/VEST-WB8B14T3DS)**\n   - **Үнэ:** 1,249,900₮ (Хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Техникийн үзүүлэлт:** Угаах жин 8.0кг, гүн 60см, өргөн 60см, усаа халаадаг тусгай онцлогтой.\n\nТа бусад загваруудыг харах бол доорх линкээр орно уу:\n[Ангилал: Урдаа хаалгатай угаалгын машин](https://bsb.mn/categories/wm_front_door)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.2533333333333333
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.2
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "VEST-WB8B14T3DS",
+        "name": "VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин 8кг",
+        "priceFormatted": "1,249,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/VEST-WB8B14T3DS",
+        "category": "Урдаа хаалгатай угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/wm_front_door"
+      },
+      {
+        "code": "LG-F4V5VS0W",
+        "name": "LG Бүрэн автомат угаалгын машин 9кг 1400rpm LG-F4V5VS0W",
+        "priceFormatted": "1,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-F4V5VS0W",
+        "category": "Урдаа хаалгатай угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/wm_front_door"
+      },
+      {
+        "code": "ELEC-E1WYHSK1",
+        "name": "ELectrolux Угаалгын машин, хатаагчны холбогч E1WYHSK1",
+        "priceFormatted": "599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/ELEC-E1WYHSK1",
+        "category": "Хатаагч",
+        "categoryUrl": "https://bsb.mn/categories/dryer"
+      },
+      {
+        "code": "ELEC-E4YHMKP3",
+        "name": "Electrolux E4YHMKP3 Угаалгын машин хатаагчны холбогч",
+        "priceFormatted": "739,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/ELEC-E4YHMKP3",
+        "category": "Угаалгын машин",
+        "categoryUrl": "https://bsb.mn/categories/washing_machine"
+      }
+    ],
+    "durationMs": 2616
+  },
+  {
+    "id": "log-1789955158747-ldj9",
+    "timestamp": "2026-09-21T01:45:58.747Z",
+    "dialogId": "sim-1789955154086",
+    "customerMessage": "Хөргөгч ямар ямар байгаа вэ?",
+    "botAnswer": "Сайн байна уу? БСБ-ын хэрэглэгчийн үйлчилгээний туслах танаас асуулт авлаа.\n\nМанай дэлгүүрт дараах төрлийн хөргөгчүүд бэлэн байгаа бөгөөд та өөрийн хэрэгцээнд тохируулан сонгох боломжтой:\n\n1. **Side by Side (Хоёр талын) хөргөгч:**\n   * **[LG GC-B277BPUM Side by Side Хөргөгч](https://bsb.mn/products/by-code/LG-GC-B277BPUM)**\n     * Үнэ: 4,299,900₮ (Хямдарсан)\n     * Төлөв: Бэлэн байгаа (CEPAMR, ELBMOL салбарууд дээр)\n     * Баталгаа: 12 сар\n\n2. **2 Хаалгатай хөргөгч:**\n   * **[Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/**](https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0/)**\n     * Үнэ: 7,499,900₮\n     * Төлөв: Бэлэн байгаа (CEPAMR, ELBMOL, CEPWHS салбарууд дээр)\n     * Баталгаа: 12 сар\n     * *Урамшуулал: Наадая Аялъя бэлэгтэй худалдаа*\n   * **[AEG Хөргөгч 242л OSC-6M199ES](https://bsb.mn/products/by-code/AEG-OSC-6M199ES)**\n     * Үнэ: 7,599,900₮\n     * Төлөв: Бэлэн байгаа (CEPWHS, CEPAMR, ELBMOL салбарууд дээр)\n     * Баталгаа: 12 сар\n     * *Урамшуулал: Наадая Аялъя бэлэгтэй худалдаа*\n\n3. **Машины хөргөгч:**\n   * **[ANTUNCLE CF-FCR30 Машины хөргөгч 30л](https://bsb.mn/products/by-code/ANTU-CF-FCR30)**\n     * Үнэ: 1,099,900₮ (Хямдарсан)\n     * Төлөв: Бэлэн байгаа (BSBWHS, ELBMOL салбарууд дээр)\n     * Баталгаа: 12 сар\n     * *Урамшуулал: Наадая Аялъя бэлэгтэй худалдаа*\n\nТа бусад загваруудыг үзэхийг хүсвэл доорх холбоосоор орно уу:\n[Ангилал: Side-By-Side хөргөгч](https://bsb.mn/categories/ref_side_by_side) | [Ангилал: 2 хаалгатай хөргөгч](https://bsb.mn/categories/ref_two_doors)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "LG-GC-B277BPUM",
+        "name": "LG GC-B277BPUM Side by Side Хөргөгч",
+        "priceFormatted": "4,299,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-B277BPUM",
+        "category": "Side-By-Side хөргөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_side_by_side"
+      },
+      {
+        "code": "ELEC-ENC-8MD18R0",
+        "name": "Electrolux Тавилганд суурилдаг хөргөгч 244L /ELEC-ENC-8MD18R0/",
+        "priceFormatted": "7,499,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/ELEC-ENC-8MD18R0",
+        "category": "2 хаалгатай хөргөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_two_doors"
+      },
+      {
+        "code": "ANTU-CF-FCR30",
+        "name": "ANTUNCLE CF-FCR30 Машины хөргөгч 30л",
+        "priceFormatted": "1,099,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/ANTU-CF-FCR30",
+        "category": "Машины хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer/mashiny-kholdoogch"
+      },
+      {
+        "code": "AEG-OSC-6M199ES",
+        "name": "AEG Хөргөгч 242л OSC-6M199ES",
+        "priceFormatted": "7,599,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/AEG-OSC-6M199ES",
+        "category": "2 хаалгатай хөргөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_two_doors"
+      }
+    ],
+    "durationMs": 4661
+  },
+  {
+    "id": "log-1789955143599-3sg9",
+    "timestamp": "2026-09-21T01:45:43.599Z",
+    "dialogId": "sim-1789955141239",
+    "customerMessage": "iPhone 16 байна уу, үнэ хэд вэ?",
+    "botAnswer": "Сайн байна уу? Танд iPhone 16 цувралын талаарх мэдээллийг хүргэж байна.\n\nОдоогоор манай сангаас дараах загварууд бэлэн байгаа байна:\n\n1. **Apple IPHONE 16 PLUS Black 256GB**\n   - **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - [Бараа үзэх](https://bsb.mn/products/by-code/APPL-MXWN3X)\n\n2. **Apple IPHONE 16 Pro Max Desert 512GB**\n   - **Үнэ:** 6,099,900₮ (Хямдарсан үнэ)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - [Бараа үзэх](https://bsb.mn/products/by-code/APPL-MYX23X)\n\nМөн iPhone 16 Plus загварын Pink өнгөний 256GB болон 128GB хувилбарууд одоогоор нөөц дууссан байгааг анхаарна уу.\n\nТа бусад загваруудыг харах боломжтой:\n[Ангилал: Гар утас](https://bsb.mn/categories/mobile)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.21904761904761902
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.18095238095238095
+      },
+      {
+        "id": "art-contact",
+        "title": "Оператор, Менежертэй шууд холбогдох",
+        "score": 0.1714285714285714
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/APPL-MXWN3X",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "APPL-MYX23X",
+        "name": "IPHONE 16 Pro Max Desert 512GB",
+        "priceFormatted": "6,099,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/APPL-MYX23X",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/APPL-MXY13X",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "APPL-MXVW3X",
+        "name": "IPHONE 16 Plus Pink 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/APPL-MXVW3X",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      }
+    ],
+    "durationMs": 2360
+  },
+  {
+    "id": "log-1789954872464-mo73",
+    "timestamp": "2026-09-21T01:41:12.464Z",
+    "dialogId": "sim-1789954872292",
+    "customerMessage": "iPhone 16 байна уу, үнэ хэд вэ?",
+    "botAnswer": "Манай мэдээллийн санд энэ асуултын талаар баталгаажсан мэдээлэл хангалтгүй байгаа тул таныг мэргэжилтэнтэй холбож байна.",
+    "handedOff": true,
+    "handoffReason": "model_declined",
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.21904761904761902
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.18095238095238095
+      },
+      {
+        "id": "art-contact",
+        "title": "Оператор, Менежертэй шууд холбогдох",
+        "score": 0.1714285714285714
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/product/iphone-16-plus-black-256gb",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/category/mobile"
+      },
+      {
+        "code": "APPL-MYX23X",
+        "name": "IPHONE 16 Pro Max Desert 512GB",
+        "priceFormatted": "6,099,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/product/iphone-16-pro-max-desert-512gb",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/category/mobile"
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/product/iphone-16-plus-pink-256gb",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/category/mobile"
+      },
+      {
+        "code": "APPL-MXVW3X",
+        "name": "IPHONE 16 Plus Pink 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/product/iphone-16-plus-pink-128gb",
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/category/mobile"
+      }
+    ],
+    "durationMs": 171
+  },
+  {
+    "id": "log-1789722885812-i5c2",
+    "timestamp": "2026-09-18T09:14:45.812Z",
+    "dialogId": "chat77276",
+    "customerMessage": "AEG Хэншүү сорогч 90 см DVE-5971HG",
+    "botAnswer": "AEG брэндийн AEG Хэншүү сорогч 90 см DVE-5971HG-ийн мэдээллийг хүргэж байна.\n\n* **Үнэ:** 3,799,900₮ (Үндсэн үнээс 10% хямдарсан)\n* **Төлөв:** Бэлэн байгаа\n* **Гол үзүүлэлтүүд:**\n    * **Өргөн:** 81-90 см\n    * **Сорох хүчин чадал:** 270/500/700 м³/цаг\n    * **Дуу чимээ:** 43-54 дБ\n    * **Онцлог:** Филтертэй, хананд тогтоодог налуу загвар, мэдрэгчтэй дэлгэцтэй, LED гэрэлтэй, 4 төрлийн сорох горимтой.\n\nТанд өөр мэдээлэл хэрэгтэй бол бид туслахад бэлэн байна.",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "AEG-DVE-5971HG",
+        "name": "AEG Хэншүү сорогч 90 см DVE-5971HG",
+        "priceFormatted": "3,799,900₮",
+        "inStock": true
+      }
+    ],
+    "durationMs": 3433
+  },
+  {
+    "id": "log-1789722853025-fe89",
+    "timestamp": "2026-09-18T09:14:13.025Z",
+    "dialogId": "chat77276",
+    "customerMessage": "Electrolux LFT-319X",
+    "botAnswer": "Манай барааны болон мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!",
+    "handedOff": true,
+    "handoffReason": "low_confidence",
+    "matchedArticles": [],
+    "matchedProducts": [],
+    "durationMs": 5864
+  },
+  {
+    "id": "log-1789722768763-mkqa",
+    "timestamp": "2026-09-18T09:12:48.763Z",
+    "dialogId": "chat77276",
+    "customerMessage": "iPhone 16 үнэ хэд вэ, бэлэн байгаа юу?",
+    "botAnswer": "Сайн байна уу? БСБ-ын харилцагчийн үйлчилгээний туслах танд мэндчилж байна.\n\nТаны асуусан Apple iPhone 16 цувралын бэлэн байгаа загваруудын мэдээллийг хүргэж байна:\n\n1. **Apple IPHONE 16 PLUS Black 256GB**\n   * **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\n2. **Apple IPHONE 16 Pro Max Desert 512GB**\n   * **Үнэ:** 6,099,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\nМөн iPhone 16 PLUS Pink (256GB болон 128GB) загварууд одоогоор нөөц дууссан байна. Та өөр загвар эсвэл техникийн үзүүлэлт тодруулахыг хүсвэл бидэнд хандаарай.",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.15833333333333333
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MYX23X",
+        "name": "IPHONE 16 Pro Max Desert 512GB",
+        "priceFormatted": "6,099,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false
+      },
+      {
+        "code": "APPL-MXVW3X",
+        "name": "IPHONE 16 Plus Pink 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": false
+      }
+    ],
+    "durationMs": 3039
+  },
+  {
+    "id": "log-1789722767822-zr59",
+    "timestamp": "2026-09-18T09:12:47.822Z",
+    "dialogId": "chat77276",
+    "customerMessage": "iPhone 16 үнэ хэд вэ, бэлэн байгаа юу?",
+    "botAnswer": "Сайн байна уу? БСБ-ын үйлчилгээг ашиглаж байгаад тань баярлалаа.\n\nТаны асуусан Apple iPhone 16 цувралын бэлэн байгаа загварууд болон үнийн мэдээллийг хүргэж байна:\n\n1. **Apple IPHONE 16 PLUS Black 256GB**\n   - **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   - **Төлөв:** Бэлэн байгаа\n\n2. **Apple IPHONE 16 Pro Max Desert 512GB**\n   - **Үнэ:** 6,099,900₮ (Хямдарсан үнэ)\n   - **Төлөв:** Бэлэн байгаа\n\nМөн Pink өнгөний 256GB болон 128GB загварууд байгаа боловч одоогоор эдгээр загварууд нөөц дууссан байна.\n\nТанд өөр тодруулах зүйл байна уу?",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.15833333333333333
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MYX23X",
+        "name": "IPHONE 16 Pro Max Desert 512GB",
+        "priceFormatted": "6,099,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false
+      },
+      {
+        "code": "APPL-MXVW3X",
+        "name": "IPHONE 16 Plus Pink 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": false
+      }
+    ],
+    "durationMs": 3173
+  },
+  {
+    "id": "log-1789722721804-ocgv",
+    "timestamp": "2026-09-18T09:12:01.804Z",
+    "dialogId": "sim-1789722719790",
+    "customerMessage": "iPhone 16 үнэ хэд вэ, бэлэн байгаа юу?",
+    "botAnswer": "Сайн байна уу? Таны асуусан Apple iPhone 16 загварын талаарх мэдээллийг БСБ-ын барааны мэдээллийн сангаас тодруулан хүргэж байна.\n\nОдоогоор дараах загварууд бэлэн байгаа бөгөөд үнэ нь хямдарсан байна:\n\n1. **Apple IPHONE 16 PLUS Black 256GB**\n   * **Үнэ:** 4,339,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\n2. **Apple IPHONE 16 Pro Max Desert 512GB**\n   * **Үнэ:** 6,099,900₮ (Хямдарсан үнэ)\n   * **Төлөв:** Бэлэн байгаа\n\nМөн iPhone 16 Plus Pink (256GB болон 128GB) загварууд одоогоор нөөцөөс дууссан байгааг анхаарна уу.\n\nТанд өөр асуух зүйл байна уу?",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.15833333333333333
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "APPL-MXWN3X",
+        "name": "IPHONE 16 PLUS Black 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MYX23X",
+        "name": "IPHONE 16 Pro Max Desert 512GB",
+        "priceFormatted": "6,099,900₮",
+        "inStock": true
+      },
+      {
+        "code": "APPL-MXY13X",
+        "name": "IPHONE 16 PLUS Pink 256GB",
+        "priceFormatted": "4,339,900₮",
+        "inStock": false
+      },
+      {
+        "code": "APPL-MXVW3X",
+        "name": "IPHONE 16 Plus Pink 128GB",
+        "priceFormatted": "3,799,900₮",
+        "inStock": false
+      }
+    ],
+    "durationMs": 2013
+  },
+  {
     "id": "log-1789722004032-n4pv",
     "timestamp": "2026-09-18T09:00:04.032Z",
     "dialogId": "sim-test-2",

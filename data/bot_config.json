@@ -5,7 +5,7 @@
   "selectedLineId": null,
   "selectedLineName": "",
   "isPollingActive": true,
-  "currentOffset": 23,
+  "currentOffset": 45,
   "tone": "professional",
   "language": "mn",
   "handoffThreshold": 0.2,
@@ -29,5 +29,26 @@
   ],
   "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.",
   "model": "bitrix/bitrixgpt-5.5",
-  "botAssignmentMode": "all_chats"
+  "botAssignmentMode": "all_chats",
+  "enableProductSearch": true,
+  "productSearchEnabled": true,
+  "productSearchLimit": 4,
+  "meiliUrl": "https://meili.bsb.mn",
+  "meiliIndex": "app_bsb_products",
+  "productConfig": {
+    "websiteBaseUrl": "https://bsb.mn",
+    "productUrlPattern": "https://bsb.mn/products/by-code/{code}",
+    "categoryUrlPattern": "https://bsb.mn/categories/{slug}",
+    "includeProductLink": true,
+    "includeCategoryLink": true,
+    "includePrice": true,
+    "includeStock": true,
+    "includeBrand": true,
+    "includeSpecs": true,
+    "includeWarranty": true,
+    "includePromotions": true,
+    "includeImage": false,
+    "linkStyle": "markdown",
+    "outputFormatTemplate": "category_focused"
+  }
 }

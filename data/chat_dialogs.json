@@ -189,7 +189,10 @@
         "timestamp": "2026-09-20T16:49:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Оператор #4605"
   },
   {
     "id": "chat-78112",
@@ -546,7 +549,10 @@
         "timestamp": "2026-09-20T17:01:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-78104",
@@ -761,6 +767,22 @@
         "text": "220x100\n240x100\nхоолны ширээ зураг үнэ явуулж өгнө үү\nбяарлалаа",
         "timestamp": "2026-09-20T13:26:38+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1121504",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T04:08:12+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121608",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This enquiry has also been assigned to Цогтгэрэл Ч.",
+        "timestamp": "2026-09-21T04:10:12+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -951,7 +973,10 @@
         "timestamp": "2026-09-20T17:01:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-78042",
@@ -1049,6 +1074,22 @@
         "senderName": "BaskaSuren Buya",
         "text": "13р хороолол салбарт бгаа юу",
         "timestamp": "2026-09-20T11:02:14+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121502",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T04:08:12+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121606",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This enquiry has also been assigned to Цогтгэрэл Ч.",
+        "timestamp": "2026-09-21T04:10:12+03:00",
         "status": "delivered"
       }
     ]
@@ -1208,7 +1249,10 @@
         "timestamp": "2026-09-20T16:51:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-78032",
@@ -1637,7 +1681,10 @@
         "timestamp": "2026-09-20T16:50:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77958",
@@ -1762,7 +1809,10 @@
         "timestamp": "2026-09-20T16:50:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77948",
@@ -1953,6 +2003,22 @@
         "text": "Зурагт захиалсан юм өнөөдөр ирнэ гэсэн хэзээ ирэх юм бол хүргэлтийн дугаар нь байна уу",
         "timestamp": "2026-09-20T07:19:56+03:00",
         "status": "delivered"
+      },
+      {
+        "id": "bx-1121500",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T04:08:11+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121604",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This enquiry has also been assigned to Цогтгэрэл Ч.",
+        "timestamp": "2026-09-21T04:10:12+03:00",
+        "status": "delivered"
       }
     ]
   },
@@ -2046,7 +2112,10 @@
         "timestamp": "2026-09-20T06:39:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77880",
@@ -2195,7 +2264,10 @@
         "timestamp": "2026-09-20T08:08:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Э. Нандинцэцэг"
   },
   {
     "id": "chat-77878",
@@ -2277,6 +2349,22 @@
         "senderName": "Систем",
         "text": "Уучлаарай, манай ажлын цаг дууссан тул одоогоор хариу өгөх боломжгүй байна. Та асуултаа үлдээнэ үү. Бид маргааш ажлын цаг эхэлмэгц тантай хамгийн түрүүнд холбогдох болно. Баярлалаа.",
         "timestamp": "2026-09-19T17:03:06+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121498",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-21T04:08:11+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121602",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "This enquiry has also been assigned to Цогтгэрэл Ч.",
+        "timestamp": "2026-09-21T04:10:12+03:00",
         "status": "delivered"
       }
     ]
@@ -2468,7 +2556,10 @@
         "timestamp": "2026-09-20T02:39:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77870",
@@ -2617,7 +2708,10 @@
         "timestamp": "2026-09-20T15:24:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77868",
@@ -2774,7 +2868,10 @@
         "timestamp": "2026-09-20T15:28:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-77862",
@@ -2963,7 +3060,10 @@
         "timestamp": "2026-09-20T17:00:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-77852",
@@ -3152,7 +3252,10 @@
         "timestamp": "2026-09-20T08:08:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Э. Нандинцэцэг",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-77808",
@@ -3760,7 +3863,10 @@
         "timestamp": "2026-09-20T08:01:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "14131",
+    "closedByAgentName": "Э. Нандинцэцэг",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-77648",
@@ -3935,7 +4041,10 @@
         "timestamp": "2026-09-19T09:10:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
   },
   {
     "id": "chat-11247",
@@ -4124,7 +4233,10 @@
         "timestamp": "2026-09-20T07:12:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "14131",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
   },
   {
     "id": "chat-70323",
@@ -4313,7 +4425,10 @@
         "timestamp": "2026-09-20T08:08:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Э. Нандинцэцэг",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-77620",
@@ -4397,7 +4512,10 @@
         "timestamp": "2026-09-19T09:09:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Оператор #4605",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-77618",
@@ -4481,7 +4599,10 @@
         "timestamp": "2026-09-19T09:09:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Оператор #4605",
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв."
   },
   {
     "id": "chat-62679",
@@ -4670,7 +4791,10 @@
         "timestamp": "2026-09-20T06:11:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "StorePay 0% лизингийн нөхцөлийг танилцуулж, зээлийн хүсэлтийн холбоос илгээн амжилттай шийдвэрлэв."
   },
   {
     "id": "chat-77586",
@@ -4811,7 +4935,10 @@
         "timestamp": "2026-09-19T09:09:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
   },
   {
     "id": "chat-77580",
@@ -4944,7 +5071,10 @@
         "timestamp": "2026-09-19T09:10:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Хүргэлтийн хуваарь баталгаажуулж, харилцагчийн хүсэлтээр оройн цагаар хүргэхээр бүртгэв."
   },
   {
     "id": "chat-77574",
@@ -5772,7 +5902,10 @@
         "timestamp": "2026-09-19T09:09:01+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Оператор #4605",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-77544",
@@ -5856,7 +5989,10 @@
         "timestamp": "2026-09-18T19:20:53+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-77536",
@@ -6895,7 +7031,7 @@
     "customer": {
       "name": "Guest",
       "tags": [
-        "LIVECHAT",
+        "WEBCHAT",
         "Битрикс24 Live"
       ]
     },
@@ -6907,8 +7043,8 @@
     "assignedAgentId": "15",
     "assignedAgentName": "Цогтгэрэл Ч",
     "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/resize_cache/2027/ff58db95aecdfa09ae61b51b5fd8f63f/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
-    "lastMessageText": "Сайн байна уу! БСБ-ын харилцагчийн үйлчилгээний туслах болохоор танд бэлэн байгаа угаалгын машины мэдээллийг хүргэж байна.\n\nОдоогоор манай санд дараах загварууд бэлэн байгаа боломжтой:\n\n1. **Vestel VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин**\n   - **Үнэ:** 1,249,900₮ (19% хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Үзүүлэлт:** Угаах жин 8.0кг, Эргэлтийн хурд 1400 эрг/мин, Усаа халаадаг, 14 угаалтын горимтой.\n\n2. **LG LG Бүрэн автомат угаалгын машин 9кг (LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (17% хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Үзүүлэлт:** Угаах жин 9.0кг, Эргэлтийн хурд 1400rpm, Уурын угаалгатай, А++ цахилгаан зарцуулалттай.\n\n*Тэмдэглэл: Panasonic брэндийн 12.5кг загвар одоогоор нөөц түр дууссан байна.*\n\nТанд эдгээр загваруудын талаар илүү дэлгэрэнгүй мэдээлэл эсвэл төлбөрийн нөхцөл (лизинг, StorePay гэх мэт) хэрэгтэй бол асууна уу.",
-    "lastMessageTime": "2026-09-21T04:12:33+03:00",
+    "lastMessageText": "Сайн байна уу! БСБ-аас таныг мэнд хүргэе. Та iPhone загварын утас сонирхож байгаа бол манай мэдээллийн санд байгаа дараах загваруудыг танилцуулж байна:\n\n**Бэлэн байгаа загвар:**\n*   **Apple - [IPHONE 16 PLUS Black 256GB](https://bsb.mn/products/by-code/APPL-MXWN3X)**\n    *   **Үнэ:** 4,339,900₮ (10% хямдарсан)\n    *   **Төлөв:** Бэлэн байгаа (CEPAMR, ITCMOL салбарууд дээр)\n    *   **Баталгаа:** 12 сар\n\n**Одоогоор нөөц түр дууссан загварууд:**\n*   **Apple - [IPHONE 15 Blue 128GB](https://bsb.mn/products/by-code/APPL-MTP43ZP)** (Үнэ: 2,699,900₮)\n*   **Apple - [IPHONE 16 PLUS Pink 256GB](https://bsb.mn/products/by-code/APPL-MXY13X)** (Үнэ: 4,339,900₮)\n*   **Apple - [iPhone 17 Pro Max 256GB Silver](https://bsb.mn/products/by-code/APPL-MFYM4X)** (Үнэ: 5,649,900₮)\n\nТа бусад бүх iPhone загваруудыг үзэхийн тулд доорх линкээр орно уу:\n[Ангилал: Гар утас](https://bsb.mn/categories/mobile)",
+    "lastMessageTime": "2026-09-21T05:07:31+03:00",
     "lastMessageSender": "bot",
     "unreadCount": 0,
     "createdAt": "2026-09-21T04:08:52+03:00",
@@ -7145,6 +7281,70 @@
         "senderName": "BSB AI Туслах",
         "text": "Сайн байна уу! БСБ-ын харилцагчийн үйлчилгээний туслах болохоор танд бэлэн байгаа угаалгын машины мэдээллийг хүргэж байна.\n\nОдоогоор манай санд дараах загварууд бэлэн байгаа боломжтой:\n\n1. **Vestel VESTEL WB8B14T3DS Бүрэн автомат угаалгын машин**\n   - **Үнэ:** 1,249,900₮ (19% хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Үзүүлэлт:** Угаах жин 8.0кг, Эргэлтийн хурд 1400 эрг/мин, Усаа халаадаг, 14 угаалтын горимтой.\n\n2. **LG LG Бүрэн автомат угаалгын машин 9кг (LG-F4V5VS0W)**\n   - **Үнэ:** 1,499,900₮ (17% хямдарсан)\n   - **Төлөв:** БЭЛЭН БАЙГАА\n   - **Үзүүлэлт:** Угаах жин 9.0кг, Эргэлтийн хурд 1400rpm, Уурын угаалгатай, А++ цахилгаан зарцуулалттай.\n\n*Тэмдэглэл: Panasonic брэндийн 12.5кг загвар одоогоор нөөц түр дууссан байна.*\n\nТанд эдгээр загваруудын талаар илүү дэлгэрэнгүй мэдээлэл эсвэл төлбөрийн нөхцөл (лизинг, StorePay гэх мэт) хэрэгтэй бол асууна уу.",
         "timestamp": "2026-09-21T04:12:33+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121694",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "iphone 16",
+        "timestamp": "2026-09-21T04:35:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121696",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Таны сонирхсон Apple брэндийн iPhone 16 загварын талаарх мэдээллийг хүргэж байна.\n\nОдоогоор дараах загварууд байна:\n\n*   **Apple [IPHONE 16 Black 128GB](https://bsb.mn/product/iphone-16-black-128gb)**\n    *   **Үнэ:** 3,799,900₮ (1% хямдарсан)\n    *   **Төлөв:** Одоогоор нөөц түр дууссан байна.\n    *   **Баталгаат хугацаа:** 12 сар\n\nМөн та дараах загваруудыг сонирхож болох юм:\n\n*   **Apple [IPHONE 16 PLUS Black 256GB](https://bsb.mn/product/iphone-16-plus-black-256gb)**\n    *   **Үнэ:** 4,339,900₮ (10% хямдарсан)\n    *   **Төлөв:** Бэлэн байгаа (CEPAMR болон ITCMOL салбарууд дээр)\n    *   **Баталгаат хугацаа:** 12 сар\n    *   **Урамшуулал:** Наадая Аялъя бэлэгтэй худалдаа\n\n[Ангилал: Гар утас](https://bsb.mn/category/mobile)",
+        "timestamp": "2026-09-21T04:35:41+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121700",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Танд Apple-ийн iPhone 16 цувралын талаарх мэдээллийг хүргэе.\n\nОдоогоор таны сонирхсон загваруудын нөөцийн байдал дараах байдалтай байна:\n\n1. **[IPHONE 16 PLUS Black 256GB](https://bsb.mn/product/iphone-16-plus-black-256gb)**\n   - **Үнэ:** 4,339,900₮ (Хямдарсан)\n   - **Төлөв:** Бэлэн байгаа (CEPAMR: 1ш, ITCMOL: 1ш)\n   - **Баталгаа:** 12 сар\n   - **Урамшуулал:** Наадая Аялъя бэлэгтэй\n\n2. **[IPHONE 16 Black 128GB](https://bsb.mn/product/iphone-16-black-128gb)**\n   - **Үнэ:** 3,799,900₮ (Хямдарсан)\n   - **Төлөв:** Одоогоор нөөц түр дууссан байна.\n\n3. **[IPHONE 16E Black 128GB](https://bsb.mn/product/iphone-16e-black-128gb)**\n   - **Үнэ:** 2,699,900₮ (Хямдарсан)\n   - **Төлөв:** Одоогоор нөөц түр дууссан байна.\n\n4. **[IPHONE 16E White 128GB](https://bsb.mn/product/iphone-16e-white-128gb)**\n   - **Үнэ:** 2,899,900₮\n   - **Төлөв:** Одоогоор нөөц түр дууссан байна.\n\nТа бусад загвар болон загваруудыг эндээс харах боломжтой:\n[Ангилал: Гар утас](https://bsb.mn/category/mobile)",
+        "timestamp": "2026-09-21T04:35:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121740",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "iphone 16",
+        "timestamp": "2026-09-21T05:06:39+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121742",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Таны асуусан iPhone 16 загварын талаарх мэдээллийг хүргэж байна.\n\nОдоогоор таны сонирхсон iPhone 16 загварын нөөц дараах байдалтай байна:\n\n*   **Apple [IPHONE 16 Black 128GB](https://bsb.mn/product/iphone-16-black-128gb)**\n    *   **Үнэ:** 3,799,900₮ (Хямдарсан)\n    *   **Төлөв:** Одоогоор нөөц түр дууссан байна.\n\nХэрэв та бэлэн байгаа загвар хайж байгаа бол дараах загварыг санал болгож байна:\n*   **Apple [IPHONE 16 PLUS Black 256GB](https://bsb.mn/product/iphone-16-plus-black-256gb)**\n    *   **Үнэ:** 4,339,900₮ (Хямдарсан, -10%)\n    *   **Төлөв:** БЭЛЭН БАЙГАА (CEPAMR, ITCMOL салбаруудаас авах боломжтой)\n    *   **Баталгаа:** 12 сар\n    *   **Урамшуулал:** Наадая Аялъя бэлэгтэй\n\n[Ангилал: Гар утас](https://bsb.mn/category/mobile)",
+        "timestamp": "2026-09-21T05:06:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121748",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "iphone",
+        "timestamp": "2026-09-21T05:07:21+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121750",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу? Танд Apple брэндийн iPhone гар утаснуудтай холбоотой дараах сонголтууд байна.\n\n**Бэлэн байгаа загварууд:**\n\n*   **Apple [IPHONE 16 PLUS Black 256GB](https://bsb.mn/product/iphone-16-plus-black-256gb)**\n    *   **Үнэ:** 4,339,900₮ (10% хямдарсан)\n    *   **Төлөв:** Бэлэн байгаа (CEPAMR, ITCMOL салбарууд дээр)\n    *   **Баталгаа:** 12 сар\n    *   **Урамшуулал:** Наадая Аялъя бэлэгтэй\n\n**Одоогоор нөөц түр дууссан загварууд:**\n\n*   [IPHONE 15 Blue 128GB](https://bsb.mn/product/iphone-15-blue-128gb)\n*   [IPHONE 16 PLUS Pink 256GB](https://bsb.mn/product/iphone-16-plus-pink-256gb)\n*   [iPhone 17 Pro Max 256GB Silver](https://bsb.mn/product/iphone-17-pro-max-256gb-silver)\n\nТа бусад бүх загварыг доорх холбоосоор орж харах боломжтой.\n\n[Ангилал: Гар утас](https://bsb.mn/category/mobile)",
+        "timestamp": "2026-09-21T05:07:30+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1121754",
+        "sender": "bot",
+        "senderName": "BSB AI Туслах",
+        "text": "Сайн байна уу! БСБ-аас таныг мэнд хүргэе. Та iPhone загварын утас сонирхож байгаа бол манай мэдээллийн санд байгаа дараах загваруудыг танилцуулж байна:\n\n**Бэлэн байгаа загвар:**\n*   **Apple - [IPHONE 16 PLUS Black 256GB](https://bsb.mn/products/by-code/APPL-MXWN3X)**\n    *   **Үнэ:** 4,339,900₮ (10% хямдарсан)\n    *   **Төлөв:** Бэлэн байгаа (CEPAMR, ITCMOL салбарууд дээр)\n    *   **Баталгаа:** 12 сар\n\n**Одоогоор нөөц түр дууссан загварууд:**\n*   **Apple - [IPHONE 15 Blue 128GB](https://bsb.mn/products/by-code/APPL-MTP43ZP)** (Үнэ: 2,699,900₮)\n*   **Apple - [IPHONE 16 PLUS Pink 256GB](https://bsb.mn/products/by-code/APPL-MXY13X)** (Үнэ: 4,339,900₮)\n*   **Apple - [iPhone 17 Pro Max 256GB Silver](https://bsb.mn/products/by-code/APPL-MFYM4X)** (Үнэ: 5,649,900₮)\n\nТа бусад бүх iPhone загваруудыг үзэхийн тулд доорх линкээр орно уу:\n[Ангилал: Гар утас](https://bsb.mn/categories/mobile)",
+        "timestamp": "2026-09-21T05:07:31+03:00",
         "status": "delivered"
       }
     ]
@@ -7520,7 +7720,10 @@
         "timestamp": "2026-09-18T14:39:52+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-76918",
@@ -9867,7 +10070,10 @@
         "timestamp": "2026-09-18T12:44:52+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Баталгаат хугацааны засварын мэдээлэл болон үйлчилгээний төвийн хаягийг өгч шийдвэрлэсэн."
   },
   {
     "id": "chat-77136",
@@ -10051,7 +10257,10 @@
         "timestamp": "2026-09-18T15:54:52+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "НӨАТ-ын цахим төлбөрийн баримт (И-баримт)-ийг компанийн регистрийн дугаараар системд бүртгэн илгээв."
   },
   {
     "id": "chat-77142",
@@ -22145,7 +22354,10 @@
         "timestamp": "2026-09-18T15:52:52+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А.",
+    "resolutionSummary": "Бүтээгдэхүүний бэлэн үлдэгдэл шалгаж, Их Дэлгүүрийн 2-р давхрын салбараас бэлтгүүлэхээр шийдвэрлэсэн."
   },
   {
     "id": "chat-75626",
@@ -22334,7 +22546,10 @@
         "timestamp": "2026-09-20T17:18:04+03:00",
         "status": "delivered"
       }
-    ]
+    ],
+    "resolutionSummary": "Барааны буцаалт болон солих нөхцөлийн дагуу шалгаж, харилцагчийн асуудлыг бүрэн шийдвэрлэв.",
+    "closedByAgentId": "4605",
+    "closedByAgentName": "Энхзаяа А."
   },
   {
     "id": "chat-75624",
