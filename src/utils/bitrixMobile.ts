@@ -151,3 +151,79 @@ export function getAppUrl(): string {
   if (typeof window === 'undefined') return '';
   return `${window.location.origin}${window.location.pathname}`;
 }
+
+/**
+ * Retrieves the currently logged-in user from Bitrix24 JS SDK if available.
+ */
+export function getBitrixCurrentUser(
+  callback: (user: { id: string | number; name?: string; lastName?: string; avatar?: string } | null) => void
+) {
+  if (typeof window === 'undefined') {
+    callback(null);
+    return;
+  }
+
+  const checkUser = () => {
+    if (window.BX24 && typeof window.BX24.init === 'function') {
+      try {
+        window.BX24.init(() => {
+          // 1. Try BX24.callMethod('user.current')
+          if (typeof window.BX24?.callMethod === 'function') {
+            try {
+              window.BX24.callMethod('user.current', {}, (res: any) => {
+                if (res && typeof res.data === 'function') {
+                  const u = res.data();
+                  if (u && (u.ID || u.id)) {
+                    callback({
+                      id: u.ID || u.id,
+                      name: `${u.NAME || ''} ${u.LAST_NAME || ''}`.trim(),
+                      lastName: u.LAST_NAME,
+                      avatar: u.PERSONAL_PHOTO,
+                    });
+                    return;
+                  }
+                }
+                // Fallback to getAuth
+                const auth = typeof window.BX24?.getAuth === 'function' ? window.BX24.getAuth() : null;
+                const uid = auth?.user_id || auth?.USER_ID;
+                if (uid) {
+                  callback({ id: uid });
+                  return;
+                }
+                callback(null);
+              });
+              return;
+            } catch (e) {
+              console.warn('[BitrixSDK] callMethod user.current error:', e);
+            }
+          }
+
+          // 2. Fallback to getAuth
+          const auth = typeof window.BX24?.getAuth === 'function' ? window.BX24.getAuth() : null;
+          const uid = auth?.user_id || auth?.USER_ID;
+          if (uid) {
+            callback({ id: uid });
+            return;
+          }
+          callback(null);
+        });
+      } catch (err) {
+        console.warn('[BitrixSDK] init for user check failed:', err);
+        callback(null);
+      }
+    } else {
+      callback(null);
+    }
+  };
+
+  if (window.BX24) {
+    checkUser();
+  } else {
+    window.addEventListener('load', checkUser, { once: true });
+    // Timeout fallback in case BX24 is not injected
+    setTimeout(() => {
+      if (!window.BX24) callback(null);
+    }, 1500);
+  }
+}
+

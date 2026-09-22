@@ -549,6 +549,7 @@ export class ChatManagerService extends EventEmitter {
     agentAccessRole?: 'admin' | 'supervisor' | 'agent';
     agentAssignedChannelIds?: number[];
     requestingAgentId?: string;
+    requestingBitrixUserId?: number;
     canAccessAllChannels?: boolean;
   }): ChatDialog[] {
     let result = [...this.dialogs];
@@ -567,21 +568,34 @@ export class ChatManagerService extends EventEmitter {
       // - If a chat is assigned to an agent, it is ONLY visible to that assigned agent.
       // - If closed, only visible if closed by or assigned to this agent.
       const reqAgentId = filters.requestingAgentId ? String(filters.requestingAgentId) : null;
-      const reqBxId = reqAgentId?.startsWith('bx-') ? reqAgentId.replace('bx-', '') : reqAgentId;
+      const reqBxId = filters.requestingBitrixUserId
+        ? String(filters.requestingBitrixUserId)
+        : reqAgentId?.startsWith('bx-')
+        ? reqAgentId.replace('bx-', '')
+        : reqAgentId;
+
+      const myIdSet = new Set<string>();
+      if (reqAgentId) {
+        myIdSet.add(reqAgentId);
+        if (reqAgentId.startsWith('bx-')) myIdSet.add(reqAgentId.replace('bx-', ''));
+        else myIdSet.add(`bx-${reqAgentId}`);
+      }
+      if (reqBxId) {
+        myIdSet.add(reqBxId);
+        myIdSet.add(`bx-${reqBxId}`);
+      }
 
       result = result.filter((d) => {
         const isUnassigned = (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
         if (isUnassigned) return true;
-        if (!reqAgentId) return false;
+        if (myIdSet.size === 0) return false;
 
         const dAgentId = String(d.assignedAgentId || '');
         const dClosedId = String(d.closedByAgentId || '');
 
         const isMine =
-          dAgentId === reqAgentId ||
-          (reqBxId && (dAgentId === reqBxId || dAgentId === `bx-${reqBxId}`)) ||
-          dClosedId === reqAgentId ||
-          (reqBxId && (dClosedId === reqBxId || dClosedId === `bx-${reqBxId}`));
+          (dAgentId && myIdSet.has(dAgentId)) ||
+          (dClosedId && myIdSet.has(dClosedId));
 
         return isMine;
       });
@@ -1166,6 +1180,19 @@ export class ChatManagerService extends EventEmitter {
   recordBotReply(dialogId: string, replyText: string, handedOff = false, botName = 'BSB AI Туслах') {
     const dialog = this.getDialogById(dialogId);
     if (!dialog) return;
+
+    // Suppress duplicate bot message if an identical bot message exists in the last 4 messages within 12s
+    const recentMsgs = dialog.messages.slice(-4);
+    const hasDuplicate = recentMsgs.some(
+      (m) =>
+        m.sender === 'bot' &&
+        m.text.trim() === replyText.trim() &&
+        Date.now() - new Date(m.timestamp).getTime() < 12000
+    );
+    if (hasDuplicate) {
+      console.log(`[ChatManager] Suppressed duplicate bot message in dialog ${dialogId} within 12s window`);
+      return dialog;
+    }
 
     const nowIso = new Date().toISOString();
     dialog.lastMessageText = replyText;

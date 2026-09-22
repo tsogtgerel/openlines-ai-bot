@@ -1025,7 +1025,18 @@ async function startServer() {
   app.post('/api/chats/sync', async (req, res) => {
     try {
       const syncResult = await bitrixOpenlinesSync.syncOpenlineSessions(40);
-      const dialogs = chatManager.getAllDialogs();
+      const requestingAgentId = (req.body && req.body.requestingAgentId) || (req.query && req.query.requestingAgentId);
+      const targetAgent = requestingAgentId
+        ? worktimeManager.getAgentById(requestingAgentId as string)
+        : worktimeManager.getCurrentAgent();
+
+      const dialogs = chatManager.getAllDialogs({
+        agentAccessRole: targetAgent?.accessRole,
+        agentAssignedChannelIds: targetAgent?.assignedChannelIds,
+        requestingAgentId: targetAgent?.id,
+        requestingBitrixUserId: targetAgent?.bitrixUserId,
+        canAccessAllChannels: targetAgent?.canAccessAllChannels,
+      });
       res.json({
         success: true,
         data: {
@@ -1078,13 +1089,23 @@ async function startServer() {
               return;
             }
           }
-          const isUnassigned = !d.assignedAgentId || d.status === 'new';
-          const reqId = targetAgent.id;
-          const reqBx = reqId.startsWith('bx-') ? reqId.replace('bx-', '') : reqId;
+          const isUnassigned = (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
+          
+          const myIdSet = new Set<string>();
+          if (targetAgent.id) {
+            myIdSet.add(targetAgent.id);
+            if (targetAgent.id.startsWith('bx-')) myIdSet.add(targetAgent.id.replace('bx-', ''));
+            else myIdSet.add(`bx-${targetAgent.id}`);
+          }
+          if (targetAgent.bitrixUserId) {
+            myIdSet.add(String(targetAgent.bitrixUserId));
+            myIdSet.add(`bx-${targetAgent.bitrixUserId}`);
+          }
+
           const dAgentId = String(d.assignedAgentId || '');
           const dClosedId = String(d.closedByAgentId || '');
-          const isAssigned = dAgentId === reqId || dAgentId === reqBx;
-          const isClosed = dClosedId === reqId || dClosedId === reqBx;
+          const isAssigned = Boolean(dAgentId && myIdSet.has(dAgentId));
+          const isClosed = Boolean(dClosedId && myIdSet.has(dClosedId));
 
           if (!isUnassigned && !isAssigned && !isClosed) {
             return;
@@ -1140,6 +1161,7 @@ async function startServer() {
         agentAccessRole: targetAgent?.accessRole,
         agentAssignedChannelIds: targetAgent?.assignedChannelIds,
         requestingAgentId: targetAgent?.id,
+        requestingBitrixUserId: targetAgent?.bitrixUserId,
         canAccessAllChannels: targetAgent?.canAccessAllChannels,
       });
 
@@ -1172,6 +1194,7 @@ async function startServer() {
         agentAccessRole: targetAgent?.accessRole,
         agentAssignedChannelIds: targetAgent?.assignedChannelIds,
         requestingAgentId: targetAgent?.id,
+        requestingBitrixUserId: targetAgent?.bitrixUserId,
         canAccessAllChannels: targetAgent?.canAccessAllChannels,
       });
       res.json({ success: true, data: dialogs });
@@ -1287,28 +1310,20 @@ async function startServer() {
             !dialog.assignedAgentId);
 
         if (shouldBotReply && dialog.status !== 'closed') {
-          setTimeout(async () => {
-            try {
-              const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
-              if (match) {
-                const numericChatId = parseInt(match[0], 10);
-                await botWorker.processOpenlineCustomerMessage({
-                  chatId: numericChatId || 0,
-                  dialogId: `chat${numericChatId}`,
-                  messageId: outcome.message.id,
-                  text: text.trim(),
-                  customerName: dialog.customer.name,
-                  channelId: Number(dialog.channelId) || 0,
-                  channelName: dialog.channelName || 'Суваг',
-                  channelType: dialog.channelType,
-                });
-              } else {
+          // For local/simulation chats only. Real Bitrix Openlines chats are handled authoritatively by bitrixOpenlinesSync
+          // to prevent duplicate AI triggers and race conditions.
+          const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
+          const isBitrixOpenlineChat = Boolean(match && !dialog.id.startsWith('sim-'));
+
+          if (!isBitrixOpenlineChat) {
+            setTimeout(async () => {
+              try {
                 await botWorker.processMessage(dialog.id, text.trim());
+              } catch (botErr: any) {
+                console.error('[Server] Bot response error for customer message:', botErr.message);
               }
-            } catch (botErr: any) {
-              console.error('[Server] Bot response error for customer message:', botErr.message);
-            }
-          }, 350);
+            }, 350);
+          }
         }
       }
 
@@ -1589,7 +1604,7 @@ async function startServer() {
         closedByAgentName,
         closedByAgentAvatar
       );
-      worktimeManager.incrementResolvedChat();
+      worktimeManager.incrementResolvedChat(closedByAgentId);
 
       // 1. Bitrix24 Openlines чатын сессийг дуусгах
       if (dialog.dialogId?.startsWith('chat')) {
@@ -2162,7 +2177,10 @@ async function startServer() {
   app.get('/api/worktime/team', (req, res) => {
     try {
       const team = worktimeManager.getAllAgents();
-      const currentAgent = worktimeManager.getCurrentAgent();
+      const requestedAgentId = (req.query.agentId as string) || undefined;
+      const currentAgent = requestedAgentId
+        ? worktimeManager.getAgentById(requestedAgentId) || worktimeManager.getCurrentAgent()
+        : worktimeManager.getCurrentAgent();
       const activeShifts = team.map((a) => worktimeManager.getCurrentShift(a.id));
       res.json({ success: true, data: { team, currentAgentId: currentAgent.id, activeShifts } });
     } catch (e: any) {

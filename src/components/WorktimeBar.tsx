@@ -259,6 +259,7 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                 <div className="text-left min-w-0">
                   <div className="font-semibold text-white leading-tight flex items-center gap-1">
                     <span className="truncate max-w-[70px] sm:max-w-[130px]">{currentAgent.name}</span>
+                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">#{currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')}</span>
                     <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
                   </div>
                 </div>
@@ -292,9 +293,12 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
                           }`}
                         />
                       </div>
-                      <div className="flex-1 truncate">
-                        <div className="font-medium text-white text-[11px] truncate flex items-center gap-1">
-                          <span>{a.name}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-white text-[11px] truncate flex items-center justify-between">
+                          <span className="truncate">{a.name}</span>
+                          <span className="text-[9px] text-slate-400 font-mono shrink-0 ml-1">#{a.bitrixUserId || a.id.replace('bx-', '')}</span>
+                        </div>
+                        <div className="text-[9px] text-slate-400 flex items-center gap-1.5 mt-0.5">
                           <span
                             className={`text-[8px] font-semibold px-1 py-0.2 rounded ${
                               a.accessRole === 'admin'

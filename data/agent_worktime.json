@@ -49,7 +49,7 @@
         "БСБ Мебель - Facebook - Comments",
         "Viber Test Channel"
       ],
-      "activeSessions": 16,
+      "activeSessions": 64,
       "accessRole": "admin",
       "canAccessAllChannels": true,
       "bitrixWorkdayStatus": "OPENED"
@@ -204,7 +204,7 @@
         "Интернэт дэлгүүр - Facebook - Messenger",
         "Интернэт дэлгүүр - Telegram"
       ],
-      "activeSessions": 10,
+      "activeSessions": 0,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -482,10 +482,10 @@
       "name": "Оюун-Эрдэнэ Г.",
       "role": "Худалдааны зөвлөх - Кассчин",
       "avatar": "https://cdn.bitrix24.com/b34916009/main/f93/f93fab2cf59da2a31e1cb03dab4728bb/Image _24_.jpg.png",
-      "status": "online",
+      "status": "offline",
       "email": "mm.ofcash@bsb.mn",
       "phone": "",
-      "isClockedIn": true,
+      "isClockedIn": false,
       "isOnBreak": false,
       "activeShiftId": null,
       "assignedChannelIds": [
@@ -687,7 +687,7 @@
       "phone": "",
       "isClockedIn": true,
       "isOnBreak": false,
-      "activeShiftId": null,
+      "activeShiftId": "shift-bx-1710",
       "assignedChannelIds": [
         27,
         31,
@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 60,
+      "activeSessions": 63,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1156,7 +1156,7 @@
       "assignedChannelNames": [
         "БСБ Мебель - Facebook - Messenger"
       ],
-      "activeSessions": 5,
+      "activeSessions": 6,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1317,6 +1317,22 @@
   ],
   "shifts": [
     {
+      "id": "shift-bx-1710",
+      "agentId": "bx-4605",
+      "agentName": "Энхзаяа А.",
+      "date": "2026-09-22",
+      "clockInTime": "2026-09-22T07:42:26+08:00",
+      "clockOutTime": null,
+      "isClockedIn": true,
+      "isOnBreak": false,
+      "totalBreakSeconds": 0,
+      "workedSeconds": 0,
+      "chatsResolved": 0,
+      "bitrixWorkdayStatus": "OPENED",
+      "bitrixWorkdayId": 1710,
+      "bitrixDuration": "00:00:00"
+    },
+    {
       "id": "shift-bx-1718",
       "agentId": "bx-15",
       "agentName": "Цогтгэрэл Ч",
@@ -1327,7 +1343,7 @@
       "isOnBreak": false,
       "totalBreakSeconds": 0,
       "workedSeconds": 0,
-      "chatsResolved": 0,
+      "chatsResolved": 3,
       "bitrixWorkdayStatus": "OPENED",
       "bitrixWorkdayId": 1718,
       "bitrixDuration": "00:00:00"

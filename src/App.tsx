@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Radio,
   BookOpen,
@@ -32,7 +32,7 @@ import { InquiryAnalyticsTab } from './components/InquiryAnalyticsTab';
 import { AgentPermissionsModal } from './components/AgentPermissionsModal';
 import { RedeployModal } from './components/RedeployModal';
 import { BitrixMobileModal } from './components/BitrixMobileModal';
-import { initBitrix24SDK } from './utils/bitrixMobile';
+import { initBitrix24SDK, getBitrixCurrentUser } from './utils/bitrixMobile';
 import {
   KnowledgeArticle,
   BotConfig,
@@ -79,6 +79,7 @@ export default function App() {
 
   // Omnichannel Chats & Worktime State
   const [currentAgent, setCurrentAgent] = useState<Agent | null>(null);
+  const currentAgentRef = useRef<Agent | null>(null);
   const [currentShift, setCurrentShift] = useState<WorkShift | null>(null);
   const [personalPerformance, setPersonalPerformance] = useState<PersonalPerformanceSummary | null>(null);
   const [team, setTeam] = useState<Agent[]>([]);
@@ -194,10 +195,32 @@ export default function App() {
     }
   };
 
+  // Helper to persist and sync operator session locally (per-tab sessionStorage + cross-session localStorage)
+  const setLocalAgentSession = (agent: Agent) => {
+    currentAgentRef.current = agent;
+    setCurrentAgent(agent);
+    if (typeof window !== 'undefined') {
+      try {
+        if (agent.id) {
+          sessionStorage.setItem('bsb_operator_agent_id', agent.id);
+          localStorage.setItem('bsb_operator_agent_id', agent.id);
+        }
+        if (agent.bitrixUserId) {
+          sessionStorage.setItem('bsb_operator_bitrix_user_id', String(agent.bitrixUserId));
+          localStorage.setItem('bsb_operator_bitrix_user_id', String(agent.bitrixUserId));
+        }
+      } catch (err) {
+        console.warn('Storage sync error:', err);
+      }
+    }
+  };
+
   // Load Worktime & Chats status (with requestingAgentId context for channel isolation)
   const loadWorktimeAndChats = async (agentOverrideId?: string) => {
     try {
-      const activeAgentId = agentOverrideId || currentAgent?.id;
+      const sessionAgentId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : null;
+      const savedAgentId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_agent_id') : null;
+      const activeAgentId = agentOverrideId || currentAgentRef.current?.id || sessionAgentId || savedAgentId || undefined;
       const statusUrl = activeAgentId
         ? `/api/worktime/status?agentId=${encodeURIComponent(activeAgentId)}`
         : '/api/worktime/status';
@@ -205,16 +228,39 @@ export default function App() {
       const worktimeRes = await fetchJsonSafe(statusUrl);
 
       if (worktimeRes?.success && worktimeRes.data) {
-        setCurrentAgent(worktimeRes.data.currentAgent);
+        const teamList: Agent[] = worktimeRes.data.team || [];
+        setTeam(teamList);
+
+        // Find the operator corresponding to THIS client/tab session
+        let targetAgent: Agent | null = null;
+        if (activeAgentId && teamList.length > 0) {
+          targetAgent = teamList.find(
+            (a) => a.id === activeAgentId || String(a.bitrixUserId) === String(activeAgentId).replace('bx-', '')
+          ) || null;
+        }
+
+        // Only fallback to server currentAgent if this client has no agent at all yet
+        if (!targetAgent && !currentAgentRef.current) {
+          targetAgent = worktimeRes.data.currentAgent || null;
+        }
+
+        if (targetAgent) {
+          // If we already have an agent in this session, DO NOT let another operator's identity overwrite us
+          if (!currentAgentRef.current || currentAgentRef.current.id === targetAgent.id) {
+            currentAgentRef.current = targetAgent;
+            setCurrentAgent(targetAgent);
+          }
+        }
+
         setCurrentShift(worktimeRes.data.currentShift);
-        setTeam(worktimeRes.data.team || []);
         if (worktimeRes.data.personalPerformance) {
           setPersonalPerformance(worktimeRes.data.personalPerformance);
         }
       }
 
-      const chatsUrl = activeAgentId
-        ? `/api/chats?requestingAgentId=${encodeURIComponent(activeAgentId)}`
+      const chatsAgentId = activeAgentId || currentAgentRef.current?.id;
+      const chatsUrl = chatsAgentId
+        ? `/api/chats?requestingAgentId=${encodeURIComponent(chatsAgentId)}`
         : '/api/chats';
       const chatsRes = await fetchJsonSafe(chatsUrl);
 
@@ -240,17 +286,21 @@ export default function App() {
     const urlParams = new URLSearchParams(window.location.search);
     const bitrixUserId = urlParams.get('USER_ID') || urlParams.get('user_id') || urlParams.get('userId');
     const agentId = urlParams.get('agent_id') || urlParams.get('agentId');
+    const sessionAgentId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : null;
+    const sessionBxUserId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_bitrix_user_id') : null;
+    const savedAgentId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_agent_id') : null;
+    const savedBxUserId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_bitrix_user_id') : null;
 
-    if (bitrixUserId || agentId) {
+    const trySwitch = (idToSwitch?: string | null, bxToSwitch?: string | number | null) => {
       fetch('/api/worktime/switch-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId, bitrixUserId }),
+        body: JSON.stringify({ agentId: idToSwitch, bitrixUserId: bxToSwitch }),
       })
         .then((r) => r.json())
         .then((data) => {
           if (data.success && data.data) {
-            setCurrentAgent(data.data.agent);
+            setLocalAgentSession(data.data.agent);
             setCurrentShift(data.data.shift);
             if (data.data.personalPerformance) {
               setPersonalPerformance(data.data.personalPerformance);
@@ -261,13 +311,30 @@ export default function App() {
           }
         })
         .catch(() => loadWorktimeAndChats());
+    };
+
+    if (bitrixUserId || agentId) {
+      trySwitch(agentId, bitrixUserId);
     } else {
-      loadWorktimeAndChats();
+      // Check Bitrix24 JS SDK if running inside Bitrix iframe/slider
+      getBitrixCurrentUser((bxUser) => {
+        if (bxUser && bxUser.id) {
+          trySwitch(undefined, bxUser.id);
+        } else if (sessionAgentId || sessionBxUserId) {
+          trySwitch(sessionAgentId, sessionBxUserId);
+        } else if (savedAgentId || savedBxUserId) {
+          trySwitch(savedAgentId, savedBxUserId);
+        } else {
+          loadWorktimeAndChats();
+        }
+      });
     }
 
-    // Poll chats and shifts periodically
+    // Poll chats and shifts periodically, always scoped to this client's active agent
     const pollInterval = setInterval(() => {
-      loadWorktimeAndChats();
+      const activeId = currentAgentRef.current?.id ||
+        (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') || localStorage.getItem('bsb_operator_agent_id') : null);
+      loadWorktimeAndChats(activeId || undefined);
     }, 12000);
     return () => clearInterval(pollInterval);
   }, []);
@@ -415,7 +482,7 @@ export default function App() {
       }).then((r) => r.json());
 
       if (res.success && res.data) {
-        setCurrentAgent(res.data.agent);
+        setLocalAgentSession(res.data.agent);
         setCurrentShift(res.data.shift);
         if (res.data.personalPerformance) {
           setPersonalPerformance(res.data.personalPerformance);
@@ -444,10 +511,11 @@ export default function App() {
 
     if (res.success && res.data) {
       setTeam((prev) => prev.map((a) => (a.id === agentId ? res.data : a)));
-      if (currentAgent?.id === agentId) {
+      if (currentAgentRef.current?.id === agentId || currentAgent?.id === agentId) {
+        currentAgentRef.current = res.data;
         setCurrentAgent(res.data);
       }
-      await loadWorktimeAndChats(currentAgent?.id);
+      await loadWorktimeAndChats(currentAgentRef.current?.id || agentId);
     } else {
       throw new Error(res.error?.message || 'Эрхийн тохиргоо шинэчлэхэд алдаа гарлаа');
     }

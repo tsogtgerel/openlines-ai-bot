@@ -600,7 +600,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     try {
       setIsSyncingBitrix(true);
       setSyncStatusMsg('Битрикс24-өөс шинэ чатуудыг татаж байна...');
-      const res = await fetch('/api/chats/sync', { method: 'POST' }).then((r) => r.json());
+      const res = await fetch('/api/chats/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ requestingAgentId: currentAgent?.id }),
+      }).then((r) => r.json());
       if (res.success && res.data) {
         if (Array.isArray(res.data.dialogs)) {
           setDialogs(res.data.dialogs);
@@ -636,10 +640,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // 1. Initial Load when filters or sorting change
+  // 1. Initial Load when filters, sorting, or active agent identity changes
   useEffect(() => {
+    lastSyncVersionRef.current = 0;
+    isInitialLoadCompletedRef.current = false;
+    knownDialogIdsRef.current.clear();
     loadDialogs();
-  }, [channelFilter, sortBy]);
+  }, [channelFilter, sortBy, currentAgent?.id]);
 
   // 2. Real-time Server-Sent Events (SSE) Stream
   // Instantly delivers customer messages in <50ms without waiting for polling loops
@@ -1631,10 +1638,12 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   // Sorts conversations by 'Newest', 'Oldest', 'Pending AI Action', 'Closed Newest', 'Closed Oldest'
   const filteredDialogs = useMemo(() => {
     let result = dialogs.filter((d) => {
-      if (statusFilter === 'new') return d.status === 'new';
+      if (statusFilter === 'new') {
+        return (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
+      }
       if (statusFilter === 'my') {
         return (
-          (d.status === 'in_progress' || d.status === 'assigned') &&
+          d.status !== 'closed' &&
           (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
         );
       }
@@ -1655,11 +1664,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
       // 2. Chat isolation: Only unassigned (new queue) or assigned to this agent
       result = result.filter((d) => {
-        const isUnassigned = !d.assignedAgentId || d.status === 'new' || d.assignedAgentId === 'unassigned';
         const isMine =
           d.assignedAgentId === currentAgent.id ||
           isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent) ||
           isMyClosedDialog(d, currentAgent);
+        const isUnassigned = (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
         return isUnassigned || isMine;
       });
     }
@@ -1807,19 +1816,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       list = list.filter((d) => allowed.includes(String(d.channelId)));
     }
     return list.filter((d) => {
-      const isUnassigned = !d.assignedAgentId || d.status === 'new' || d.assignedAgentId === 'unassigned';
       const isMine =
         d.assignedAgentId === currentAgent.id ||
         isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent) ||
         isMyClosedDialog(d, currentAgent);
+      const isUnassigned = (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
       return isUnassigned || isMine;
     });
   }, [dialogs, currentAgent, isAgent]);
 
-  const unassignedCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => d.status === 'new').length;
+  const unassignedCount = (isAgent ? agentAccessibleDialogs : dialogs).filter(
+    (d) => (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned'
+  ).length;
   const myActiveCount = (isAgent ? agentAccessibleDialogs : dialogs).filter(
     (d) =>
-      (d.status === 'in_progress' || d.status === 'assigned') &&
+      d.status !== 'closed' &&
       (d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent))
   ).length;
   const myClosedCount = (isAgent ? agentAccessibleDialogs : dialogs).filter((d) => d.status === 'closed' && isMyClosedDialog(d, currentAgent)).length;
@@ -2097,6 +2108,22 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               )}
             </div>
           </div>
+
+          {/* Operator Bitrix Isolation Indicator */}
+          {isAgent && currentAgent && (
+            <div className="px-3 py-1.5 bg-blue-50/80 border-b border-blue-100 flex items-center justify-between text-[11px] text-blue-900">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                <span className="font-semibold truncate">{currentAgent.name}</span>
+                <span className="text-[10px] text-blue-700 font-mono shrink-0">
+                  (Битрикс #{currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')})
+                </span>
+              </div>
+              <span className="text-[10px] text-blue-700 font-medium shrink-0 ml-2 bg-blue-100/70 px-1.5 py-0.5 rounded">
+                Зөвхөн өөрийн чатууд
+              </span>
+            </div>
+          )}
 
           {/* Status Filter Tabs */}
           <div className="px-3 py-2 border-b border-slate-200 bg-white flex items-center gap-1.5 overflow-x-auto scrollbar-none whitespace-nowrap text-[11px]">

@@ -265,8 +265,7 @@ export class WorktimeManagerService {
   getCurrentAgent(): Agent {
     let agent = this.agents.find((a) => a.id === this.currentAgentId);
     if (!agent) {
-      agent = this.agents[0];
-      this.currentAgentId = agent.id;
+      agent = this.agents[0] || INITIAL_AGENTS[0];
     }
     return agent;
   }
@@ -281,8 +280,8 @@ export class WorktimeManagerService {
       found = this.agents.find((a) => a.bitrixUserId === num);
     }
     if (!found) throw new Error(`Agent not found: ${agentId}`);
-    this.currentAgentId = found.id;
-    this.saveData();
+    // Multi-operator isolation: Do NOT mutate global server singleton or save to disk,
+    // which would cause other logged-in operators to switch to this operator!
     return found;
   }
 

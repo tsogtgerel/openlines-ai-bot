@@ -1,5 +1,6 @@
 import { vibeRequest, getVibeRateLimitInfo } from './vibeApi';
 import { chatManager, ChatDialog, ChatMessage, CustomerProfile } from './chatManager';
+import { worktimeManager } from './worktimeManager';
 import { botWorker } from './botWorker';
 
 function cleanBBCode(text: string): string {
@@ -166,21 +167,8 @@ export class BitrixOpenlinesSyncService {
               .slice(lastMsgIdx + 1)
               .some((m) => m.sender === 'agent' || m.sender === 'bot');
 
-          if (!hasReplied && !isSentBeforeBotConnected) {
-            botWorker
-              .processOpenlineCustomerMessage({
-                chatId: numChatId,
-                dialogId: `chat${numChatId}`,
-                messageId: Number(lastMsg.id.replace('bx-', '')) || 0,
-                text: lastMsg.text,
-                customerName: currentDialog.customer.name,
-                channelId: Number(configId) || 0,
-                channelName,
-                channelType: currentDialog.channelType,
-                userCode: (currentDialog.customer as any)?.socialId,
-              })
-              .catch((err) => console.error('[OpenlinesSync] syncSingleChat AI Bot error:', err));
-          }
+          const rawMsgNum = Number(lastMsg.id.replace('bx-', '')) || 0;
+          // syncSingleChat is only for UI data synchronization; automated AI responses are handled centrally by syncSessions
         }
 
         return currentDialog;
@@ -399,10 +387,10 @@ export class BitrixOpenlinesSyncService {
           ? String(s.operatorId)
           : (status === 'in_progress' && operatorUser ? String(operatorUser.id) : null),
         assignedAgentName: hasActiveOperator
-          ? (assignedOperatorUser?.name || (s.operatorId === 15 ? 'Цогтгэрэл Ч' : `Оператор #${s.operatorId}`))
+          ? (worktimeManager.getAgentById(String(s.operatorId))?.name || assignedOperatorUser?.name || (s.operatorId === 15 ? 'Цогтгэрэл Ч' : `Оператор #${s.operatorId}`))
           : (status === 'in_progress' && operatorUser ? operatorUser.name : null),
         assignedAgentAvatar: hasActiveOperator
-          ? (assignedOperatorUser?.avatar && assignedOperatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? assignedOperatorUser.avatar : null)
+          ? (worktimeManager.getAgentById(String(s.operatorId))?.avatar || (assignedOperatorUser?.avatar && assignedOperatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? assignedOperatorUser.avatar : null))
           : (status === 'in_progress' && operatorUser?.avatar && operatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? operatorUser.avatar : null),
         lastMessageText: lastMsg ? lastMsg.text : 'Харилцан яриа эхэлсэн',
         lastMessageTime: lastMsg ? lastMsg.timestamp : s.dateCreate,
@@ -600,12 +588,19 @@ export class BitrixOpenlinesSyncService {
                     .slice(lastCustomerIdx + 1)
                     .some((m) => m.sender === 'agent' || m.sender === 'bot');
 
-                if (!hasReplied && !isSentBeforeBotConnected) {
+                const rawCustomerMsgNum = Number(lastCustomerMsg.id.replace('bx-', '')) || 0;
+                const isAlreadyProcessed = botWorker.isMessageProcessed(`chat${s.chatId}`, rawCustomerMsgNum);
+                const isCurrentlyProcessing = botWorker.isProcessingChat(`chat${s.chatId}`);
+                const isPromptRecent = botWorker.isPromptRecentlyProcessed(`chat${s.chatId}`, lastCustomerMsg.text);
+
+                if (!hasReplied && !isSentBeforeBotConnected && !isAlreadyProcessed && !isCurrentlyProcessing && !isPromptRecent) {
+                  // Mark message processed immediately so concurrent loops skip
+                  botWorker.markMessageProcessed(`chat${s.chatId}`, rawCustomerMsgNum);
                   botWorker
                     .processOpenlineCustomerMessage({
                       chatId: s.chatId,
                       dialogId: `chat${s.chatId}`,
-                      messageId: Number(lastCustomerMsg.id.replace('bx-', '')) || 0,
+                      messageId: rawCustomerMsgNum,
                       text: lastCustomerMsg.text,
                       customerName: chatDialog.customer.name,
                       channelId: s.configId,

@@ -183,8 +183,78 @@ export class BotWorkerService {
   private isProcessingPoll = false;
   private processedOpenlineMessageIds = new Set<string>();
 
+  // In-flight processing mutex per dialog to completely eliminate race conditions and double answers
+  private inFlightDialogProcesses = new Map<string, Promise<BotProcessOutcome>>();
+  // Recent prompt deduplication per dialog: dialogId -> { text, timestamp, reply }
+  private lastProcessedPerDialog = new Map<string, { text: string; timestamp: number; reply: string }>();
+  // Outgoing reply deduplication per dialog: bitrixDialogId -> { message, timestamp }
+  private lastSentReplies = new Map<string, { message: string; timestamp: number }>();
+
   // Active AI conversation memory & session states per chat ID
   private activeSessions = new Map<string, AiSessionState>();
+
+  /**
+   * Mark a message as processed across all dialog representations
+   */
+  public markMessageProcessed(dialogId: string, messageId: string | number) {
+    if (!messageId) return;
+    const cleanMsgId = String(messageId).replace(/^bx-/, '');
+    const cleanDialogId = dialogId.startsWith('chat') ? dialogId : `chat${dialogId.replace(/\D/g, '')}`;
+    const num = dialogId.replace(/\D/g, '');
+
+    this.processedOpenlineMessageIds.add(`${cleanDialogId}-${cleanMsgId}`);
+    if (num) {
+      this.processedOpenlineMessageIds.add(`chat${num}-${cleanMsgId}`);
+      this.processedOpenlineMessageIds.add(`${num}-${cleanMsgId}`);
+    }
+
+    if (this.processedOpenlineMessageIds.size > 3000) {
+      const arr = Array.from(this.processedOpenlineMessageIds);
+      this.processedOpenlineMessageIds = new Set(arr.slice(arr.length - 1500));
+    }
+  }
+
+  /**
+   * Check if a message was already processed by the bot
+   */
+  public isMessageProcessed(dialogId: string, messageId: string | number): boolean {
+    if (!messageId) return false;
+    const cleanMsgId = String(messageId).replace(/^bx-/, '');
+    const cleanDialogId = dialogId.startsWith('chat') ? dialogId : `chat${dialogId.replace(/\D/g, '')}`;
+    const num = dialogId.replace(/\D/g, '');
+
+    return (
+      this.processedOpenlineMessageIds.has(`${cleanDialogId}-${cleanMsgId}`) ||
+      (Boolean(num) && this.processedOpenlineMessageIds.has(`chat${num}-${cleanMsgId}`)) ||
+      (Boolean(num) && this.processedOpenlineMessageIds.has(`${num}-${cleanMsgId}`))
+    );
+  }
+
+  /**
+   * Check if an AI response is currently in-flight for this dialog
+   */
+  public isProcessingChat(dialogId: string): boolean {
+    const normKey = this.normalizeChatKey(dialogId) || dialogId;
+    return this.inFlightDialogProcesses.has(normKey);
+  }
+
+  /**
+   * Check if the same prompt text was answered recently in this dialog (within 12 seconds)
+   */
+  public isPromptRecentlyProcessed(dialogId: string, text: string): boolean {
+    if (!text || !text.trim()) return false;
+    const normKey = this.normalizeChatKey(dialogId) || dialogId;
+    const cleanText = text.toLowerCase().trim();
+    const last = this.lastProcessedPerDialog.get(normKey);
+    if (
+      last &&
+      last.text.toLowerCase().trim() === cleanText &&
+      Date.now() - last.timestamp < 12000
+    ) {
+      return true;
+    }
+    return false;
+  }
 
   constructor() {
     this.ensureDataDir();
@@ -750,6 +820,17 @@ export class BotWorkerService {
       return;
     }
 
+    // Deduplication check: Do not re-process the exact same message event
+    const rawMsgId = messageObj.id || data.PARAMS?.MESSAGE_ID || data.MESSAGE_ID || evt.id || '';
+    const messageId = rawMsgId ? String(rawMsgId).replace(/^bx-/, '') : '';
+    if (messageId && this.isMessageProcessed(dialogId, messageId)) {
+      console.log(`[BotWorker] Skipping duplicate incoming message event for ${dialogId} (msg: ${messageId})`);
+      return;
+    }
+    if (messageId) {
+      this.markMessageProcessed(dialogId, messageId);
+    }
+
     const senderName =
       userObj.name ||
       `${userObj.first_name || ''} ${userObj.last_name || ''}`.trim() ||
@@ -811,7 +892,61 @@ export class BotWorkerService {
   }
 
   /**
-   * Харилцагчийн ирүүлсэн мессежийг боловсруулах гол логик:
+   * Харилцагчийн ирүүлсэн мессежийг боловсруулах гол хаалга (Concurrency lock & Debounce хамгаалалттай):
+   * Нэгэн зэрэг ижил чатаас ирсэн давхардсан дуудлагуудыг түгжиж (in-flight lock),
+   * давхар хариу (duplicate reply) илгээгдэхээс найдвартай сэргийлнэ.
+   */
+  async processMessage(dialogId: string, text: string): Promise<BotProcessOutcome> {
+    const normKey = this.normalizeChatKey(dialogId) || dialogId;
+    const cleanText = text.trim();
+
+    // 1. Debounce check: If the same dialog received the exact same prompt within 8s, reuse outcome
+    const now = Date.now();
+    const lastProcessed = this.lastProcessedPerDialog.get(normKey);
+    if (
+      lastProcessed &&
+      lastProcessed.text.toLowerCase().trim() === cleanText.toLowerCase() &&
+      now - lastProcessed.timestamp < 8000
+    ) {
+      console.log(`[BotWorker] Debouncing duplicate prompt for ${dialogId} ("${cleanText}") within 8s window`);
+      return {
+        answer: lastProcessed.reply,
+        handedOff: false,
+        handoff: false,
+        chatId: dialogId,
+        sessionCleared: false,
+      };
+    }
+
+    // 2. In-flight concurrency lock: If this dialog is already computing a response, reuse the promise
+    const inFlight = this.inFlightDialogProcesses.get(normKey);
+    if (inFlight) {
+      console.log(`[BotWorker] A message process is already in-flight for ${dialogId}. Reusing active process to prevent double reply.`);
+      return await inFlight;
+    }
+
+    const processPromise = (async () => {
+      try {
+        const outcome = await this.executeProcessMessage(dialogId, cleanText);
+        if (outcome?.answer) {
+          this.lastProcessedPerDialog.set(normKey, {
+            text: cleanText,
+            timestamp: Date.now(),
+            reply: outcome.answer,
+          });
+        }
+        return outcome;
+      } finally {
+        this.inFlightDialogProcesses.delete(normKey);
+      }
+    })();
+
+    this.inFlightDialogProcesses.set(normKey, processPromise);
+    return await processPromise;
+  }
+
+  /**
+   * Харилцагчийн ирүүлсэн мессежийг боловсруулах дотоод логик:
    * 1. PII (утас, и-мэйл) нууцлалын маск хийх
    * 2. Оператор хүссэн түлхүүр үг / товчлуурыг шалгах -> тийм бол шууд дамжуулах
    * 3. Мэдээллийн сангаас (Knowledge Base) семантик хайлт хийх
@@ -819,7 +954,7 @@ export class BotWorkerService {
    * 5. VibeCode AI (BitrixGPT) загварт баримтуудыг System Prompt болгон өгч хариулт бэлтгэх
    * 6. Бэлэн хариултыг 'Оператор дуудах' инлайн товчлуурын хамт илгээх
    */
-  async processMessage(dialogId: string, text: string): Promise<BotProcessOutcome> {
+  private async executeProcessMessage(dialogId: string, text: string): Promise<BotProcessOutcome> {
     const startTime = Date.now();
     const botId = this.config.botId;
 
@@ -1513,122 +1648,148 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
       return null;
     }
 
-    const currentDialog =
-      chatManager.getDialogById(params.dialogId) ||
-      chatManager.getDialogById(`chat-${params.chatId}`) ||
-      chatManager.getDialogById(`chat${params.chatId}`);
+    const normKey = this.normalizeChatKey(params.dialogId) || String(params.chatId);
+    const cleanText = (params.text || '').trim();
 
-    // [SESSION CONTEXT RESOLUTION RULE]
-    // Trigger early CRM identification and state resolution for the Openlines session
-    if (this.config.sessionContextRuleEnabled !== false) {
-      crmContextResolver.resolveSessionContext({
-        dialogId: params.dialogId,
-        chatId: params.chatId,
-        userCode: params.userCode,
-        customer: currentDialog?.customer,
-        messageText: params.text,
-        crmMode: this.config.crmMode || 'classic',
-        channelSource: params.channelType || 'openlines',
-      }).catch((err) => {
-        console.warn('[BotWorker] Early Openline CRM Context Resolution error:', err.message);
-      });
-    }
-
-    const isExplicitlyConnected = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
-
-    // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
-    if (this.config.botAssignmentMode === 'manual_only' && !isExplicitlyConnected) {
+    // 1. Strict deduplication: Check if this exact message ID was already processed OR identical prompt was answered within 12s
+    if (this.isMessageProcessed(params.dialogId, params.messageId) || this.isPromptRecentlyProcessed(params.dialogId, cleanText)) {
+      console.log(`[BotWorker] Skipping duplicate openline trigger for ${params.dialogId} (msgId: ${params.messageId}, prompt: "${cleanText.slice(0, 30)}")`);
       return null;
     }
 
-    // Хэрэв бүх чатад автоматаар хариулах горимтой бөгөөд тухайлсан суваг сонгосон бол сувгийн ID тохирч буйг шалгана
-    if (!isExplicitlyConnected && this.config.selectedLineId && Number(this.config.selectedLineId) !== Number(params.channelId)) {
+    // 2. Immediate concurrency check: If this chat is currently in-flight, reuse or reject to prevent duplicate reply
+    if (this.isProcessingChat(normKey)) {
+      console.log(`[BotWorker] Chat ${normKey} is already in-flight. Skipping duplicate concurrent trigger.`);
       return null;
     }
 
-    // Check if session is handed off to an agent in AI memory
-    if (!isExplicitlyConnected && (this.isSessionHandedOff(params.dialogId) || (params.chatId && this.isSessionHandedOff(String(params.chatId))))) {
-      console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Chat has active handoff to human agent. Bot response suppressed.`);
-      return null;
-    }
+    // Mark message processed immediately before any async work begins
+    this.markMessageProcessed(params.dialogId, params.messageId);
+    this.markMessageProcessed(`chat${params.chatId}`, params.messageId);
+    if (normKey) this.markMessageProcessed(normKey, params.messageId);
 
-    // Check if dialog is currently in progress, assigned to an operator, or bot has detached
-    if (currentDialog) {
-      if (currentDialog.botActive === false) {
-        console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Bot explicitly detached`);
-        return null;
-      }
-      if (!isExplicitlyConnected && currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') {
-        console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId}`);
-        return null;
-      }
+    // Acquire the mutex lock for this chat immediately
+    const processPromise = (async () => {
+      try {
+        const currentDialog =
+          chatManager.getDialogById(params.dialogId) ||
+          chatManager.getDialogById(`chat-${params.chatId}`) ||
+          chatManager.getDialogById(`chat${params.chatId}`);
 
-      // Locate the target message in currentDialog by ID, or fallback to the latest message by text
-      let targetIdx = -1;
-      if (params.messageId) {
-        const idStr = String(params.messageId);
-        targetIdx = currentDialog.messages.findIndex(
-          (m) =>
-            m.id === idStr ||
-            m.id === `bx-${idStr}` ||
-            m.id.replace(/^bx-/, '') === idStr.replace(/^bx-/, '')
-        );
-      }
-      if (targetIdx === -1) {
-        // Fallback: search backwards for the latest message with matching text
-        for (let i = currentDialog.messages.length - 1; i >= 0; i--) {
-          if (currentDialog.messages[i].text === params.text) {
-            targetIdx = i;
-            break;
-          }
-        }
-      }
-
-      if (targetIdx !== -1) {
-        const targetMsg = currentDialog.messages[targetIdx];
-
-        // Хэрэв бот холбогдохоос өмнө бичигдсэн хуучин мессеж бол алгасна
-        if (currentDialog.botConnectedAt) {
-          const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
-          const targetTime = new Date(targetMsg.timestamp).getTime();
-          if (targetTime < botConnectedTime - 2000) {
-            console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Message sent before bot was connected (${targetMsg.timestamp} < ${currentDialog.botConnectedAt})`);
-            return null;
-          }
+        // [SESSION CONTEXT RESOLUTION RULE]
+        // Trigger early CRM identification and state resolution for the Openlines session
+        if (this.config.sessionContextRuleEnabled !== false) {
+          crmContextResolver.resolveSessionContext({
+            dialogId: params.dialogId,
+            chatId: params.chatId,
+            userCode: params.userCode,
+            customer: currentDialog?.customer,
+            messageText: params.text,
+            crmMode: this.config.crmMode || 'classic',
+            channelSource: params.channelType || 'openlines',
+          }).catch((err) => {
+            console.warn('[BotWorker] Early Openline CRM Context Resolution error:', err.message);
+          });
         }
 
-        // Уг мессежээс хойш оператор эсвэл бот аль хэдийн хариулсан эсэхийг дарааллаар нь шалгах
-        const hasAgentOrBotReplied = currentDialog.messages.slice(targetIdx + 1).some(
-          (m) => m.sender === 'agent' || m.sender === 'bot'
-        );
-        if (hasAgentOrBotReplied) {
-          console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Already replied to by agent or bot`);
+        const isExplicitlyConnected = Boolean(currentDialog?.botActive || currentDialog?.status === 'bot');
+
+        // Хэрэв горим нь зөвхөн заасан тухайлсан чатад холбогдох ('manual_only') бол botActive === true байхыг шалгана
+        if (this.config.botAssignmentMode === 'manual_only' && !isExplicitlyConnected) {
           return null;
         }
+
+        // Хэрэв бүх чатад автоматаар хариулах горимтой бөгөөд тухайлсан суваг сонгосон бол сувгийн ID тохирч буйг шалгана
+        if (!isExplicitlyConnected && this.config.selectedLineId && Number(this.config.selectedLineId) !== Number(params.channelId)) {
+          return null;
+        }
+
+        // Check if session is handed off to an agent in AI memory
+        if (!isExplicitlyConnected && (this.isSessionHandedOff(params.dialogId) || (params.chatId && this.isSessionHandedOff(String(params.chatId))))) {
+          console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Chat has active handoff to human agent. Bot response suppressed.`);
+          return null;
+        }
+
+        // Check if dialog is currently in progress, assigned to an operator, or bot has detached
+        if (currentDialog) {
+          if (currentDialog.botActive === false) {
+            console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Bot explicitly detached`);
+            return null;
+          }
+          if (!isExplicitlyConnected && currentDialog.assignedAgentId && currentDialog.assignedAgentId !== 'unassigned') {
+            console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Handled by operator ${currentDialog.assignedAgentName || currentDialog.assignedAgentId}`);
+            return null;
+          }
+
+          // Locate the target message in currentDialog by ID, or fallback to the latest message by text
+          let targetIdx = -1;
+          if (params.messageId) {
+            const idStr = String(params.messageId);
+            targetIdx = currentDialog.messages.findIndex(
+              (m) =>
+                m.id === idStr ||
+                m.id === `bx-${idStr}` ||
+                m.id.replace(/^bx-/, '') === idStr.replace(/^bx-/, '')
+            );
+          }
+          if (targetIdx === -1) {
+            // Fallback: search backwards for the latest message with matching text
+            for (let i = currentDialog.messages.length - 1; i >= 0; i--) {
+              if (currentDialog.messages[i].text === params.text) {
+                targetIdx = i;
+                break;
+              }
+            }
+          }
+
+          if (targetIdx !== -1) {
+            const targetMsg = currentDialog.messages[targetIdx];
+
+            // Хэрэв бот холбогдохоос өмнө бичигдсэн хуучин мессеж бол алгасна
+            if (currentDialog.botConnectedAt) {
+              const botConnectedTime = new Date(currentDialog.botConnectedAt).getTime();
+              const targetTime = new Date(targetMsg.timestamp).getTime();
+              if (targetTime < botConnectedTime - 2000) {
+                console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Message sent before bot was connected (${targetMsg.timestamp} < ${currentDialog.botConnectedAt})`);
+                return null;
+              }
+            }
+
+            // Уг мессежээс хойш оператор эсвэл бот аль хэдийн хариулсан эсэхийг дарааллаар нь шалгах
+            const hasAgentOrBotReplied = currentDialog.messages.slice(targetIdx + 1).some(
+              (m) => m.sender === 'agent' || m.sender === 'bot'
+            );
+            if (hasAgentOrBotReplied) {
+              console.log(`[BotWorker] Skipping openline message for ${params.dialogId}: Already replied to by agent or bot`);
+              return null;
+            }
+          }
+        }
+
+        // Ensure bot is in chat
+        if (params.chatId) {
+          await vibeRequest('POST', `/v1/chats/${params.chatId}/users`, {
+            users: [this.config.botId],
+          }).catch(() => {});
+        }
+
+        console.log(`[BotWorker] Auto-processing customer message for ${params.dialogId}: "${cleanText.slice(0, 60)}"`);
+        const outcome = await this.executeProcessMessage(params.dialogId, cleanText);
+        if (outcome?.answer) {
+          this.lastProcessedPerDialog.set(normKey, {
+            text: cleanText,
+            timestamp: Date.now(),
+            reply: outcome.answer,
+          });
+        }
+        return outcome;
+      } finally {
+        this.inFlightDialogProcesses.delete(normKey);
       }
-    }
+    })();
 
-    const msgKey = `${params.dialogId}-${params.messageId}`;
-    if (this.processedOpenlineMessageIds.has(msgKey)) {
-      return null;
-    }
-    this.processedOpenlineMessageIds.add(msgKey);
-
-    // Keep set bounded to prevent memory growth
-    if (this.processedOpenlineMessageIds.size > 2000) {
-      const arr = Array.from(this.processedOpenlineMessageIds);
-      this.processedOpenlineMessageIds = new Set(arr.slice(arr.length - 1000));
-    }
-
-    // Ensure bot is in chat
-    if (params.chatId) {
-      await vibeRequest('POST', `/v1/chats/${params.chatId}/users`, {
-        users: [this.config.botId],
-      }).catch(() => {});
-    }
-
-    console.log(`[BotWorker] Auto-processing customer message for ${params.dialogId}: "${params.text.slice(0, 60)}"`);
-    return await this.processMessage(params.dialogId, params.text);
+    this.inFlightDialogProcesses.set(normKey, processPromise);
+    return await processPromise;
   }
 
   private async sendReply(dialogId: string, message: string, includeKeyboard = false) {
@@ -1637,6 +1798,28 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
     const match = dialogId.match(/\d+/);
     const numericChatId = match ? parseInt(match[0], 10) : null;
     const bitrixDialogId = match ? `chat${match[0]}` : dialogId;
+    const normKey = this.normalizeChatKey(dialogId);
+
+    // Outgoing deduplication guard: never send the identical message to the same chat within 12 seconds
+    const now = Date.now();
+    const lastSent =
+      this.lastSentReplies.get(bitrixDialogId) ||
+      (normKey ? this.lastSentReplies.get(normKey) : undefined) ||
+      this.lastSentReplies.get(dialogId);
+
+    if (
+      lastSent &&
+      lastSent.message.trim() === message.trim() &&
+      now - lastSent.timestamp < 12000
+    ) {
+      console.warn(`[BotWorker] Blocked duplicate outgoing reply to ${bitrixDialogId} within 12s debounce window`);
+      return;
+    }
+
+    const replyRecord = { message: message.trim(), timestamp: now };
+    this.lastSentReplies.set(bitrixDialogId, replyRecord);
+    this.lastSentReplies.set(dialogId, replyRecord);
+    if (normKey) this.lastSentReplies.set(normKey, replyRecord);
 
     if (numericChatId && numericChatId > 0) {
       // 1. Bitrix24 Openlines дээр мессеж илгээхийн тулд оператор эсвэл систем уг сешнийг "answer" хийсэн байх шаардлагатай
