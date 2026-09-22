@@ -5,7 +5,7 @@
   "selectedLineId": null,
   "selectedLineName": "",
   "isPollingActive": true,
-  "currentOffset": 55,
+  "currentOffset": 65,
   "tone": "professional",
   "language": "mn",
   "handoffThreshold": 0.2,
@@ -27,7 +27,7 @@
     "manager",
     "/operator"
   ],
-  "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу.",
+  "systemPromptAddition": "Монгол хэлээр эелдэг, товч бөгөөд ойлгомжтой, үнэн зөв хариулна уу. [Contextual Intent Detection]: Хэрэглэгч тухайлсан бараа худалдан авах (авах, захиалах, үнэ, лизинг) эсвэл зөвлөмж хүссэн (зөвлөх, санал болгох, харьцуулах) тодорхой хүсэлт илэрхийлээгүй бол дур мэдэн барааны холбоос болон барааны карт санал болгохгүй, зөвхөн асуусан асуултад шууд тодорхой хариулна.",
   "model": "bitrix/bitrixgpt-5.5",
   "botAssignmentMode": "manual_only",
   "enableProductSearch": true,
@@ -50,5 +50,8 @@
     "includeImage": false,
     "linkStyle": "markdown",
     "outputFormatTemplate": "category_focused"
-  }
+  },
+  "crmMode": "classic",
+  "sessionContextRuleEnabled": true,
+  "contextualIntentDetection": true
 }

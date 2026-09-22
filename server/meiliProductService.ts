@@ -105,6 +105,8 @@ export interface DetectedProductContext {
   preciseQuery: string;
   isFollowUpQuery: boolean;
   isProductInquiry: boolean;
+  hasPurchaseOrRecommendationIntent: boolean;
+  intentType: 'buy' | 'recommendation' | 'general_inquiry' | 'service_term' | 'small_talk';
   originalQuery: string;
 }
 
@@ -1274,7 +1276,7 @@ export class MeiliProductService {
 
     const generalServicePattern = /^(хүргэлт|хүргэлтийн хугацаа|хүргэлт яаж хийгддэг вэ|хүргэлт үнэгүй юу|хүргэлтийн нөхцөл|баталгаа|баталгаат хугацаа|баталгаат засвар|сервис төв|буцаалт|буцаах нөхцөл|лизинг|лизингээр авах|зээл|storepay|pocket|данс|дансны дугаар|дансаар төлөх|төлбөр|шилжүүлэг|салбар|дэлгүүрүүд|салбар хаана байдаг|цагийн хуваарь|утасны дугаар|лавлах утас)[!.? ]*$/i;
 
-    if (smallTalkPattern.test(rawQuery) || acknowledgementPattern.test(rawQuery) || generalServicePattern.test(rawQuery)) {
+    if (smallTalkPattern.test(rawQuery) || acknowledgementPattern.test(rawQuery)) {
       return {
         exactCode: undefined,
         detectedBrand: undefined,
@@ -1284,6 +1286,24 @@ export class MeiliProductService {
         preciseQuery: '',
         isFollowUpQuery: false,
         isProductInquiry: false,
+        hasPurchaseOrRecommendationIntent: false,
+        intentType: 'small_talk',
+        originalQuery: rawQuery,
+      };
+    }
+
+    if (generalServicePattern.test(rawQuery)) {
+      return {
+        exactCode: undefined,
+        detectedBrand: undefined,
+        detectedCategory: undefined,
+        categorySlug: undefined,
+        detectedSpecs: [],
+        preciseQuery: '',
+        isFollowUpQuery: false,
+        isProductInquiry: false,
+        hasPurchaseOrRecommendationIntent: false,
+        intentType: 'service_term',
         originalQuery: rawQuery,
       };
     }
@@ -1448,13 +1468,50 @@ export class MeiliProductService {
     const productIntentWords = /\b(бараа|бүтээгдэхүүн|загвар|үнэ|үнэтэй|хямдрал|хямд|хямдарсан|бэлэн|байгаа юу|байна уу|авах|худалдаж|сонирхож|хайж|зарах|дэлгүүр|үзэх|үзүүлэх|санал|инч|хэмжээ|багтаамж|хүчин чадал|үзүүлэлт|параметр)\b/i;
     const hasProductIntentWords = productIntentWords.test(currentQueryLower);
 
+    // Service / Repair / Complaint / Store Location / Policy keywords
+    const serviceRepairComplaintPattern = /\b(сервис|сервис төв|засвар|засуулах|эвдэрсэн|эвдэрвэл|эвдрэл|гэмтэл|сэлбэг|оношилгоо|баталгаат хугацаа|баталгааны хуудас|буцаалт|буцаах|солиулах|солих хүсэлт|гомдол|гомдолтой|ирээгүй|хүлээгдэж байна|хаяг хаана|салбар хаана|салбарууд|цагийн хуваарь|хэд хүртэл ажилладаг|утасны дугаар|дансны дугаар|данс)\b/i;
+
+    // Explicit Purchase Intent keywords
+    const buyIntentPattern = /\b(авах|авъя|авмаар|авах гэсэн|худалдаж авах|захиалах|захиалъя|захиалга өгөх|авбал|авч болох уу|хүргүүлж авах|хаанаас авах|дэлгүүрээс авах|худалдан авалт|худалдан авах|сагслах|сагсанд|үнэ|үнэтэй|хэд вэ|хэдтэй|үнэ нь|хямдрал|хямд|хямдарсан|хямдралтай|үнээр|өртөг|бэлэн байна уу|бэлэн байгаа юу|байгаа юу|байна уу|нөөц байна уу|нөөцтэй юу|агуулахад байгаа юу|дэлгүүрт байна уу|салбарт байна уу|лизинг|лизингээр|зээл|зээлээр|storepay|pocket|pocketzero|хувааж төлөх)\b/i;
+
+    // Product Recommendation Intent keywords
+    const recommendationIntentPattern = /\b(санал болгооч|санал болгох|санал болгоорой|зөвлөөч|зөвлөгөө|зөвлөх|зөвлөмж|зөвлөгөө өгөөч|аль нь дээр вэ|ямар нь дээр вэ|ямар нь зүгээр вэ|ямар нь сайн бэ|аль нь сайн бэ|ямар загвар байна|ямар загварууд байна|загварууд байна уу|сонголт байна уу|сонгох|сонгоход|сонгож өгөөч|харьцуулах|ялгаа нь юу вэ|ялгаатай юу|үзүүлэлт нь юу вэ|үзүүлэлт|параметр|сонирхож байна|хайж байна|хэрэгтэй байна|үзэх|үзүүлэх|линк өгөөч|холбоос өгөөч|дэлгэрэнгүй холбоос)\b/i;
+
+    const isServiceOrComplaint = serviceRepairComplaintPattern.test(currentQueryLower);
+    const hasBuyIntent = buyIntentPattern.test(currentQueryLower);
+    const hasRecommendationIntent = recommendationIntentPattern.test(currentQueryLower);
+
+    let intentType: 'buy' | 'recommendation' | 'general_inquiry' | 'service_term' | 'small_talk' = 'general_inquiry';
+    let hasPurchaseOrRecommendationIntent = false;
+
+    if (isServiceOrComplaint && !hasBuyIntent && !hasRecommendationIntent) {
+      intentType = 'service_term';
+      hasPurchaseOrRecommendationIntent = false;
+    } else if (hasBuyIntent) {
+      intentType = 'buy';
+      hasPurchaseOrRecommendationIntent = true;
+    } else if (hasRecommendationIntent) {
+      intentType = 'recommendation';
+      hasPurchaseOrRecommendationIntent = true;
+    } else if (exactCode) {
+      intentType = 'buy';
+      hasPurchaseOrRecommendationIntent = true;
+    } else if (directCategoryMatch || currentBrandMatch) {
+      intentType = 'recommendation';
+      hasPurchaseOrRecommendationIntent = true;
+    } else if (isFollowUpQuery && (detectedCategoryObj || detectedBrand || exactCode)) {
+      intentType = isFollowUpPattern.test(cleanQuery) ? 'buy' : 'recommendation';
+      hasPurchaseOrRecommendationIntent = true;
+    }
+
     // Is this a genuine product inquiry?
     const isProductInquiry = Boolean(
-      exactCode ||
-      directCategoryMatch ||
-      currentBrandMatch ||
-      (hasProductIntentWords && (detectedCategoryObj || detectedBrand || exactCode || cleanQuery.length >= 3)) ||
-      (isFollowUpQuery && (detectedCategoryObj || detectedBrand || exactCode))
+      hasPurchaseOrRecommendationIntent &&
+      (exactCode ||
+        directCategoryMatch ||
+        currentBrandMatch ||
+        (hasProductIntentWords && (detectedCategoryObj || detectedBrand || exactCode || cleanQuery.length >= 3)) ||
+        (isFollowUpQuery && (detectedCategoryObj || detectedBrand || exactCode)))
     );
 
     if (!isProductInquiry) {
@@ -1467,6 +1524,8 @@ export class MeiliProductService {
         preciseQuery: '',
         isFollowUpQuery: false,
         isProductInquiry: false,
+        hasPurchaseOrRecommendationIntent: false,
+        intentType: isServiceOrComplaint ? 'service_term' : 'general_inquiry',
         originalQuery: rawQuery,
       };
     }
@@ -1512,6 +1571,8 @@ export class MeiliProductService {
       preciseQuery: preciseQuery || rawQuery,
       isFollowUpQuery,
       isProductInquiry: true,
+      hasPurchaseOrRecommendationIntent: true,
+      intentType,
       originalQuery: rawQuery,
     };
   }
@@ -1528,12 +1589,24 @@ export class MeiliProductService {
       inStockOnly?: boolean;
       requirePhysicalProduct?: boolean;
       config?: ProductDisplayConfig;
+      contextualIntentDetection?: boolean;
     } = {}
   ): Promise<MeiliSearchResult & { detectedContext: DetectedProductContext }> {
     const detectedContext = this.detectConversationProductContext(query, conversation);
 
     // If query is not a genuine product inquiry or has no precise search query, do not search MeiliSearch!
     if (!detectedContext.isProductInquiry || !detectedContext.preciseQuery) {
+      return {
+        hits: [],
+        total: 0,
+        query,
+        processingTimeMs: 0,
+        detectedContext,
+      };
+    }
+
+    // Contextual Intent Detection: Prevent blindly suggesting products unless user specifically expresses intent to buy or asks for product recommendations
+    if (options.contextualIntentDetection !== false && !detectedContext.hasPurchaseOrRecommendationIntent) {
       return {
         hits: [],
         total: 0,

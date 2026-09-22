@@ -74,6 +74,7 @@ export interface BotConfig {
   productConfig?: ProductDisplayConfig; // Барааны мэдээлэл болон линкний форматын нарийвчилсан тохиргоо
   crmMode?: 'classic' | 'simple'; // 'classic': creates Repeat Lead, 'simple': creates Repeat Deal
   sessionContextRuleEnabled?: boolean; // [SESSION CONTEXT RESOLUTION RULE] идэвхтэй эсэх
+  contextualIntentDetection?: boolean; // [CONTEXTUAL INTENT DETECTION] зорилго таних шүүлтүүр (бараа авах эсвэл зөвлөмж хүсээгүй үед линк шидэхийг хориглоно)
 }
 
 /**
@@ -172,6 +173,7 @@ const DEFAULT_CONFIG: BotConfig = {
   productConfig: DEFAULT_PRODUCT_CONFIG,
   crmMode: 'classic',
   sessionContextRuleEnabled: true,
+  contextualIntentDetection: true,
 };
 
 export class BotWorkerService {
@@ -497,6 +499,10 @@ export class BotWorkerService {
             console.log('[BotWorker] Auto-migrated bot_config.json to official BSB product URL patterns (/products/by-code/:code)');
             this.saveConfig();
           }
+        }
+
+        if (this.config.contextualIntentDetection === undefined) {
+          this.config.contextualIntentDetection = true;
         }
       } else {
         this.saveConfig();
@@ -1044,6 +1050,7 @@ export class BotWorkerService {
         const prodResult = await meiliProductService.searchByConversation(sanitizedText, prevMessages, {
           limit: prodLimit,
           config: this.config.productConfig,
+          contextualIntentDetection: this.config.contextualIntentDetection !== false,
         });
         matchedProducts = prodResult.hits;
         detectedProductContext = prodResult.detectedContext;
@@ -1052,22 +1059,28 @@ export class BotWorkerService {
       }
     }
 
+    // Contextual Intent Detection: Prevent blindly suggesting product links unless user specifically expresses intent to buy or asks for recommendations
+    const isContextualIntentActive = this.config.contextualIntentDetection !== false;
+    const isAllowedProductInquiry = isContextualIntentActive
+      ? Boolean(detectedProductContext?.isProductInquiry && detectedProductContext?.hasPurchaseOrRecommendationIntent)
+      : Boolean(detectedProductContext?.isProductInquiry);
+
     // 4. Search Knowledge Base & MeiliSearch Official Product Terms (app_bsb_product_terms)
     const matchedKb = knowledgeBase.search(sanitizedText, 3);
     const topKbScore = matchedKb.length > 0 ? matchedKb[0].score : 0;
     const matchedTerm = await meiliProductService.findRelevantTerm(sanitizedText);
 
     // 5. If confidence is below threshold, no products, and no official term -> check taxon or handoff
-    const hasProductMatch = detectedProductContext?.isProductInquiry && matchedProducts.length > 0;
+    const hasProductMatch = isAllowedProductInquiry && matchedProducts.length > 0;
     const hasKbMatch = matchedKb.length > 0 && topKbScore >= this.config.handoffThreshold;
     const hasTermMatch = matchedTerm !== null;
 
     if (!hasProductMatch && !hasKbMatch && !hasTermMatch) {
-      // Check if a category was detected in the customer query ONLY IF the customer is making a product inquiry
-      let detectedCat = detectedProductContext?.isProductInquiry ? detectedProductContext.detectedCategory : undefined;
-      let detectedSlug = detectedProductContext?.isProductInquiry ? detectedProductContext.categorySlug : undefined;
+      // Check if a category was detected in the customer query ONLY IF the customer has genuine purchase or recommendation intent
+      let detectedCat = isAllowedProductInquiry ? detectedProductContext?.detectedCategory : undefined;
+      let detectedSlug = isAllowedProductInquiry ? detectedProductContext?.categorySlug : undefined;
 
-      if (detectedProductContext?.isProductInquiry && (!detectedCat || !detectedSlug)) {
+      if (isAllowedProductInquiry && (!detectedCat || !detectedSlug)) {
         const catDirect = BSB_CATEGORIES.find((c) => c.keywords.some((kw) => sanitizedText.toLowerCase().includes(kw)));
         if (catDirect) {
           detectedCat = catDirect.name;
@@ -1075,8 +1088,8 @@ export class BotWorkerService {
         }
       }
 
-      // Also check official MeiliSearch taxons (app_bsb_taxons) ONLY IF user is making a product inquiry
-      if (detectedProductContext?.isProductInquiry && (!detectedCat || !detectedSlug)) {
+      // Also check official MeiliSearch taxons (app_bsb_taxons) ONLY IF user has genuine purchase or recommendation intent
+      if (isAllowedProductInquiry && (!detectedCat || !detectedSlug)) {
         try {
           const liveTaxon = await meiliProductService.findBestTaxon(sanitizedText);
           if (liveTaxon && liveTaxon.slug && liveTaxon.name) {
@@ -1148,7 +1161,7 @@ export class BotWorkerService {
 
     // 6. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
     try {
-      const productContext = (detectedProductContext?.isProductInquiry && matchedProducts.length > 0)
+      const productContext = (isAllowedProductInquiry && matchedProducts.length > 0)
         ? meiliProductService.formatForPrompt(matchedProducts, this.config.productConfig)
         : '';
 
@@ -1187,13 +1200,15 @@ export class BotWorkerService {
 
       const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
       const linkDirectives: string[] = [];
-      if (detectedProductContext?.isProductInquiry && matchedProducts.length > 0) {
+      if (isAllowedProductInquiry && matchedProducts.length > 0) {
         if (productConfig.includeProductLink !== false) {
-          linkDirectives.push("Хэрэглэгч тухайлсан бараа асуусан тул бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС MeiliSearch баримтаас олдсон бодит 'url' талбарын хаягийг '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр дараагийн мөрөнд нь тусад нь заавал хавсаргана. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны мэдээллийнх нь араас тусад нь мөр болгож тавина. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.");
+          linkDirectives.push("• Хэрэглэгч тухайлсан бараа худалдан авах эсвэл зөвлөмж хүссэн тул бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС MeiliSearch баримтаас олдсон бодит 'url' талбарын хаягийг '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр дараагийн мөрөнд нь тусад нь заавал хавсаргана. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны мэдээллийнх нь араас тусад нь мөр болгож тавина. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.");
         }
         if (productConfig.includeCategoryLink !== false) {
-          linkDirectives.push("Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх 'categoryUrl' талбарын холбоосыг 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.");
+          linkDirectives.push("• Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх 'categoryUrl' талбарын холбоосыг 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.");
         }
+      } else {
+        linkDirectives.push("• [Contextual Intent Detection]: Хэрэглэгч бараа худалдан авах (авах, захиалах, үнэ, лизинг, бэлэн байгаа эсэх г.м) эсвэл зөвлөмж/санал болгохыг хүссэн тодорхой зорилго илэрхийлээгүй байна. Иймд хэрэглэгчийн асуусан асуултад (ерөнхий лавлагаа, сервис төв, баталгаат засвар, хүргэлтийн ерөнхий журам, мэндчилгээ г.м) шууд тодорхой, эелдэг хариулж, ДУР МЭДЭН БАРААНЫ ХОЛБООС БОЛОН БАРААНЫ ЗӨВЛӨМЖИЙГ ХҮЧЭЭР САНАЛ БОЛГОХГҮЙ.");
       }
 
       const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
@@ -1203,7 +1218,8 @@ export class BotWorkerService {
 1. Бараа, бүтээгдэхүүн, үнэ, загвар, техникийн үзүүлэлт, бэлэн байгаа эсэхийг асуусан бол "БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН"-аас олдсон бодит бүтээгдэхүүний брэнд, нэр, үнэ (₮-өөр), бэлэн байгаа эсэх төлөв, гол техникийн үзүүлэлтийг тодорхой дурдаж хариулна.
 2. Хэрэв барааны нөөц дууссан ("Одоогоор нөөц дууссан") байвал "Одоогоор нөөц түр дууссан байна" гэдгийг тодорхой мэдэгдэнэ.
 3. Хүргэлт, буцаалт, төлбөрийн нөхцөлийн талаар асуусан бол "БСБ АЛБАН ЁСНЫ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛҮҮД"-ийн заалтыг (жишээ нь 72 цагийн сэтгэл ханамж, 24-72 цагийн хүргэлт, 250,000₮-с дээш үнэгүй хүргэлт г.м) яг үнэн зөв дурдаж хариулна.
-4. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Хэрэглэгч бараа бүтээгдэхүүн асуугаагүй бол барааны линк болон ангиллын холбоос хавсаргахгүй, асуултад шууд тодорхой хариулна.'}
+4. [Contextual Intent Detection]: Хэрэглэгч тухайлсан бараа худалдан авах (үнэ, авах, захиалах, бэлэн байгаа эсэх г.м) эсвэл зөвлөмж/санал болгохыг хүссэн тохиолдолд л барааны мэдээлэл болон албан ёсны холбоосыг санал болгоно. Хэрэглэгч ерөнхий лавлагаа, сервис, баталгаа, хүргэлтийн нөхцөл, гомдол, мэндчилгээ бичсэн тохиолдолд барааны линк болон ангиллын холбоос хавсаргахгүй, асуултад шууд тодорхой хариулна.
+${linkDirectives.join('\n')}
 5. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
 6. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
 7. БСБ Барааны сан эсвэл Үйлчилгээний нөхцөлөөс мэдээлэл олдсон бол [TRANSFER_OPERATOR] гаргахгүй, олдсон албан ёсны мэдээллийг найрсаг танилцуулна.
@@ -1224,8 +1240,8 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
       const aiContent = (rawAny.choices?.[0]?.message?.content || rawAny.data?.choices?.[0]?.message?.content || '').trim();
 
       if (!aiContent || aiContent.includes('[TRANSFER_OPERATOR]')) {
-        // If products were found in MeiliSearch AND user genuinely asked for products, do NOT transfer to operator with "no info"!
-        if (detectedProductContext?.isProductInquiry && matchedProducts.length > 0) {
+        // If products were found in MeiliSearch AND user genuinely asked for products with purchase/rec intent, do NOT transfer to operator with "no info"!
+        if (isAllowedProductInquiry && matchedProducts.length > 0) {
           const itemsList = matchedProducts.slice(0, 3).map((p, idx) => {
             const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
             const price = p.priceFormatted || 'Үнэ тодруулах';

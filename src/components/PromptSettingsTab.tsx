@@ -20,6 +20,11 @@ import {
   RotateCcw,
   GitMerge,
   ShieldCheck,
+  Target,
+  ShieldAlert,
+  ShoppingBag,
+  HelpCircle,
+  Compass,
 } from 'lucide-react';
 import { BotConfig, ProductDisplayConfig } from '../types';
 import { FormattedMessageText } from './FormattedMessageText';
@@ -73,6 +78,9 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   const [sessionContextRuleEnabled, setSessionContextRuleEnabled] = useState<boolean>(
     botConfig?.sessionContextRuleEnabled ?? true
   );
+  const [contextualIntentDetection, setContextualIntentDetection] = useState<boolean>(
+    botConfig?.contextualIntentDetection ?? true
+  );
 
   // MeiliSearch product output & format config
   const [productConfig, setProductConfig] = useState<ProductDisplayConfig>(() => {
@@ -103,10 +111,11 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Live preview state
-  const [previewQuery, setPreviewQuery] = useState('iPhone 16');
+  const [previewQuery, setPreviewQuery] = useState('iPhone 16 үнэ хэд вэ?');
   const [previewLoading, setPreviewLoading] = useState(false);
   const [previewPromptText, setPreviewPromptText] = useState<string | null>(null);
   const [previewSampleAnswer, setPreviewSampleAnswer] = useState<string | null>(null);
+  const [previewDetectedContext, setPreviewDetectedContext] = useState<any>(null);
   const [activePreviewTab, setActivePreviewTab] = useState<'answer' | 'prompt'>('answer');
 
   const updateProductConfig = <K extends keyof ProductDisplayConfig>(
@@ -186,15 +195,28 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
         body: JSON.stringify({
           query: previewQuery.trim(),
           config: productConfig,
+          contextualIntentDetection,
         }),
       });
       const data = await res.json();
       if (data.success && data.data) {
         setPreviewPromptText(data.data.promptText);
+        setPreviewDetectedContext(data.data.detectedContext || null);
 
-        // Generate realistic simulated bot answer according to template
+        const detectedCtx = data.data.detectedContext;
         const hits = data.data.hits || [];
-        if (hits.length === 0) {
+
+        // Check if contextual intent detection blocked product recommendations
+        if (contextualIntentDetection && detectedCtx && !detectedCtx.hasPurchaseOrRecommendationIntent) {
+          const typeLabel = detectedCtx.intentType === 'service_term'
+            ? 'Үйлчилгээний нөхцөл / сервис лавлагаа'
+            : detectedCtx.intentType === 'small_talk'
+            ? 'Мэндчилгээ / Энгийн яриа'
+            : 'Ерөнхий лавлагаа';
+          setPreviewSampleAnswer(
+            `🛡️ [Contextual Intent Filter ИДЭВХЖСЭН]: Хэрэглэгчийн асуултад бараа худалдан авах эсвэл зөвлөмж хүссэн шууд зорилго илрээгүй (${typeLabel}).\n\nБот дур мэдэн барааны холбоос болон ангиллын линк хавсаргахгүй, зөвхөн хэрэглэгчийн асуусан лавлагаанд шууд тодорхой хариулна.`
+          );
+        } else if (hits.length === 0) {
           setPreviewSampleAnswer(`Уучлаарай, "${previewQuery}" түлхүүр үгээр барааны мэдээллийн санд одоогоор бэлэн бараа олдсонгүй.`);
         } else {
           const top = hits[0];
@@ -263,6 +285,7 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
         productConfig,
         crmMode,
         sessionContextRuleEnabled,
+        contextualIntentDetection,
       });
       setSavedSuccess(true);
       setTimeout(() => setSavedSuccess(false), 2500);
@@ -621,6 +644,76 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
             </div>
           </div>
 
+          {/* Contextual Intent Detection Card */}
+          <div className="p-3.5 sm:p-4 rounded-xl border border-amber-200 bg-gradient-to-r from-amber-50/70 via-orange-50/40 to-white space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-amber-500 text-white flex items-center justify-center shadow-xs">
+                  <Target className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h5 className="text-xs font-bold text-slate-900">
+                      Contextual Intent Detection (Зорилго таних шүүлтүүр)
+                    </h5>
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-200">
+                      <ShieldAlert className="w-3 h-3 text-amber-600" />
+                      Anti-Spam
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Хэрэглэгч бараа авах эсвэл зөвлөмж хүсээгүй үед барааны линк шидэхийг хатуу хориглоно.
+                  </p>
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-2.5 py-1.5 rounded-lg border border-amber-300 shadow-2xs">
+                <input
+                  type="checkbox"
+                  checked={contextualIntentDetection}
+                  onChange={(e) => setContextualIntentDetection(e.target.checked)}
+                  className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500"
+                />
+                <span className="text-xs font-bold text-slate-800">
+                  {contextualIntentDetection ? 'Шүүлтүүр асаалттай' : 'Унтраасан'}
+                </span>
+              </label>
+            </div>
+
+            {/* 3 Intent Mode Pills */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 text-[11px]">
+              <div className="p-2 rounded-lg bg-white border border-emerald-200/80 shadow-2xs">
+                <div className="flex items-center gap-1 font-bold text-emerald-800 mb-0.5">
+                  <ShoppingBag className="w-3.5 h-3.5 text-emerald-600" />
+                  1. Худалдан авах зорилго (Buy)
+                </div>
+                <p className="text-[10.5px] text-slate-600">
+                  Үнэ, авах, захиалах, бэлэн нөөц, лизинг, сагслах зэрэгт <strong>барааны үнэ & шууд холбоосыг хавсаргана</strong>.
+                </p>
+              </div>
+
+              <div className="p-2 rounded-lg bg-white border border-blue-200/80 shadow-2xs">
+                <div className="flex items-center gap-1 font-bold text-blue-800 mb-0.5">
+                  <Compass className="w-3.5 h-3.5 text-blue-600" />
+                  2. Зөвлөмж хүссэн (Recommendation)
+                </div>
+                <p className="text-[10.5px] text-slate-600">
+                  Санал болгооч, ямар загвар дээр вэ, харьцуулах хүсэлтэд <strong>зөвлөмж & ангиллын холбоосоор хангана</strong>.
+                </p>
+              </div>
+
+              <div className="p-2 rounded-lg bg-white border border-rose-200/80 shadow-2xs">
+                <div className="flex items-center gap-1 font-bold text-rose-800 mb-0.5">
+                  <HelpCircle className="w-3.5 h-3.5 text-rose-600" />
+                  3. Ерөнхий & Үйлчилгээ (Service)
+                </div>
+                <p className="text-[10.5px] text-slate-600">
+                  Сервис төв, баталгаат засвар, хүргэлтийн ерөнхий журам, гомдол, мэндчилгээнд <strong>барааны линк шидэхгүй, зөвхөн шууд хариулна</strong>.
+                </p>
+              </div>
+            </div>
+          </div>
+
           {/* 1. Fields to include */}
           <div className="pt-3 border-t border-indigo-100/80 space-y-2">
             <h5 className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
@@ -893,23 +986,89 @@ export const PromptSettingsTab: React.FC<PromptSettingsTabProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={previewQuery}
-                onChange={(e) => setPreviewQuery(e.target.value)}
-                placeholder="Жишээ: iPhone 16, зурагт, угаалгын машин..."
-                className="flex-1 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="button"
-                onClick={handleRunPreview}
-                disabled={previewLoading || !previewQuery.trim()}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 shrink-0"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${previewLoading ? 'animate-spin' : ''}`} />
-                {previewLoading ? 'Шалгаж байна...' : 'Шалгах / Preview'}
-              </button>
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={previewQuery}
+                  onChange={(e) => setPreviewQuery(e.target.value)}
+                  placeholder="Жишээ: iPhone 16 үнэ хэд вэ?, сервис хаана байдаг вэ..."
+                  className="flex-1 px-3 py-1.5 bg-white border border-indigo-200 rounded-lg text-xs font-medium text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleRunPreview}
+                  disabled={previewLoading || !previewQuery.trim()}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-2xs transition disabled:opacity-50 shrink-0"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${previewLoading ? 'animate-spin' : ''}`} />
+                  {previewLoading ? 'Шалгаж байна...' : 'Шалгах / Preview'}
+                </button>
+              </div>
+
+              {/* Quick query chips */}
+              <div className="flex flex-wrap items-center gap-1.5 text-[10.5px]">
+                <span className="text-indigo-900/70 font-semibold">Турших асуултууд:</span>
+                <button
+                  type="button"
+                  onClick={() => setPreviewQuery('iPhone 16 үнэ хэд вэ, авах гэсэн юм')}
+                  className="px-2 py-0.5 rounded bg-white hover:bg-emerald-50 border border-emerald-200 text-emerald-800 transition"
+                >
+                  🛒 "iPhone 16 үнэ..." (Buy)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewQuery('LG хөргөгч санал болгооч, ямар загвар дээр вэ')}
+                  className="px-2 py-0.5 rounded bg-white hover:bg-blue-50 border border-blue-200 text-blue-800 transition"
+                >
+                  💡 "Хөргөгч санал болгооч..." (Rec)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewQuery('Сервис төвийн хаяг, баталгаат засвар хаана байдаг вэ?')}
+                  className="px-2 py-0.5 rounded bg-white hover:bg-rose-50 border border-rose-200 text-rose-800 transition"
+                >
+                  🛡️ "Сервис төвийн хаяг..." (Service)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewQuery('Сайн байна уу, өнөөдөр салбарууд ажиллаж байгаа юу?')}
+                  className="px-2 py-0.5 rounded bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 transition"
+                >
+                  💬 "Салбар ажиллаж байгаа юу?" (General)
+                </button>
+              </div>
+
+              {/* Detected intent banner */}
+              {previewDetectedContext && (
+                <div className="pt-1">
+                  {contextualIntentDetection && !previewDetectedContext.hasPurchaseOrRecommendationIntent ? (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-amber-50 border border-amber-200 text-[11px] text-amber-900">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0" />
+                      <div>
+                        <span className="font-bold">Contextual Intent Detection идэвхжсэн:</span> Барааны холбоос хаагдсан (
+                        {previewDetectedContext.intentType === 'service_term'
+                          ? 'Үйлчилгээ / Сервис лавлагаа'
+                          : previewDetectedContext.intentType === 'small_talk'
+                          ? 'Мэндчилгээ'
+                          : 'Ерөнхий асуулт'}
+                        ). Бот хэрэглэгчид дур мэдэн барааны линк шидэхгүй!
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-900">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <div>
+                        <span className="font-bold">Зорилго зөвшөөрөгдсөн:</span>{' '}
+                        {previewDetectedContext.intentType === 'buy'
+                          ? '🛒 Худалдан авах зорилго (Buy Intent)'
+                          : '💡 Зөвлөмж авах хүсэлт (Recommendation Intent)'}{' '}
+                        тул барааны үнэ, мэдээлэл болон албан ёсны линкийг хавсаргав.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Preview Output Box */}

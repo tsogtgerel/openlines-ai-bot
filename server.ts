@@ -380,19 +380,30 @@ async function startServer() {
    */
   app.post('/api/products/format-preview', async (req, res) => {
     try {
-      const { query = 'зурагт', config } = req.body || {};
+      const { query = 'зурагт', config, contextualIntentDetection } = req.body || {};
       const activeConfig = config || botWorker.getConfig().productConfig;
-      const searchRes = await meiliProductService.searchProducts(query, {
+      const isContextualIntentActive = contextualIntentDetection !== undefined
+        ? contextualIntentDetection
+        : (botWorker.getConfig().contextualIntentDetection !== false);
+
+      const convRes = await meiliProductService.searchByConversation(query, [], {
         limit: 3,
         config: activeConfig,
+        contextualIntentDetection: isContextualIntentActive,
       });
-      const promptText = meiliProductService.formatForPrompt(searchRes.hits, activeConfig);
+
+      const detectedContext = convRes.detectedContext;
+      const hits = convRes.hits;
+      const promptText = hits.length > 0 ? meiliProductService.formatForPrompt(hits, activeConfig) : '';
+
       res.json({
         success: true,
         data: {
-          hits: searchRes.hits,
+          hits,
           promptText,
           config: activeConfig,
+          detectedContext,
+          contextualIntentActive: isContextualIntentActive,
         },
       });
     } catch (e: any) {

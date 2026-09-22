@@ -48,6 +48,7 @@ export interface BotConfig {
   productConfig?: ProductDisplayConfig;
   crmMode?: 'classic' | 'simple'; // 'classic': creates Repeat Lead, 'simple': creates Repeat Deal
   sessionContextRuleEnabled?: boolean;
+  contextualIntentDetection?: boolean; // Contextual Intent Detection: prevents blindly suggesting product links unless user specifically expresses intent to buy or asks for product recommendations
 }
 
 export interface CrmContextResolution {
