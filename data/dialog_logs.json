@@ -1,5 +1,357 @@
 [
   {
+    "id": "log-1790062234826-aek1",
+    "timestamp": "2026-09-22T07:30:34.826Z",
+    "dialogId": "chat8049",
+    "customerMessage": "LG хөргөгч үнэ хэд вэ",
+    "botAnswer": "Сайн байна уу! БСБ-д хандаж байгаад тань баярлалаа. LG брэнд хөргөгчний боломжтой загварууд болон тэдгээрийн үнийн мэдээллийг доор харуулахын зэрэгцээ бэлэн байгаа загваруудыг санал болгож байна:\n\n**1. LG-GC-B459EQLM LG 2 хаалгатай хөргөгч**\n*   **Үнэ:** 1,899,900₮ (Хямдарсан үнэ)\n*   **Төлөв:** Бэлэн байгаа (Салбарууд дээр нөөцтэй)\n*   **Гол үзүүлэлт:** Нийт багтаамж: 338литр | Гүн: 68.5см | Өндөр: 186см | Доороо хөлдөөгчтэй\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-B459EQLM)\n\n**2. LG-GC-Q257CAFV LG Side by side 647л**\n*   **Үнэ:** 4,699,900₮ (Хямдарсан үнэ)\n*   **Төлөв:** Бэлэн байгаа (Салбарууд дээр нөөцтэй)\n*   **Гол үзүүлэлт:** Нийт багтаамж: 628литр | Өндөр: 180см\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-Q257CAFV)\n\n**3. LG-GC-B459FTPW LG 2 хаалгатай хөргөгч 344л**\n*   **Үнэ:** 2,199,900₮ (Хямдарсан үнэ)\n*   **Төлөв:** Одоогоор нөөц түр дууссан байна.\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-B459FTPW)\n\n**4. LG-GC-B459MQWM LG 2 хаалгатай хөргөгч**\n*   **Үнэ:** 1,999,900₮ (Хямдарсан үнэ)\n*   **Төлөв:** Одоогоор нөөц түр дууссан байна.\n*   **Гол үзүүлэлт:** Багтаамж: 251-400 л | Өндөр: 186,5см | Доороо хөлдөөгчтэй\n🔗 [Дэлгэрэнгүй үзэх](https://bsb.mn/products/by-code/LG-GC-B459MQWM)\n\nТанд өөр тодорхой хэмжээ эсвэл техникийн үзүүлэлт шаардлагатай загвар байна уу? Би танд сонгоход тань тусалъя.\n\n📁 [Ангилал: Хөргөгч, хөлдөөгч](https://bsb.mn/categories/ref_freezer)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.2533333333333333
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.2
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "LG-GC-B459EQLM",
+        "name": "LG-GC-B459EQLM LG 2 хаалгатай хөргөгч",
+        "priceFormatted": "1,899,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-B459EQLM",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "LG-GC-Q257CAFV",
+        "name": "LG-GC-Q257CAFV LG Side by side 647л",
+        "priceFormatted": "4,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-Q257CAFV",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "LG-GC-B459FTPW",
+        "name": "LG-GC-B459FTPW LG 2 хаалгатай хөргөгч  344л",
+        "priceFormatted": "2,199,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-B459FTPW",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "LG-GC-B459MQWM",
+        "name": "LG-GC-B459MQWM LG 2 хаалгатай хөргөгч",
+        "priceFormatted": "1,999,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-B459MQWM",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      }
+    ],
+    "durationMs": 28260
+  },
+  {
+    "id": "log-1790062199146-x1ly",
+    "timestamp": "2026-09-22T07:29:59.146Z",
+    "dialogId": "chat8049",
+    "customerMessage": "баталгааны хугацаа хэдэн сар байдаг вэ?",
+    "botAnswer": "БСБ-д бараа бүтээгдэхүүн худалдан авахад үйлдвэрийн албан ёсны 1-ээс 3 хүртэлх жилийн баталгаа олгогддог. \n\nТүүнчлэн, та бараагаа хүлээн авснаас хойш 72 цагийн дотор үйлдвэрийн гэмтэл согог илэрсэн тохиолдолд баримттай нь шинээр солих боломжтой бөгөөд баталгаат хугацаанд манай албан ёсны Сервис төв үнэ төлбөргүй үйлчилгээ үзүүлнэ.",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-returns",
+        "title": "Баталгаат хугацаа & Бараа буцаах, солих журам",
+        "score": 0.6444444444444445
+      },
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 0.3222222222222222
+      },
+      {
+        "id": "art-hours",
+        "title": "Ажлын цагийн хуваарь & Харилцагчийн үйлчилгээ",
+        "score": 0.16666666666666666
+      }
+    ],
+    "matchedProducts": [],
+    "durationMs": 8113
+  },
+  {
+    "id": "log-1790062191032-x9ys",
+    "timestamp": "2026-09-22T07:29:51.032Z",
+    "dialogId": "chat8049",
+    "customerMessage": "bot",
+    "botAnswer": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [],
+    "durationMs": 4258
+  },
+  {
+    "id": "log-1790062186773-wdqe",
+    "timestamp": "2026-09-22T07:29:46.773Z",
+    "dialogId": "chat8049",
+    "customerMessage": "юу байна",
+    "botAnswer": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [],
+    "durationMs": 5359
+  },
+  {
+    "id": "log-1790061882959-5dnb",
+    "timestamp": "2026-09-22T07:24:42.959Z",
+    "dialogId": "chat8049",
+    "customerMessage": "юу байна",
+    "botAnswer": "Сайн байна уу! Танд БСБ-ийн албан ёсны хэрэглэгчийн үйлчилгээний туслах AI бот байна.\n\nТанд бараа бүтээгдэхүүн, үнэ, техникийн үзүүлэлт болон бусад үйлчилгээний мэдээлэлээр туслахад бэлэн байна. Танд ямар нэгэн тодорхой бараа эсвэл асуулт байна уу?\n\n🔗 Холбоос: https://bsb.mn/products/by-code/EPSO-T6642\n📁 [Ангилал: Принтерийн хор](https://bsb.mn/categories/printer_ink)",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "EPSO-T6642",
+        "name": "Epson T6642 Cyan ink bottle 70ml",
+        "priceFormatted": "32,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/EPSO-T6642",
+        "category": "Принтерийн хор",
+        "categoryUrl": "https://bsb.mn/categories/printer_ink"
+      },
+      {
+        "code": "EPSO-T6643",
+        "name": "Epson T6643 Magenta ink bottle 70ml",
+        "priceFormatted": "32,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/EPSO-T6643",
+        "category": "Принтерийн хор",
+        "categoryUrl": "https://bsb.mn/categories/printer_ink"
+      },
+      {
+        "code": "EPSO-T6644",
+        "name": "Epson T6644 Yellow ink bottle 70ml",
+        "priceFormatted": "32,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/EPSO-T6644",
+        "category": "Принтерийн хор",
+        "categoryUrl": "https://bsb.mn/categories/printer_ink"
+      },
+      {
+        "code": "EPSO-T6641",
+        "name": "Epson T6641 Black ink bottle 70ml",
+        "priceFormatted": "32,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/EPSO-T6641",
+        "category": "Принтерийн хор",
+        "categoryUrl": "https://bsb.mn/categories/printer_ink"
+      }
+    ],
+    "durationMs": 10967
+  },
+  {
+    "id": "log-1790061752632-ff7p",
+    "timestamp": "2026-09-22T07:22:32.632Z",
+    "dialogId": "chat8049",
+    "customerMessage": "test",
+    "botAnswer": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Light Green\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-LG\n\n2. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Violet\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-V\n\n3. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Black\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-BK\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Хөргөгч](https://bsb.mn/categories/ref_two_doors)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [
+      {
+        "code": "SAMS-S741B-LG",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Light Green",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-LG",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-LG",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S741B-V",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Violet",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-V",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-V",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S741B-BK",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Black",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-BK",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-BK",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S731B-DB",
+        "name": "Samsung Galaxy S25 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Dark Blue",
+        "priceFormatted": "2,049,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S731B-DB",
+        "url": "https://bsb.mn/products/by-code/SAMS-S731B-DB",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile_all"
+      }
+    ],
+    "durationMs": 26189
+  },
+  {
+    "id": "log-1790061632352-9ekb",
+    "timestamp": "2026-09-22T07:20:32.352Z",
+    "dialogId": "chat8049",
+    "customerMessage": "баталгаа",
+    "botAnswer": "Сайн байна уу! БСБ-д худалдаалагдаж буй сонголтуудаас танилцуулж байна:\n\n1. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Light Green\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-LG\n\n2. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Violet\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-V\n\n3. S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Black\n   • Үнэ: 3,199,900₮ (Бэлэн байгаа)\n   🔗 Холбоос: https://bsb.mn/products/by-code/SAMS-S741B-BK\n\nТа бусад бүх загварыг дараах албан ёсны ангиллын холбоосоор орж үзэх боломжтой:\n📁 [Ангилал: Хөргөгч](https://bsb.mn/categories/ref_two_doors)\n\nТанд дэлгэрэнгүй мэдээлэл эсвэл зээлийн нөхцөл хэрэгтэй бол лавлана уу!",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-returns",
+        "title": "Баталгаат хугацаа & Бараа буцаах, солих журам",
+        "score": 1
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "SAMS-S741B-LG",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Light Green",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-LG",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-LG",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S741B-V",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Violet",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-V",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-V",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S741B-BK",
+        "name": "S26 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Black",
+        "priceFormatted": "3,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S741B-BK",
+        "url": "https://bsb.mn/products/by-code/SAMS-S741B-BK",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile"
+      },
+      {
+        "code": "SAMS-S731B-DB",
+        "name": "Samsung Galaxy S25 FE Cortex 3.2GHz 8GB 128GB 6.7\" 2340x1080 50MP 12MP 12MP 4900mAh Dark Blue",
+        "priceFormatted": "2,049,900₮",
+        "inStock": false,
+        "productUrl": "https://bsb.mn/products/by-code/SAMS-S731B-DB",
+        "url": "https://bsb.mn/products/by-code/SAMS-S731B-DB",
+        "isProductSpecificUrl": true,
+        "isCategoryFallbackUrl": false,
+        "category": "Гар утас",
+        "categoryUrl": "https://bsb.mn/categories/mobile_all"
+      }
+    ],
+    "durationMs": 26840
+  },
+  {
+    "id": "log-1790061553991-1p8x",
+    "timestamp": "2026-09-22T07:19:13.991Z",
+    "dialogId": "chat8049",
+    "customerMessage": "хүргэлтийн хугацаа",
+    "botAnswer": "БСБ-ийн хүргэлтийн нөхцөлийг танд танилцуулъя.\n\nЗахиалга баталгаажсанаас хойш бэлэн бараа 24-72 цагийн хооронд хүргэгдэнэ. Барааны төрлөөс хамаарч хүргэлтийн хугацаа дараах байдлаар өөр өөр байна:\n\n*   **Электрон болон компьютерын бараа:**\n    *   Даваа-Бямба гарагт 17:00 цагаас өмнө захиалвал **маргааш** нь,\n    *   17:00 цагаас хойш захиалвал **нөгөө өдөр** нь,\n    *   Ням гарагт захиалвал **ирэх мягмар** гарагт хүргэгдэнэ.\n\n*   **Гэрийн болон албан тасалгааны тавилга:**\n    *   Ажлын өдрүүдэд 16:00 цагаас өмнө захиалвал **маргааш** нь,\n    *   Амралтын өдрүүдэд захиалвал **ирэх мягмар** гарагт хүргэж, угсралт хийгдэнэ.\n\n**Нэмэлт мэдээлэл:**\n*   Интернэт дэлгүүрийн 250,000₮-өөс дээш үнэ бүхий барааг хот дотор **үнэгүй** хүргэнэ.\n*   Хүргэлт нь хотын дараах тодорхой хязгаарлагдмал бүсүүдэд (Улиастайн гүүр, Нисэх буудал, Яармагийн товчоо, Орбитын тойрог, 7 буудлын салбар зэрэг) хийгдэнэ.\n*   Худалдан авсан барааг компанийн бараа хүргэгчид хүргэнэ.\n\n🔗 Холбоос: https://bsb.mn/products/by-code/LG-GC-Q257CAFV\n📁 [Ангилал: Хөргөгч, хөлдөөгч](https://bsb.mn/categories/ref_freezer)",
+    "handedOff": false,
+    "matchedArticles": [
+      {
+        "id": "art-delivery",
+        "title": "Хүргэлтийн хугацаа, Нөхцөл & Захиалга хянах",
+        "score": 1
+      },
+      {
+        "id": "art-returns",
+        "title": "Баталгаат хугацаа & Бараа буцаах, солих журам",
+        "score": 0.9666666666666667
+      }
+    ],
+    "matchedProducts": [
+      {
+        "code": "LG-GC-Q257CAFV",
+        "name": "LG-GC-Q257CAFV LG Side by side 647л",
+        "priceFormatted": "4,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-Q257CAFV",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "LG-GC-B277BPUM",
+        "name": "LG GC-B277BPUM Side by Side Хөргөгч",
+        "priceFormatted": "4,299,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/LG-GC-B277BPUM",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "TOSH-GR-RS910WI1-PMJ-06",
+        "name": "Toshiba GR-RS910WI1-PMJ-06 Side by Side 2 хаалгатай хөргөгч",
+        "priceFormatted": "4,199,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/TOSH-GR-RS910WI1-PMJ-06",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      },
+      {
+        "code": "TOSH-GR-RT559WE-PMJ-37",
+        "name": "Toshiba GR-RT559WE-PMJ-37 2 хаалгатай хөргөгч",
+        "priceFormatted": "1,699,900₮",
+        "inStock": true,
+        "productUrl": "https://bsb.mn/products/by-code/TOSH-GR-RT559WE-PMJ-37",
+        "category": "Хөргөгч, хөлдөөгч",
+        "categoryUrl": "https://bsb.mn/categories/ref_freezer"
+      }
+    ],
+    "durationMs": 27114
+  },
+  {
+    "id": "log-1790061479575-xtjo",
+    "timestamp": "2026-09-22T07:17:59.575Z",
+    "dialogId": "chat8049",
+    "customerMessage": "hi",
+    "botAnswer": "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.",
+    "handedOff": false,
+    "matchedArticles": [],
+    "matchedProducts": [],
+    "durationMs": 4396
+  },
+  {
     "id": "log-1789975225671-esz9",
     "timestamp": "2026-09-21T07:20:25.671Z",
     "dialogId": "test-verify-url",

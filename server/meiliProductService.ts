@@ -104,6 +104,7 @@ export interface DetectedProductContext {
   detectedSpecs?: string[];
   preciseQuery: string;
   isFollowUpQuery: boolean;
+  isProductInquiry: boolean;
   originalQuery: string;
 }
 
@@ -1255,8 +1256,9 @@ export class MeiliProductService {
   }
 
   /**
-   * Intelligently detects product name, exact code, brand, category, or specifications
-   * from the entire ongoing conversation history (customer + previous agent messages).
+   * Intelligently detects product codes, brand names, categories, and technical specs
+   * from the customer query and previous customer inquiries.
+   * Crucially distinguishes between product inquiries and conversational/service queries.
    */
   public detectConversationProductContext(
     query: string,
@@ -1265,10 +1267,35 @@ export class MeiliProductService {
     const rawQuery = (query || '').trim();
     const cleanQuery = this.extractCleanSearchQuery(rawQuery);
 
+    // 1. Explicit Non-Product Check: Greetings, small-talk, presence tests, bot testing, acknowledgements
+    const smallTalkPattern = /^(сайн байна уу|сайн уу|сайн уу даа|өдрийн мэнд|өглөөний мэнд|оройн мэнд|мэнд|мэнд ээ|hi|hello|hey|yo|sn bnu|snu|юу байна|сонин юу байна|сонин сайхан юу байна|юу бна|юу байна даа|ямар сонин байна|хөөе|байна уу|хүн байна уу|сонсож байна уу|хэн нэгэн байна уу|ажиллаж байна уу|bot|боот|бот|ai|test|тест|шалгалт|туслаач|туслаарай|асуух юм байна|асуух зүйл байна|нэг юм асууя|мэдээлэл авъя)[!.? ]*$/i;
+
+    const acknowledgementPattern = /^(за|заа|тийм|тийм ээ|тийм үү|үгүй|үгүй ээ|үгүй байх|ойлголоо|мэдлээ|зөв|буруу|тэгье|тэгэх үү|байж байгаарай|түр хүлээгээрэй|баярлалаа|их баярлалаа|гялайлаа|ok|okay|yes|no|thanks|thx|ty|zaza|zaa)[!.? ]*$/i;
+
+    const generalServicePattern = /^(хүргэлт|хүргэлтийн хугацаа|хүргэлт яаж хийгддэг вэ|хүргэлт үнэгүй юу|хүргэлтийн нөхцөл|баталгаа|баталгаат хугацаа|баталгаат засвар|сервис төв|буцаалт|буцаах нөхцөл|лизинг|лизингээр авах|зээл|storepay|pocket|данс|дансны дугаар|дансаар төлөх|төлбөр|шилжүүлэг|салбар|дэлгүүрүүд|салбар хаана байдаг|цагийн хуваарь|утасны дугаар|лавлах утас)[!.? ]*$/i;
+
+    if (smallTalkPattern.test(rawQuery) || acknowledgementPattern.test(rawQuery) || generalServicePattern.test(rawQuery)) {
+      return {
+        exactCode: undefined,
+        detectedBrand: undefined,
+        detectedCategory: undefined,
+        categorySlug: undefined,
+        detectedSpecs: [],
+        preciseQuery: '',
+        isFollowUpQuery: false,
+        isProductInquiry: false,
+        originalQuery: rawQuery,
+      };
+    }
+
+    // Strip URLs and markdown links from helper text
+    const cleanCustomerText = (t: string) =>
+      t.replace(/https?:\/\/[^\s]+/g, '').replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1').trim();
+
     // Normalize messages into a chronological list, isolating to the current active session
-    const messages: string[] = [];
+    // CRITICAL: ONLY include customer messages! Never inspect bot/agent messages which contain links, codes, URLs
+    const customerMessages: string[] = [];
     if (Array.isArray(conversation)) {
-      // Find latest session boundary if conversation contains session markers
       let startIndex = 0;
       for (let idx = 0; idx < conversation.length; idx++) {
         const item = conversation[idx];
@@ -1285,18 +1312,19 @@ export class MeiliProductService {
       const activeSlice = conversation.slice(startIndex);
       for (const item of activeSlice) {
         if (typeof item === 'string' && item.trim()) {
-          messages.push(item.trim());
+          customerMessages.push(cleanCustomerText(item.trim()));
         } else if (item && typeof (item as any).text === 'string' && (item as any).text.trim()) {
-          // Ignore system messages from CRM / Openlines (e.g. "Order attached", "Deal attached", "picked conversation", etc.)
-          if ((item as any).sender === 'system') {
+          // Strictly only customer messages
+          if ((item as any).sender && (item as any).sender !== 'customer') {
             continue;
           }
-          messages.push((item as any).text.trim());
+          customerMessages.push(cleanCustomerText((item as any).text.trim()));
         }
       }
     }
-    if (rawQuery && !messages.includes(rawQuery)) {
-      messages.push(rawQuery);
+    const cleanRaw = cleanCustomerText(rawQuery);
+    if (cleanRaw && !customerMessages.includes(cleanRaw)) {
+      customerMessages.push(cleanRaw);
     }
 
     let exactCode: string | undefined;
@@ -1305,7 +1333,7 @@ export class MeiliProductService {
     const detectedSpecs: string[] = [];
 
     // Check if the customer's CURRENT message explicitly mentions a product category
-    const currentQueryLower = rawQuery.toLowerCase();
+    const currentQueryLower = cleanRaw.toLowerCase();
     const directCategoryMatch = BSB_CATEGORIES.find((cat) =>
       cat.keywords.some((kw) => this.matchesCategoryKeyword(currentQueryLower, kw))
     );
@@ -1329,22 +1357,44 @@ export class MeiliProductService {
       detectedBrand = currentBrandMatch;
     }
 
-    // Check if current message has an explicit product code
-    const currentCodeMatch = rawQuery.match(/\b([A-Za-z0-9]{3,}-[A-Za-z0-9\-]+)\b/);
-    if (currentCodeMatch && !currentCodeMatch[1].toLowerCase().includes('wi-fi') && currentCodeMatch[1].length >= 5) {
-      exactCode = currentCodeMatch[1];
+    // Check if current message has an explicit product code (must have digits, length >= 4, no hyphens words like wi-fi)
+    const currentCodeMatch = cleanRaw.match(/\b([A-Za-z0-9]{2,}-[A-Za-z0-9\-]+)\b/);
+    if (currentCodeMatch) {
+      const codeCandidate = currentCodeMatch[1];
+      const lowerCandidate = codeCandidate.toLowerCase();
+      if (
+        !lowerCandidate.includes('wi-fi') &&
+        !lowerCandidate.includes('side-by') &&
+        !lowerCandidate.includes('in-stock') &&
+        !lowerCandidate.includes('part-time') &&
+        codeCandidate.length >= 4 &&
+        /\d/.test(codeCandidate)
+      ) {
+        exactCode = codeCandidate;
+      }
     }
 
-    // Scan backwards from newest to oldest message for missing context ONLY if not directly supplied in current query
-    for (let i = messages.length - 1; i >= 0; i--) {
-      const msg = messages[i];
+    // Scan backwards from newest to oldest customer message for missing context ONLY if not directly supplied in current query
+    for (let i = customerMessages.length - 1; i >= 0; i--) {
+      const msg = customerMessages[i];
       const lower = msg.toLowerCase();
 
-      // 1. Detect explicit product code if not already found and user didn't switch to a broad category
+      // 1. Detect explicit product code if not already found
       if (!exactCode && !directCategoryMatch) {
-        const codeMatch = msg.match(/\b([A-Za-z0-9]{3,}-[A-Za-z0-9\-]+)\b/);
-        if (codeMatch && !codeMatch[1].toLowerCase().includes('wi-fi') && codeMatch[1].length >= 5) {
-          exactCode = codeMatch[1];
+        const codeMatch = msg.match(/\b([A-Za-z0-9]{2,}-[A-Za-z0-9\-]+)\b/);
+        if (codeMatch) {
+          const cCand = codeMatch[1];
+          const lCand = cCand.toLowerCase();
+          if (
+            !lCand.includes('wi-fi') &&
+            !lCand.includes('side-by') &&
+            !lCand.includes('in-stock') &&
+            !lCand.includes('part-time') &&
+            cCand.length >= 4 &&
+            /\d/.test(cCand)
+          ) {
+            exactCode = cCand;
+          }
         }
       }
 
@@ -1385,15 +1435,41 @@ export class MeiliProductService {
     }
 
     // Determine if query is a follow-up inquiry (e.g. "Үнэ нь хэд вэ?", "Бэлэн байна уу?", "55 инч нь", "Линк өгөөч")
-    const isFollowUpPattern = /^(үнэ|хэд|хэдтэй|бэлэн|байгаа|байна|хямдрал|өнгө|загвар|үзэх|линк|холбоос|аль|аль нь|санал|мэдээлэл|хэмжээ|хүргэлт|лизинг|storepay|pocket|une|hed|hedtei|belen|baigaa|baina|link|uzekh)/i;
+    const isFollowUpPattern = /^(үнэ|хэд|хэдтэй|бэлэн|байгаа|байна|хямдрал|өнгө|загвар|үзэх|линк|холбоос|аль|аль нь|санал|мэдээлэл|хэмжээ|une|hed|hedtei|belen|baigaa|baina|link|uzekh)/i;
     const isFollowUpQuery =
       !directCategoryMatch &&
-      (cleanQuery.length < 4 ||
-        isFollowUpPattern.test(cleanQuery) ||
+      (isFollowUpPattern.test(cleanQuery) ||
         cleanQuery === 'үнэ' ||
         cleanQuery === 'бэлэн' ||
         cleanQuery === 'une' ||
         cleanQuery === 'belen');
+
+    // Product intent keywords in Mongolian
+    const productIntentWords = /\b(бараа|бүтээгдэхүүн|загвар|үнэ|үнэтэй|хямдрал|хямд|хямдарсан|бэлэн|байгаа юу|байна уу|авах|худалдаж|сонирхож|хайж|зарах|дэлгүүр|үзэх|үзүүлэх|санал|инч|хэмжээ|багтаамж|хүчин чадал|үзүүлэлт|параметр)\b/i;
+    const hasProductIntentWords = productIntentWords.test(currentQueryLower);
+
+    // Is this a genuine product inquiry?
+    const isProductInquiry = Boolean(
+      exactCode ||
+      directCategoryMatch ||
+      currentBrandMatch ||
+      (hasProductIntentWords && (detectedCategoryObj || detectedBrand || exactCode || cleanQuery.length >= 3)) ||
+      (isFollowUpQuery && (detectedCategoryObj || detectedBrand || exactCode))
+    );
+
+    if (!isProductInquiry) {
+      return {
+        exactCode: undefined,
+        detectedBrand: undefined,
+        detectedCategory: undefined,
+        categorySlug: undefined,
+        detectedSpecs: [],
+        preciseQuery: '',
+        isFollowUpQuery: false,
+        isProductInquiry: false,
+        originalQuery: rawQuery,
+      };
+    }
 
     let preciseQuery = cleanQuery;
 
@@ -1406,7 +1482,7 @@ export class MeiliProductService {
       } else {
         preciseQuery = cleanQuery || directCategoryMatch.canonicalSearchTerm;
       }
-    } else if (isFollowUpQuery || cleanQuery.length < 4) {
+    } else if (isFollowUpQuery) {
       // Build precise query from conversation context: Brand + Specs + Category
       const parts: string[] = [];
       if (detectedBrand) parts.push(detectedBrand);
@@ -1435,6 +1511,7 @@ export class MeiliProductService {
       detectedSpecs,
       preciseQuery: preciseQuery || rawQuery,
       isFollowUpQuery,
+      isProductInquiry: true,
       originalQuery: rawQuery,
     };
   }
@@ -1454,6 +1531,17 @@ export class MeiliProductService {
     } = {}
   ): Promise<MeiliSearchResult & { detectedContext: DetectedProductContext }> {
     const detectedContext = this.detectConversationProductContext(query, conversation);
+
+    // If query is not a genuine product inquiry or has no precise search query, do not search MeiliSearch!
+    if (!detectedContext.isProductInquiry || !detectedContext.preciseQuery) {
+      return {
+        hits: [],
+        total: 0,
+        query,
+        processingTimeMs: 0,
+        detectedContext,
+      };
+    }
 
     // 1. Try search with precise query
     let result = await this.searchProducts(detectedContext.preciseQuery, options);

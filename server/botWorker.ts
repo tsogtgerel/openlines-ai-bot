@@ -975,9 +975,9 @@ export class BotWorkerService {
       };
     }
 
-    // 2. Check for polite greeting (e.g. "Сайн байна уу", "Өдрийн мэнд") to avoid immediate handoff
-    const isGreeting = /^(сайн байна уу|сайн уу|өдрийн мэнд|өглөөний мэнд|оройн мэнд|hi|hello|hey|sn bnu)[!.? ]*$/i.test(text.trim());
-    if (isGreeting) {
+    // 2. Check for polite greeting, small talk, bot checks, or acknowledgements to avoid false product matching or premature handoffs
+    const isSmallTalkOrGreeting = /^(сайн байна уу|сайн уу|сайн уу даа|өдрийн мэнд|өглөөний мэнд|оройн мэнд|мэнд|мэнд ээ|hi|hello|hey|yo|sn bnu|snu|юу байна|сонин юу байна|сонин сайхан юу байна|юу бна|юу байна даа|ямар сонин байна|хөөе|байна уу|хүн байна уу|сонсож байна уу|хэн нэгэн байна уу|ажиллаж байна уу|bot|боот|бот|ai|test|тест|шалгалт|туслаач|туслаарай|асуух юм байна|асуух зүйл байна|нэг юм асууя|мэдээлэл авъя)[!.? ]*$/i.test(text.trim());
+    if (isSmallTalkOrGreeting) {
       let greetingReply = "Сайн байна уу! БСБ Сервисд тавтай морилно уу. Танд ямар бараа, бүтээгдэхүүн, үнэ эсвэл үйлчилгээний талаар мэдээлэл хэрэгтэй байна вэ? Би туслахад бэлэн байна.";
 
       // If REPEAT customer acknowledges greeting: Acknowledge return: "Welcome back! How can we assist you today?"
@@ -1006,6 +1006,31 @@ export class BotWorkerService {
       return { answer: greetingReply, handedOff: false, handoff: false, chatId: dialogId, sessionCleared: false };
     }
 
+    const isAcknowledgement = /^(за|заа|тийм|тийм ээ|тийм үү|үгүй|үгүй ээ|үгүй байх|ойлголоо|мэдлээ|зөв|буруу|тэгье|тэгэх үү|байж байгаарай|түр хүлээгээрэй|баярлалаа|их баярлалаа|гялайлаа|ok|okay|yes|no|thanks|thx|ty|zaza|zaa)[!.? ]*$/i.test(text.trim());
+    if (isAcknowledgement) {
+      let ackReply = "Танд тусалж чадсандаа баяртай байна! Өөр тодруулах бараа, үнэ эсвэл үйлчилгээний талаар асуух зүйл байвал лавлана уу.";
+      if (/^(баярлалаа|их баярлалаа|гялайлаа|thanks|thx|ty)[!.? ]*$/i.test(text.trim())) {
+        ackReply = "Зүгээр дээ, танд тусалсандаа баяртай байна! Өөр асуух зүйл гарвал хэзээд хандаарай.";
+      }
+
+      await this.sendReply(dialogId, ackReply, true);
+      chatManager.recordBotReply(dialogId, ackReply, false, this.config.botName);
+      this.recordSessionTurn(dialogId, text, ackReply);
+
+      this.addLog({
+        id: `log-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        timestamp: new Date().toISOString(),
+        dialogId,
+        customerMessage: text,
+        botAnswer: ackReply,
+        handedOff: false,
+        matchedArticles: [],
+        matchedProducts: [],
+        durationMs: Date.now() - startTime,
+      });
+      return { answer: ackReply, handedOff: false, handoff: false, chatId: dialogId, sessionCleared: false };
+    }
+
     // 3. Search MeiliSearch Product Database (https://meili.bsb.mn) using conversation context
     let matchedProducts: FormattedBsbProduct[] = [];
     let detectedProductContext: DetectedProductContext | undefined;
@@ -1014,7 +1039,8 @@ export class BotWorkerService {
       try {
         const prodLimit = this.config.productSearchLimit || 4;
         const dialogData = chatManager.getDialog(dialogId);
-        const prevMessages = dialogData ? dialogData.messages.slice(-8) : [];
+        // Only inspect customer messages so generated URLs/codes in bot replies never pollute context
+        const prevMessages = dialogData ? dialogData.messages.slice(-8).filter((m) => m.sender === 'customer') : [];
         const prodResult = await meiliProductService.searchByConversation(sanitizedText, prevMessages, {
           limit: prodLimit,
           config: this.config.productConfig,
@@ -1032,21 +1058,25 @@ export class BotWorkerService {
     const matchedTerm = await meiliProductService.findRelevantTerm(sanitizedText);
 
     // 5. If confidence is below threshold, no products, and no official term -> check taxon or handoff
-    const hasProductMatch = matchedProducts.length > 0;
+    const hasProductMatch = detectedProductContext?.isProductInquiry && matchedProducts.length > 0;
     const hasKbMatch = matchedKb.length > 0 && topKbScore >= this.config.handoffThreshold;
     const hasTermMatch = matchedTerm !== null;
 
     if (!hasProductMatch && !hasKbMatch && !hasTermMatch) {
-      // Check if a category was detected in the customer query (e.g. угаалгын машин, хөргөгч, зурагт)
-      let detectedCat =
-        detectedProductContext?.detectedCategory ||
-        BSB_CATEGORIES.find((c) => c.keywords.some((kw) => sanitizedText.toLowerCase().includes(kw)))?.name;
-      let detectedSlug =
-        detectedProductContext?.categorySlug ||
-        BSB_CATEGORIES.find((c) => c.name === detectedCat)?.slug;
+      // Check if a category was detected in the customer query ONLY IF the customer is making a product inquiry
+      let detectedCat = detectedProductContext?.isProductInquiry ? detectedProductContext.detectedCategory : undefined;
+      let detectedSlug = detectedProductContext?.isProductInquiry ? detectedProductContext.categorySlug : undefined;
 
-      // Also check official MeiliSearch taxons (app_bsb_taxons)
-      if (!detectedCat || !detectedSlug) {
+      if (detectedProductContext?.isProductInquiry && (!detectedCat || !detectedSlug)) {
+        const catDirect = BSB_CATEGORIES.find((c) => c.keywords.some((kw) => sanitizedText.toLowerCase().includes(kw)));
+        if (catDirect) {
+          detectedCat = catDirect.name;
+          detectedSlug = catDirect.slug;
+        }
+      }
+
+      // Also check official MeiliSearch taxons (app_bsb_taxons) ONLY IF user is making a product inquiry
+      if (detectedProductContext?.isProductInquiry && (!detectedCat || !detectedSlug)) {
         try {
           const liveTaxon = await meiliProductService.findBestTaxon(sanitizedText);
           if (liveTaxon && liveTaxon.slug && liveTaxon.name) {
@@ -1088,7 +1118,7 @@ export class BotWorkerService {
         return { answer: catReply, handedOff: false, handoff: false, chatId: dialogId, sessionCleared: false };
       }
 
-      const unsureMsg = "Манай барааны болон мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!";
+      const unsureMsg = "Манай мэдээллийн санд энэ асуултын талаар тодорхой мэдээлэл олдсонгүй. Танд туслахаар харилцагчийн үйлчилгээний мэргэжилтэнтэй шууд холбож байна!";
       await this.sendReply(dialogId, unsureMsg);
       await this.handoffToOperator(dialogId, 'low_confidence');
       chatManager.recordBotReply(dialogId, unsureMsg, true, this.config.botName);
@@ -1118,7 +1148,7 @@ export class BotWorkerService {
 
     // 6. Generate answer via VibeCode AI (bitrix/bitrixgpt-5.5)
     try {
-      const productContext = matchedProducts.length > 0
+      const productContext = (detectedProductContext?.isProductInquiry && matchedProducts.length > 0)
         ? meiliProductService.formatForPrompt(matchedProducts, this.config.productConfig)
         : '';
 
@@ -1157,11 +1187,13 @@ export class BotWorkerService {
 
       const productConfig = this.config.productConfig || DEFAULT_PRODUCT_CONFIG;
       const linkDirectives: string[] = [];
-      if (productConfig.includeProductLink !== false) {
-        linkDirectives.push("Хэрэглэгч бараа асуусан бол бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС MeiliSearch баримтаас олдсон бодит 'url' талбарын хаягийг '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр дараагийн мөрөнд нь тусад нь заавал хавсаргана. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны мэдээллийнх нь араас тусад нь мөр болгож тавина. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.");
-      }
-      if (productConfig.includeCategoryLink !== false) {
-        linkDirectives.push("Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх 'categoryUrl' талбарын холбоосыг 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.");
+      if (detectedProductContext?.isProductInquiry && matchedProducts.length > 0) {
+        if (productConfig.includeProductLink !== false) {
+          linkDirectives.push("Хэрэглэгч тухайлсан бараа асуусан тул бараа тус бүрийн нэр, үнэ, үзүүлэлтийн мэдээллийн АРААС MeiliSearch баримтаас олдсон бодит 'url' талбарын хаягийг '🔗 Холбоос: {url}' (эсвэл 🔗 [Дэлгэрэнгүй үзэх]({url})) хэлбэрээр дараагийн мөрөнд нь тусад нь заавал хавсаргана. Барааны гарчиг/нэрэн дээр холбоос хавчуулахгүй, барааны мэдээллийнх нь араас тусад нь мөр болгож тавина. Буруу эсвэл дур мэдэн зохиосон линк огт тавьж болохгүй.");
+        }
+        if (productConfig.includeCategoryLink !== false) {
+          linkDirectives.push("Хэрэглэгчид ижил төстэй бусад загваруудыг харах боломж олгож, дээрх 'categoryUrl' талбарын холбоосыг 📁 [Ангилал: {Ангиллын нэр}]({categoryUrl}) хэлбэрээр хариултын төгсгөлд санал болгоно.");
+        }
       }
 
       const systemPrompt = `Та бол БСБ (BSB) компанийн албан ёсны харилцагчийн үйлчилгээний туслах AI бот юм.
@@ -1171,7 +1203,7 @@ export class BotWorkerService {
 1. Бараа, бүтээгдэхүүн, үнэ, загвар, техникийн үзүүлэлт, бэлэн байгаа эсэхийг асуусан бол "БСБ БАРААНЫ АЛБАН ЁСНЫ МЭДЭЭЛЛИЙН САН"-аас олдсон бодит бүтээгдэхүүний брэнд, нэр, үнэ (₮-өөр), бэлэн байгаа эсэх төлөв, гол техникийн үзүүлэлтийг тодорхой дурдаж хариулна.
 2. Хэрэв барааны нөөц дууссан ("Одоогоор нөөц дууссан") байвал "Одоогоор нөөц түр дууссан байна" гэдгийг тодорхой мэдэгдэнэ.
 3. Хүргэлт, буцаалт, төлбөрийн нөхцөлийн талаар асуусан бол "БСБ АЛБАН ЁСНЫ ҮЙЛЧИЛГЭЭНИЙ НӨХЦӨЛҮҮД"-ийн заалтыг (жишээ нь 72 цагийн сэтгэл ханамж, 24-72 цагийн хүргэлт, 250,000₮-с дээш үнэгүй хүргэлт г.м) яг үнэн зөв дурдаж хариулна.
-4. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Барааны мэдээллийг тодорхой дурдана.'}
+4. ${linkDirectives.length > 0 ? linkDirectives.join('\n') : 'Хэрэглэгч бараа бүтээгдэхүүн асуугаагүй бол барааны линк болон ангиллын холбоос хавсаргахгүй, асуултад шууд тодорхой хариулна.'}
 5. Лизинг, төлбөрийн нөхцөл (StorePay, PocketZero, Хаан банкны лизинг г.м.), салбар дэлгүүрийн хаяг асуусан бол Мэдээллийн сангаас үндэслэн тайлбарлана.
 6. Барааны болон мэдээллийн санд БАЙХГҮЙ хуурамч мэдээллийг дур мэдэн зохиож БОЛОХГҮЙ.
 7. БСБ Барааны сан эсвэл Үйлчилгээний нөхцөлөөс мэдээлэл олдсон бол [TRANSFER_OPERATOR] гаргахгүй, олдсон албан ёсны мэдээллийг найрсаг танилцуулна.
@@ -1192,8 +1224,8 @@ ${termsContext ? termsContext + '\n\n' : ''}${productContext ? productContext + 
       const aiContent = (rawAny.choices?.[0]?.message?.content || rawAny.data?.choices?.[0]?.message?.content || '').trim();
 
       if (!aiContent || aiContent.includes('[TRANSFER_OPERATOR]')) {
-        // If products were found in MeiliSearch, do NOT transfer to operator with "no info"!
-        if (matchedProducts.length > 0) {
+        // If products were found in MeiliSearch AND user genuinely asked for products, do NOT transfer to operator with "no info"!
+        if (detectedProductContext?.isProductInquiry && matchedProducts.length > 0) {
           const itemsList = matchedProducts.slice(0, 3).map((p, idx) => {
             const stock = p.inStock ? 'Бэлэн байгаа' : 'Нөөц түр дууссан';
             const price = p.priceFormatted || 'Үнэ тодруулах';

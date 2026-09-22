@@ -1,6 +1,6 @@
 {
   "version": "1.0",
-  "updatedAt": "2026-09-21T08:22:46.215Z",
+  "updatedAt": "2026-09-22T07:30:09.441Z",
   "contacts": [
     {
       "id": 686300,
@@ -77,6 +77,20 @@
       "activeLeadId": 66313,
       "activeDealId": null,
       "lastMessageAttachedAt": "2026-09-21T08:22:46.197Z"
+    },
+    {
+      "id": 637189,
+      "name": "Цогтгэрэл",
+      "phone": "+97680089797",
+      "socialId": "chat_user_8049",
+      "email": "linos.noto@gmail.com",
+      "closedLeadsCount": 20,
+      "closedDealsCount": 7,
+      "updatedAt": "2026-09-22T07:30:09.426Z",
+      "isRepeatCustomer": true,
+      "activeLeadId": 67016,
+      "activeDealId": null,
+      "lastMessageAttachedAt": "2026-09-22T07:30:09.426Z"
     }
   ],
   "dialogContexts": {
@@ -179,6 +193,27 @@
       "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
       "resolvedAt": "2026-09-21T08:22:46.197Z",
       "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-66313) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
+    },
+    "chat8049": {
+      "state": "ACTIVE_LEAD",
+      "contactId": 637189,
+      "contactName": "Цогтгэрэл",
+      "socialId": "chat_user_8049",
+      "phone": "+97680089797",
+      "activeLead": {
+        "id": 67016,
+        "title": "Active Lead #67016",
+        "stageId": "IN_PROCESS",
+        "statusId": "IN_PROCESS"
+      },
+      "activeDeal": null,
+      "isRepeatCustomer": false,
+      "repeatEntityCreated": null,
+      "assignedCrmId": "LEAD-67016",
+      "toneDirective": "Continue previous qualification",
+      "resolutionRuleApplied": "Attach message to Active Lead. Do NOT create a new Lead. Tone: Continue previous qualification.",
+      "resolvedAt": "2026-09-22T07:30:09.426Z",
+      "details": "Харилцагч идэвхтэй Lead-тэй (#LEAD-67016) байгаа тул мессежийг шууд хавсаргаж, өмнөх тодруулга, мэргэшүүлэлтийг (qualification) хэвийн үргэлжлүүлнэ. Шинэ Lead үүсгээгүй."
     }
   }
 }

@@ -34,6 +34,7 @@ export class BitrixOpenlinesSyncService {
   // Track session message counts & statuses to avoid wasteful calls to unchanged chats
   private knownSessionCounts: Map<number, number> = new Map();
   private knownSessionStatuses: Map<number, string> = new Map();
+  private latestSessionsCache: Map<number, any> = new Map();
   private activeChatId: number | null = null;
 
   async loadLineConfigs(): Promise<void> {
@@ -102,13 +103,15 @@ export class BitrixOpenlinesSyncService {
         return existing || null;
       }
 
-      const configId = existing?.channelId ? Number(existing.channelId) : 39;
+      const cachedSession = this.latestSessionsCache.get(numChatId);
+      const configId = cachedSession?.configId || (existing?.channelId ? Number(existing.channelId) : 39);
       const channelName = this.getLineName(configId);
 
-      // Parse existing lead id if available so syncSingleChat does not wipe it out
-      let crmEntityId: number | undefined = undefined;
-      let crmEntityType: string | undefined = undefined;
-      if (existing?.customer?.crmLeadId) {
+      // Prefer cached latest session CRM entity to avoid flipping to older stale records
+      let crmEntityId: number | undefined = cachedSession?.crmEntityId;
+      let crmEntityType: string | undefined = cachedSession?.crmEntityType;
+
+      if (!crmEntityId && existing?.customer?.crmLeadId) {
         const parts = existing.customer.crmLeadId.split('-');
         if (parts.length === 2 && !isNaN(Number(parts[1]))) {
           crmEntityType = parts[0];
@@ -116,20 +119,22 @@ export class BitrixOpenlinesSyncService {
         }
       }
 
-      const fakeSession = {
+      const sessionObj = {
         chatId: numChatId,
+        id: cachedSession?.id,
         configId,
-        source: existing?.channelType || 'webchat',
-        status: existing?.status || 'in_progress',
-        userId: 0,
-        operatorId: existing?.assignedAgentId ? Number(existing.assignedAgentId) : 0,
-        dateCreate: existing?.createdAt || new Date().toISOString(),
+        source: cachedSession?.source || existing?.channelType || 'webchat',
+        status: cachedSession?.status || existing?.status || 'in_progress',
+        userId: cachedSession?.userId || 0,
+        userCode: cachedSession?.userCode,
+        operatorId: cachedSession?.operatorId || (existing?.assignedAgentId ? Number(existing.assignedAgentId) : 0),
+        dateCreate: cachedSession?.dateCreate || existing?.createdAt || new Date().toISOString(),
         messageCount: rawData.messages.length,
         crmEntityId,
         crmEntityType,
       };
 
-      const updatedDialog = this.mapRawToChatDialog(fakeSession, rawData, channelName);
+      const updatedDialog = this.mapRawToChatDialog(sessionObj, rawData, channelName);
       if (updatedDialog) {
         chatManager.upsertBitrixDialog(updatedDialog);
         this.knownSessionCounts.set(numChatId, rawData.messages.length);
@@ -449,8 +454,51 @@ export class BitrixOpenlinesSyncService {
         return { count: 0, updated: 0, error: sessionsRes.error?.message || 'No sessions returned' };
       }
 
-      const sessions = sessionsRes.data.sessions as any[];
+      const rawSessions = sessionsRes.data.sessions as any[];
       let updatedCount = 0;
+
+      // Deduplicate sessions by chatId so that only the LATEST authoritative session represents each chat.
+      // Bitrix Openlines returns all historical sessions for each chat. An older closed session (e.g. DEAL-1727)
+      // must NOT overwrite or conflict with the latest active session (e.g. LEAD-60102).
+      const latestSessionsByChat = new Map<number, any>();
+      for (const s of rawSessions) {
+        if (!s.chatId) continue;
+        const prev = latestSessionsByChat.get(s.chatId);
+        if (!prev) {
+          latestSessionsByChat.set(s.chatId, s);
+        } else {
+          const sId = Number(s.id) || 0;
+          const prevId = Number(prev.id) || 0;
+          const sDate = s.dateCreate ? new Date(s.dateCreate).getTime() : 0;
+          const prevDate = prev.dateCreate ? new Date(prev.dateCreate).getTime() : 0;
+
+          const sIsActive = s.status !== 'closed';
+          const prevIsActive = prev.status !== 'closed';
+
+          // Prioritize active sessions over closed sessions; otherwise prefer higher session ID / newer date
+          let isNewer = false;
+          if (sIsActive && !prevIsActive) {
+            isNewer = true;
+          } else if (!sIsActive && prevIsActive) {
+            isNewer = false;
+          } else if (sId && prevId) {
+            isNewer = sId > prevId;
+          } else {
+            isNewer = sDate > prevDate;
+          }
+
+          if (isNewer) {
+            latestSessionsByChat.set(s.chatId, s);
+          }
+        }
+      }
+
+      // Update the class-level cache with latest session information
+      for (const [chatId, s] of latestSessionsByChat.entries()) {
+        this.latestSessionsCache.set(chatId, s);
+      }
+
+      const sessions = Array.from(latestSessionsByChat.values());
 
       // Smart Diffing: Ямар сешнүүдэд ШИНЭ мессеж ирсэн эсвэл статус өөрчлөгдсөнийг тодорхойлох
       const sessionsToFetch: any[] = [];
