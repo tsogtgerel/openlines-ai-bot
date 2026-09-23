@@ -269,6 +269,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isBotActionLoading, setIsBotActionLoading] = useState(false);
   const [isTakingDialog, setIsTakingDialog] = useState(false);
+  const [isReturningToQueue, setIsReturningToQueue] = useState(false);
   const [isTransferring, setIsTransferring] = useState(false);
   const [transferSuccessMsg, setTransferSuccessMsg] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
@@ -1358,6 +1359,41 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
       setSendErrorMessage('Сервертэй холбогдоход алдаа гарлаа: ' + (e.message || ''));
     } finally {
       setIsTakingDialog(false);
+    }
+  };
+
+  // Return dialog back to unassigned queue (Return to Queue)
+  const handleReturnToQueue = async () => {
+    if (!selectedDialog || isReturningToQueue) return;
+    setIsReturningToQueue(true);
+    setSendErrorMessage(null);
+    try {
+      const res = await fetch('/api/chats/unassign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chatId: selectedDialog.id,
+          agentId: currentAgent?.id,
+          operatorName: currentAgent?.name || 'Оператор',
+        }),
+      }).then((r) => r.json());
+
+      if (res.success && res.data) {
+        const updated = res.data;
+        setSelectedDialog(updated);
+        setDialogs((prev) => prev.map((d) => (isDialogMatch(d, updated.id) ? updated : d)));
+        setCrmNotification({
+          type: 'success',
+          message: 'Харилцан яриаг ерөнхий дараалалд амжилттай буцаалаа (Return to Queue).',
+        });
+      } else {
+        setSendErrorMessage(res.error?.message || 'Дараалалд буцаахад алдаа гарлаа');
+      }
+    } catch (err: any) {
+      console.error('Failed to return dialog to queue:', err);
+      setSendErrorMessage('Сервертэй холбогдоход алдаа гарлаа: ' + (err.message || ''));
+    } finally {
+      setIsReturningToQueue(false);
     }
   };
 
@@ -2797,23 +2833,60 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               {/* Row 2: Action Buttons Bar (Exact layout and colors from image.png) */}
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5 shrink-0">
                 {/* 1. Take Dialog Button (Green solid) or Assigned to Me badge */}
-                {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
-                  <button
-                    id="take-dialog-btn"
-                    onClick={handleTakeDialog}
-                    disabled={isTakingDialog}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95 cursor-pointer shrink-0 disabled:opacity-60"
-                    title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
-                  >
-                    <UserCheck className="w-3.5 h-3.5" />
-                    <span>{isTakingDialog ? 'Өөртөө авч байна...' : 'Өөртөө авах'}</span>
-                  </button>
-                )}
-                {selectedDialog.status !== 'closed' && isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>Та хариуцаж байна</span>
-                  </span>
+                {!isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) ? (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      id="take-dialog-btn"
+                      onClick={handleTakeDialog}
+                      disabled={isTakingDialog}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95 cursor-pointer shrink-0 disabled:opacity-60"
+                      title={
+                        selectedDialog.status === 'closed'
+                          ? 'Хаагдсан чатыг өөртөө авч дахин нээх'
+                          : selectedDialog.status === 'bot' || selectedDialog.botActive
+                          ? 'Чатыг өөртөө авч, ботыг салгах'
+                          : 'Чатыг өөртөө авах'
+                      }
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      <span>{isTakingDialog ? 'Өөртөө авч байна...' : 'Өөртөө авах'}</span>
+                    </button>
+                    {Boolean(selectedDialog.assignedAgentId || selectedDialog.assignedAgentName) && selectedDialog.status !== 'closed' && (
+                      <button
+                        id="return-to-queue-btn"
+                        type="button"
+                        onClick={handleReturnToQueue}
+                        disabled={isReturningToQueue}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 active:scale-95"
+                        title="Return to Queue (Нийтийн дараалал руу буцаах)"
+                        aria-label="Return to Queue"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{isReturningToQueue ? 'Буцааж байна...' : 'Return to Queue'}</span>
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs shrink-0">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>Та хариуцаж байна</span>
+                    </span>
+                    {selectedDialog.status !== 'closed' && (
+                      <button
+                        id="return-to-queue-btn"
+                        type="button"
+                        onClick={handleReturnToQueue}
+                        disabled={isReturningToQueue}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-xs font-semibold transition shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 active:scale-95"
+                        title="Return to Queue (Нийтийн дараалал руу буцаах)"
+                        aria-label="Return to Queue"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5 text-amber-600" />
+                        <span>{isReturningToQueue ? 'Буцааж байна...' : 'Return to Queue'}</span>
+                      </button>
+                    )}
+                  </div>
                 )}
 
                 {/* 2. Bot Connect/Detach Button (Light purple/rose) */}
@@ -3423,7 +3496,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               {/* Text Input Form */}
               {(() => {
                 const isAssignedToMe = isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent);
-                const isUnassignedChat = !isAssignedToMe && selectedDialog.status !== 'closed';
+                const isUnassignedChat = !isAssignedToMe;
 
                 return (
                   <form onSubmit={handleSendMessage} className="space-y-2">
@@ -3431,7 +3504,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                       <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2 text-xs text-emerald-900 shadow-2xs">
                         <div className="flex items-center gap-2 min-w-0">
                           <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
-                          <span className="truncate font-medium">Энэ чатыг өөртөө авснаар харилцагчид шууд хариу бичих боломжтой болно.</span>
+                          <span className="truncate font-medium">
+                            {selectedDialog.status === 'closed'
+                              ? 'Энэ чат хаагдсан байна. Өөртөө авснаар дахин нээж харилцагчид шууд хариу бичих боломжтой.'
+                              : 'Энэ чатыг өөртөө авснаар харилцагчид шууд хариу бичих боломжтой болно.'}
+                          </span>
                         </div>
                         <button
                           type="button"
@@ -4137,14 +4214,40 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <div className="flex items-center gap-2">
                 <Share2 className="w-4 h-4 text-blue-600" />
-                <h3 className="font-bold text-sm text-slate-900">Чатыг өөр операторт шилжүүлэх</h3>
+                <h3 className="font-bold text-sm text-slate-900">Чатыг шилжүүлэх</h3>
               </div>
-              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {/* Option to return dialog to general queue */}
+            <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 flex items-center justify-between gap-3 shadow-2xs">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center shrink-0">
+                  <RotateCcw className="w-4 h-4 text-amber-700" />
+                </div>
+                <div className="min-w-0">
+                  <div className="text-xs font-bold text-amber-950">Ерөнхий дараалалд буцаах</div>
+                  <div className="text-[10px] text-amber-700 truncate">Оноосон операторыг цуцалж, нийтийн дараалалд шилжүүлэх</div>
+                </div>
+              </div>
+              <button
+                type="button"
+                id="modal-return-to-queue-btn"
+                disabled={isReturningToQueue}
+                onClick={async () => {
+                  await handleReturnToQueue();
+                  setShowTransferModal(false);
+                }}
+                className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shrink-0 shadow-xs cursor-pointer disabled:opacity-50 transition active:scale-95"
+              >
+                {isReturningToQueue ? 'Буцааж байна...' : 'Дараалалд буцаах'}
+              </button>
+            </div>
+
             <div className="space-y-2">
-              <label className="text-xs text-slate-500 block">Шилжүүлэх оператороо сонгоно уу:</label>
+              <label className="text-xs text-slate-500 block font-medium">Эсвэл тодорхой операторт шилжүүлэх:</label>
               <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
                 {(() => {
                   const lineIdNum = selectedDialog ? parseInt(selectedDialog.channelId, 10) : null;

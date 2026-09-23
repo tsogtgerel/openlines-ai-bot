@@ -585,11 +585,14 @@ export class ChatManagerService extends EventEmitter {
 
     if (updates.status === 'new' || updates.assignedAgentId === null) {
       delete (dialog as any).localAssignedAt;
+      (dialog as any).localUnassignedAt = Date.now();
       dialog.assignedAgentId = null;
       dialog.assignedAgentName = null;
       dialog.assignedAgentAvatar = null;
     } else if (updates.assignedAgentId || updates.status === 'in_progress') {
       (dialog as any).localAssignedAt = Date.now();
+      delete (dialog as any).localUnassignedAt;
+      dialog.closedAt = undefined;
     }
 
     if (updates.status === 'bot' || updates.botActive === true) {
@@ -733,6 +736,31 @@ export class ChatManagerService extends EventEmitter {
       targetAgentId,
       targetAgentName,
       reason: 'transferred_to_agent',
+    });
+
+    this.saveDialogs(id, 'dialog:update');
+    return dialog;
+  }
+
+  returnToQueue(id: string, operatorName?: string) {
+    const dialog = this.getDialogById(id);
+    if (!dialog) throw new Error(`Dialog not found: ${id}`);
+
+    const prevAgentName = dialog.assignedAgentName || operatorName || 'Оператор';
+    dialog.assignedAgentId = null;
+    dialog.assignedAgentName = null;
+    dialog.assignedAgentAvatar = null;
+    dialog.status = 'new';
+    dialog.botActive = false;
+    dialog.botConnectedAt = undefined;
+    delete (dialog as any).localAssignedAt;
+    (dialog as any).localUnassignedAt = Date.now();
+
+    dialog.messages.push({
+      id: `sys-${Date.now()}`,
+      sender: 'system',
+      text: `Систем: Оператор ${prevAgentName} харилцан яриаг ерөнхий дараалалд буцаалаа.`,
+      timestamp: new Date().toISOString(),
     });
 
     this.saveDialogs(id, 'dialog:update');
@@ -1105,14 +1133,25 @@ export class ChatManagerService extends EventEmitter {
       const lastCustTime = lastCustomerMsg ? new Date(lastCustomerMsg.timestamp).getTime() : 0;
       const isCustomerMsgAfterClose = effectiveCloseTime > 0 && lastCustTime > effectiveCloseTime;
       const localTakeTime = (existing as any).localAssignedAt ? Number((existing as any).localAssignedAt) : 0;
-      const isLocallyTakenAfterCust = localTakeTime > 0 && localTakeTime >= lastCustTime;
+      const unassignedTime = (existing as any).localUnassignedAt ? Number((existing as any).localUnassignedAt) : 0;
+      const isLocallyUnassigned = unassignedTime > 0 && unassignedTime >= localTakeTime;
+      const isLocallyTakenAfterCust = !isLocallyUnassigned && localTakeTime > 0 && (lastCustTime === 0 || localTakeTime >= lastCustTime);
 
-      if (isCustomerMsgAfterClose && !isLocallyTakenAfterCust) {
+      if (isLocallyUnassigned && (lastCustTime === 0 || unassignedTime >= lastCustTime)) {
+        // Chat was returned to queue locally
+        finalStatus = 'new';
+        finalClosedAt = undefined;
+        finalReopenedAt = undefined;
+      } else if (isCustomerMsgAfterClose && !isLocallyTakenAfterCust && !newDialog.assignedAgentId) {
         // Customer wrote a fresh new message after close, and no agent has taken it yet: Must enter Queue ('new')!
         finalStatus = 'new';
         finalClosedAt = undefined;
         finalReopenedAt = undefined;
         delete (existing as any).localAssignedAt;
+      } else if (!isLocallyUnassigned && (newDialog.assignedAgentId || (isLocallyTakenAfterCust && (existing.assignedAgentId || newDialog.assignedAgentId)))) {
+        // Agent is assigned or recently took this chat: must remain in_progress!
+        finalStatus = 'in_progress';
+        finalClosedAt = undefined;
       } else if (existing.reopenedAt) {
         // Chat was reopened by agent/user
         const reopenTime = new Date(existing.reopenedAt).getTime();
@@ -1133,7 +1172,11 @@ export class ChatManagerService extends EventEmitter {
         const newDialogTime = newDialog.createdAt ? new Date(newDialog.createdAt).getTime() : 0;
         const isNewSessionAfterClose = newDialog.status !== 'closed' && closedTime > 0 && newDialogTime > closedTime + 2000;
 
-        if (isNewSessionAfterClose) {
+        if (!isLocallyUnassigned && (newDialog.assignedAgentId || isLocallyTakenAfterCust)) {
+          // If an agent is assigned or took the closed chat, it is in_progress!
+          finalStatus = 'in_progress';
+          finalClosedAt = undefined;
+        } else if (isNewSessionAfterClose) {
           finalStatus = 'new';
           finalClosedAt = undefined;
           finalReopenedAt = undefined;
@@ -1148,12 +1191,13 @@ export class ChatManagerService extends EventEmitter {
       }
 
       // If the chat has entered the queue ('new'), clear assigned agent so it's unassigned in Queue ('Дараалал')
-      const isQueueStatus = finalStatus === 'new' || newDialog.status === 'new';
+      const isQueueStatus = isLocallyUnassigned || ((finalStatus === 'new' || newDialog.status === 'new') && !isLocallyTakenAfterCust && !newDialog.assignedAgentId);
       const isUnassignedInBitrix =
+        isLocallyUnassigned ||
         isQueueStatus ||
         (!newDialog.assignedAgentId &&
           !existing.reopenedAt &&
-          !(existing as any).localAssignedAt);
+          !isLocallyTakenAfterCust);
 
       const preservedAgentId = isQueueStatus ? null : (existing.assignedAgentId || null);
       const preservedAgentName = isQueueStatus ? null : (existing.assignedAgentName || null);
@@ -1211,6 +1255,7 @@ export class ChatManagerService extends EventEmitter {
     } else {
       this.saveDialogs(newDialog.id, 'dialog:update');
     }
+    return existingIndex >= 0 ? this.dialogs[existingIndex] : this.dialogs[0];
   }
 }
 

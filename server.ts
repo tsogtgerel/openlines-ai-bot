@@ -1647,6 +1647,49 @@ async function startServer() {
   });
 
   /**
+   * POST /api/chats/unassign
+   * POST /api/chats/:id/return-to-queue
+   * Move the chat back to the general pool for other agents to pick up.
+   * Accepts: { chatId, agentId }
+   */
+  app.post(['/api/chats/unassign', '/api/chats/:id/return-to-queue'], async (req, res) => {
+    try {
+      const targetId = req.body?.chatId || req.params?.id || req.body?.id;
+      const agentId = req.body?.agentId;
+      const { operatorName } = req.body || {};
+
+      if (!targetId) {
+        return res.status(400).json({ success: false, error: { message: 'chatId is required' } });
+      }
+
+      let agentName = operatorName;
+      if (!agentName && agentId) {
+        const agent = worktimeManager.getAgentById(agentId);
+        if (agent) agentName = agent.name;
+      }
+
+      const dialog = chatManager.returnToQueue(targetId, agentName);
+
+      const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
+      if (match) {
+        const numId = parseInt(match[0], 10);
+        if (!isNaN(numId) && numId > 0) {
+          await bitrixOpenlinesSync.returnChatToQueue(numId, agentName);
+        }
+      }
+
+      res.json({
+        success: true,
+        data: dialog,
+        status: 'new',
+        message: 'Chat moved back to general queue successfully',
+      });
+    } catch (e: any) {
+      res.status(500).json({ success: false, error: { message: e.message } });
+    }
+  });
+
+  /**
    * POST /api/chats/:id/close
    * Асуудлыг шийдвэрлэж чатыг хаах, шалтгааны хураангуйг тэмдэглэх.
    * Мөн Bitrix24 дээрх CRM Lead-ийг хаах (CONVERTED эсвэл JUNK) болон Deal үүсгэх үйлдлийг хамт гүйцэтгэнэ.

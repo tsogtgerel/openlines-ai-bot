@@ -36,6 +36,7 @@ export class BitrixOpenlinesSyncService {
   private knownSessionCounts: Map<number, number> = new Map();
   private knownSessionStatuses: Map<number, string> = new Map();
   private latestSessionsCache: Map<number, any> = new Map();
+  private unassignedChats: Map<number, number> = new Map();
   private activeChatId: number | null = null;
 
   async loadLineConfigs(): Promise<void> {
@@ -53,6 +54,27 @@ export class BitrixOpenlinesSyncService {
 
   getLineName(configId: number): string {
     return this.lineMap.get(configId) || `Нээлттэй суваг #${configId}`;
+  }
+
+  isCustomerRawMessage(m: any, rawUsers?: any[], sessionUserId?: number): boolean {
+    if (!m) return false;
+    const aId = m.authorId !== undefined ? Number(m.authorId) : (m.senderId !== undefined ? Number(m.senderId) : NaN);
+    // authorId 0 is ALWAYS system in Bitrix24
+    if (isNaN(aId) || aId === 0) return false;
+    const botCfg = botWorker.getConfig();
+    if (aId === 19170 || aId === botCfg.botId) return false;
+
+    // Check if author is connector or extranet user
+    if (rawUsers && rawUsers.length > 0) {
+      const u = rawUsers.find((user: any) => user.id === aId);
+      if (u) {
+        return Boolean(u.connector || u.type === 'extranet');
+      }
+    }
+    if (sessionUserId && aId === Number(sessionUserId)) {
+      return true;
+    }
+    return false;
   }
 
   /**
@@ -121,21 +143,69 @@ export class BitrixOpenlinesSyncService {
       }
 
       const rawMsgs = rawData.messages || [];
-      const lastCloseMsg = [...rawMsgs].reverse().find((m: any) => {
+      const findLatestInRaw = (predicate: (m: any) => boolean) => {
+        let latest: any = null;
+        let latestTime = -1;
+        for (const m of rawMsgs) {
+          if (predicate(m)) {
+            const t = new Date(m.date).getTime();
+            if (t > latestTime) {
+              latestTime = t;
+              latest = m;
+            }
+          }
+        }
+        return latest;
+      };
+
+      const lastCloseMsg = findLatestInRaw((m: any) => {
         const txt = (m.text || '').toLowerCase();
         return txt.includes('диалог хаагдлаа') || txt.includes('conversation closed');
       });
       const lastCloseTime = lastCloseMsg ? new Date(lastCloseMsg.date).getTime() : 0;
-      const lastCustMsg = [...rawMsgs].reverse().find((m: any) => {
-        return m.authorId === undefined || m.authorId === 0 || (rawData.users?.find((u: any) => (u.id === m.authorId || u.id === m.senderId) && (u.connector || u.type === 'extranet')));
+      const lastCustMsg = findLatestInRaw((m: any) => {
+        return this.isCustomerRawMessage(m, rawData.users, cachedSession?.userId || existing?.customer?.contactId);
       });
       const lastCustTime = lastCustMsg ? new Date(lastCustMsg.date).getTime() : 0;
       const hasCustomerAfterClose = lastCloseTime > 0 && lastCustTime > lastCloseTime;
-      const localTakeTime = (existing as any)?.localAssignedAt ? Number((existing as any).localAssignedAt) : 0;
-      const hasLocalTakeAfterCust = localTakeTime > 0 && localTakeTime >= lastCustTime;
+
+      // Check if an operator picked the conversation in Bitrix messages
+      const pickMsgInRaw = findLatestInRaw((m: any) => {
+        const txt = (m.text || '').toLowerCase();
+        return txt.includes('picked conversation') || txt.includes('харилцан яриаг өөртөө авлаа') || txt.includes('взял диалог');
+      });
+      const pickTimeInRaw = pickMsgInRaw ? new Date(pickMsgInRaw.date).getTime() : 0;
+      let pickedOperatorId: number | null = null;
+      if (pickMsgInRaw) {
+        const userMatch = (pickMsgInRaw.text || '').match(/\[USER=(\d+)/i);
+        if (userMatch) {
+          pickedOperatorId = parseInt(userMatch[1], 10);
+        }
+      }
+
+      const unassignedTime = Math.max(
+        (existing as any)?.localUnassignedAt ? Number((existing as any).localUnassignedAt) : 0,
+        cachedSession?.localUnassignedAt ? Number(cachedSession.localUnassignedAt) : 0,
+        this.unassignedChats.get(numChatId) || 0
+      );
+
+      const localTakeTime = Math.max(
+        (existing as any)?.localAssignedAt ? Number((existing as any).localAssignedAt) : 0,
+        cachedSession?.localAssignedAt ? Number(cachedSession.localAssignedAt) : 0
+      );
+
+      const isLocallyUnassigned = unassignedTime > 0 && unassignedTime >= localTakeTime;
+
+      const isPickedInBitrixAfterCust =
+        !isLocallyUnassigned &&
+        pickTimeInRaw > 0 &&
+        (lastCustTime === 0 || pickTimeInRaw >= lastCustTime) &&
+        (unassignedTime === 0 || pickTimeInRaw > unassignedTime);
+
+      const hasLocalTakeAfterCust = !isLocallyUnassigned && localTakeTime > 0 && (lastCustTime === 0 || localTakeTime >= lastCustTime);
 
       const botCfg = botWorker.getConfig();
-      const hasCachedBitrixOp = Boolean(
+      const hasCachedBitrixOp = !isLocallyUnassigned && Boolean(
         cachedSession?.operatorId &&
         Number(cachedSession.operatorId) > 0 &&
         Number(cachedSession.operatorId) !== 19170 &&
@@ -144,22 +214,32 @@ export class BitrixOpenlinesSyncService {
       );
 
       const isCurrentlyUnassignedOrQueue =
-        !hasCachedBitrixOp &&
-        ((hasCustomerAfterClose && !hasLocalTakeAfterCust) ||
-        existing?.status === 'new' ||
-        !existing?.assignedAgentId ||
-        existing?.assignedAgentId === 'unassigned');
+        isLocallyUnassigned ||
+        (
+          !hasCachedBitrixOp &&
+          !hasLocalTakeAfterCust &&
+          !isPickedInBitrixAfterCust &&
+          (
+            (hasCustomerAfterClose && !hasLocalTakeAfterCust && !isPickedInBitrixAfterCust) ||
+            existing?.status === 'new' ||
+            !existing?.assignedAgentId ||
+            existing?.assignedAgentId === 'unassigned'
+          )
+        );
 
-      const localOperatorId = (hasLocalTakeAfterCust && existing?.assignedAgentId) ? parseInt(String(existing.assignedAgentId).replace(/^bx-/, ''), 10) : 0;
+      const localOperatorId = (hasLocalTakeAfterCust && (existing?.assignedAgentId || cachedSession?.operatorId))
+        ? (cachedSession?.operatorId ? Number(cachedSession.operatorId) : parseInt(String(existing?.assignedAgentId).replace(/^bx-/, ''), 10))
+        : 0;
       const validLocalOpId = !isNaN(localOperatorId) && localOperatorId > 0 ? localOperatorId : 0;
 
-      // If local state has an active assigned operator (from recent take or transfer), respect it!
-      // But if the chat is in queue ('new') or unassigned, NEVER restore an old operator!
+      // If local state or Bitrix messages have an active assigned operator, respect it!
       const effectiveOperatorId = isCurrentlyUnassignedOrQueue
         ? 0
         : (validLocalOpId > 0
           ? validLocalOpId
-          : ((cachedSession?.operatorId && Number(cachedSession.operatorId) > 0) ? Number(cachedSession.operatorId) : 0));
+          : (pickedOperatorId && pickedOperatorId > 0
+            ? pickedOperatorId
+            : ((cachedSession?.operatorId && Number(cachedSession.operatorId) > 0) ? Number(cachedSession.operatorId) : 0)));
 
       if (effectiveOperatorId > 0) {
         this.recordLocalAssignment(numChatId, effectiveOperatorId);
@@ -172,7 +252,7 @@ export class BitrixOpenlinesSyncService {
         id: cachedSession?.id,
         configId,
         source: cachedSession?.source || existing?.channelType || 'webchat',
-        status: isCurrentlyUnassignedOrQueue ? 'new' : (cachedSession?.status || existing?.status || 'new'),
+        status: isCurrentlyUnassignedOrQueue ? 'new' : (effectiveOperatorId > 0 ? 'in_progress' : (cachedSession?.status || existing?.status || 'new')),
         userId: cachedSession?.userId || 0,
         userCode: cachedSession?.userCode,
         operatorId: effectiveOperatorId || null,
@@ -294,21 +374,6 @@ export class BitrixOpenlinesSyncService {
 
       const rawMessages = rawData.messages || [];
 
-      // Bitrix24 session operator assignment:
-      // A chat has an assigned operator ONLY IF s.operatorId is valid (> 0 and !== 19170 and !== botCfg.botId)
-      // If s.operatorId is null/undefined/0, or s.status === 'new', the conversation is in the queue/unassigned.
-      // Prior chat participants in rawData.users do NOT mean the chat is currently assigned to them!
-      const hasActiveOperator = Boolean(
-        s.operatorId &&
-        Number(s.operatorId) > 0 &&
-        Number(s.operatorId) !== 19170 &&
-        Number(s.operatorId) !== botCfg.botId
-      );
-
-      const assignedOperatorUser = hasActiveOperator
-        ? (rawData.users?.find((u: any) => u.id === Number(s.operatorId)) || operatorUser)
-        : null;
-
       // Check for locally assigned or transferred operator in cache or existingDialog
       const cachedAssignment = this.latestSessionsCache.get(Number(s.chatId));
       const hasRecentLocalCache = Boolean(
@@ -323,45 +388,101 @@ export class BitrixOpenlinesSyncService {
       let finalAssignedAgentAvatar: string | null = null;
 
       const rawMsgsList = rawData.messages || [];
-      const closeMsgInRaw = [...rawMsgsList].reverse().find((m: any) => {
+      const findLatestInList = (predicate: (m: any) => boolean) => {
+        let latest: any = null;
+        let latestTime = -1;
+        for (const m of rawMsgsList) {
+          if (predicate(m)) {
+            const t = new Date(m.date).getTime();
+            if (t > latestTime) {
+              latestTime = t;
+              latest = m;
+            }
+          }
+        }
+        return latest;
+      };
+
+      const closeMsgInRaw = findLatestInList((m: any) => {
         const txt = (m.text || '').toLowerCase();
         return txt.includes('диалог хаагдлаа') || txt.includes('conversation closed');
       });
       const closeTimeInRaw = closeMsgInRaw ? new Date(closeMsgInRaw.date).getTime() : 0;
-      const custMsgInRaw = [...rawMsgsList].reverse().find((m: any) => {
-        return m.authorId === undefined || m.authorId === 0 || (rawData.users?.find((u: any) => (u.id === m.authorId || u.id === m.senderId) && (u.connector || u.type === 'extranet')));
+      const custMsgInRaw = findLatestInList((m: any) => {
+        return this.isCustomerRawMessage(m, rawData.users, s.userId || (existingDialog as any)?.customer?.contactId);
       });
       const custTimeInRaw = custMsgInRaw ? new Date(custMsgInRaw.date).getTime() : 0;
       const hasCustomerAfterLastClose = closeTimeInRaw > 0 && custTimeInRaw > closeTimeInRaw;
-      const localAssignedTime = (existingDialog as any)?.localAssignedAt ? Number((existingDialog as any).localAssignedAt) : 0;
-      const isTakenLocallyAfterCust = localAssignedTime > 0 && localAssignedTime >= custTimeInRaw;
 
-      // Check if an operator picked the conversation in Bitrix messages (e.g. "[USER=4605 REPLACE]Энхзаяа А.[/USER] picked conversation")
-      const pickMsgInRaw = [...rawMsgsList].reverse().find((m: any) => {
+      // Check if an operator picked the conversation in Bitrix messages (e.g. "[USER=15 REPLACE]Цогтгэрэл Ч[/USER] picked conversation")
+      const pickMsgInRaw = findLatestInList((m: any) => {
         const txt = (m.text || '').toLowerCase();
         return txt.includes('picked conversation') || txt.includes('харилцан яриаг өөртөө авлаа') || txt.includes('взял диалог');
       });
       const pickTimeInRaw = pickMsgInRaw ? new Date(pickMsgInRaw.date).getTime() : 0;
-      const isPickedInBitrixAfterCust = pickTimeInRaw > 0 && pickTimeInRaw >= custTimeInRaw;
+      let pickedOperatorId: number | null = null;
+      if (pickMsgInRaw) {
+        const userMatch = (pickMsgInRaw.text || '').match(/\[USER=(\d+)/i);
+        if (userMatch) {
+          pickedOperatorId = parseInt(userMatch[1], 10);
+        }
+      }
+
+      const unassignedTime = Math.max(
+        (existingDialog as any)?.localUnassignedAt ? Number((existingDialog as any).localUnassignedAt) : 0,
+        cachedAssignment?.localUnassignedAt ? Number(cachedAssignment.localUnassignedAt) : 0,
+        this.unassignedChats.get(Number(s.chatId)) || 0
+      );
+
+      const localAssignedTime = Math.max(
+        (existingDialog as any)?.localAssignedAt ? Number((existingDialog as any).localAssignedAt) : 0,
+        cachedAssignment?.localAssignedAt ? Number(cachedAssignment.localAssignedAt) : 0
+      );
+
+      const isLocallyUnassigned = unassignedTime > 0 && unassignedTime >= localAssignedTime;
+
+      const isPickedInBitrixAfterCust =
+        !isLocallyUnassigned &&
+        pickTimeInRaw > 0 &&
+        (custTimeInRaw === 0 || pickTimeInRaw >= custTimeInRaw) &&
+        (unassignedTime === 0 || pickTimeInRaw > unassignedTime);
+
+      const isTakenLocallyAfterCust = !isLocallyUnassigned && localAssignedTime > 0 && (custTimeInRaw === 0 || localAssignedTime >= custTimeInRaw);
+
+      // Bitrix24 session operator assignment:
+      const hasActiveOperator = !isLocallyUnassigned && Boolean(
+        (s.operatorId && Number(s.operatorId) > 0 && Number(s.operatorId) !== 19170 && Number(s.operatorId) !== botCfg.botId) ||
+        (pickedOperatorId && pickedOperatorId > 0 && pickedOperatorId !== 19170 && pickedOperatorId !== botCfg.botId)
+      );
+      const activeOpId = (s.operatorId && Number(s.operatorId) > 0) ? Number(s.operatorId) : (pickedOperatorId || 0);
+
+      const assignedOperatorUser = hasActiveOperator
+        ? (rawData.users?.find((u: any) => u.id === activeOpId) || operatorUser)
+        : null;
 
       // Check if operator answered or session is marked answered/in_progress in Bitrix
       const opAnswerTime = s.dateOperatorAnswer ? new Date(s.dateOperatorAnswer).getTime() : 0;
-      const isAnsweredByOpInBitrix = opAnswerTime > 0 && opAnswerTime >= custTimeInRaw;
+      const isAnsweredByOpInBitrix = !isLocallyUnassigned && opAnswerTime > 0 && opAnswerTime >= custTimeInRaw;
 
-      const isPickedOrAnsweredInBitrix = hasActiveOperator && (
-        s.status === 'answered' ||
-        s.status === 'in_progress' ||
+      const isPickedOrAnsweredInBitrix = !isLocallyUnassigned && Boolean(
         isPickedInBitrixAfterCust ||
-        isAnsweredByOpInBitrix
+        (hasActiveOperator && (
+          s.status === 'answered' ||
+          s.status === 'in_progress' ||
+          isAnsweredByOpInBitrix
+        ))
       );
 
       const isQueueChatSession =
-        !isPickedOrAnsweredInBitrix &&
-        !isTakenLocallyAfterCust &&
+        isLocallyUnassigned ||
         (
-          (hasCustomerAfterLastClose && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust) ||
-          s.status === 'new' ||
-          !s.operatorId
+          !isPickedOrAnsweredInBitrix &&
+          !isTakenLocallyAfterCust &&
+          (
+            (hasCustomerAfterLastClose && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust) ||
+            s.status === 'new' ||
+            !s.operatorId
+          )
         );
 
       // prevAgentId can ONLY be preserved if the chat was actively in progress and not returned to queue
@@ -377,14 +498,14 @@ export class BitrixOpenlinesSyncService {
           finalAssignedAgentId = opUser?.id || `bx-${cachedAssignment.operatorId}`;
           finalAssignedAgentName = opUser?.name || `Оператор #${cachedAssignment.operatorId}`;
           finalAssignedAgentAvatar = opUser?.avatar || null;
-        } else if (isTakenLocallyAfterCust && prevAgentId) {
-          finalAssignedAgentId = prevAgentId;
-          finalAssignedAgentName = prevAgentName || null;
-          finalAssignedAgentAvatar = prevAgentAvatar || null;
+        } else if (isTakenLocallyAfterCust && (prevAgentId || existingDialog?.assignedAgentId)) {
+          finalAssignedAgentId = prevAgentId || existingDialog?.assignedAgentId || null;
+          finalAssignedAgentName = prevAgentName || existingDialog?.assignedAgentName || null;
+          finalAssignedAgentAvatar = prevAgentAvatar || existingDialog?.assignedAgentAvatar || null;
         } else if (hasActiveOperator) {
-          const opUser = worktimeManager.getAgentById(String(s.operatorId));
-          finalAssignedAgentId = opUser?.id || `bx-${s.operatorId}`;
-          finalAssignedAgentName = opUser?.name || assignedOperatorUser?.name || `Оператор #${s.operatorId}`;
+          const opUser = worktimeManager.getAgentById(String(activeOpId));
+          finalAssignedAgentId = opUser?.id || `bx-${activeOpId}`;
+          finalAssignedAgentName = opUser?.name || assignedOperatorUser?.name || `Оператор #${activeOpId}`;
           finalAssignedAgentAvatar = opUser?.avatar || (assignedOperatorUser?.avatar && assignedOperatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? assignedOperatorUser.avatar : null);
         }
       }
@@ -551,7 +672,7 @@ export class BitrixOpenlinesSyncService {
         status = 'closed';
       } else if (isBotActiveNow) {
         status = 'bot';
-      } else if (finalAssignedAgentId && (hasActiveOperator || s.status === 'answered' || s.status === 'in_progress')) {
+      } else if (finalAssignedAgentId || isTakenLocallyAfterCust || isPickedInBitrixAfterCust || hasActiveOperator || s.status === 'answered' || s.status === 'in_progress' || existingDialog?.status === 'in_progress') {
         status = 'in_progress';
       } else {
         status = 'new';
@@ -560,7 +681,7 @@ export class BitrixOpenlinesSyncService {
       // If existing dialog was explicitly reopened locally, and no new close happened in Bitrix after reopening
       let closedAtDate: string | undefined = s.dateClose || undefined;
       let reopenedAtDate: string | undefined = existingDialog?.reopenedAt;
-      if (hasCustomerAfterLastClose && !isTakenLocallyAfterCust) {
+      if (hasCustomerAfterLastClose && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust) {
         status = 'new';
         closedAtDate = undefined;
         reopenedAtDate = undefined;
@@ -588,12 +709,15 @@ export class BitrixOpenlinesSyncService {
         const isNewSession = sessionCreateTime > existingCloseTime + 2000;
         const isCustMsgAfter = lastCustTime > existingCloseTime + 2000;
 
-        if (isNewSession || isCustMsgAfter) {
+        if ((isNewSession || isCustMsgAfter) && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust) {
           status = 'new';
           closedAtDate = undefined;
           finalAssignedAgentId = null;
           finalAssignedAgentName = null;
           finalAssignedAgentAvatar = null;
+        } else if (isTakenLocallyAfterCust || isPickedInBitrixAfterCust) {
+          status = 'in_progress';
+          closedAtDate = undefined;
         } else {
           status = 'closed';
           closedAtDate = existingDialog.closedAt || s.dateClose || new Date().toISOString();
@@ -928,7 +1052,9 @@ export class BitrixOpenlinesSyncService {
   }
 
   recordLocalAssignment(chatId: number, operatorId: number) {
+    this.unassignedChats.delete(chatId);
     const existing = this.latestSessionsCache.get(chatId) || {};
+    delete existing.localUnassignedAt;
     this.latestSessionsCache.set(chatId, {
       ...existing,
       chatId,
@@ -940,13 +1066,27 @@ export class BitrixOpenlinesSyncService {
   }
 
   clearLocalAssignment(chatId: number) {
+    const now = Date.now();
+    this.unassignedChats.set(chatId, now);
     const existing = this.latestSessionsCache.get(chatId);
     if (existing) {
       existing.operatorId = null;
       delete existing.localAssignedAt;
+      existing.localUnassignedAt = now;
       existing.status = 'new';
     }
     this.knownSessionStatuses.set(chatId, 'new');
+  }
+
+  async returnChatToQueue(chatId: number, _operatorName?: string): Promise<any> {
+    try {
+      this.clearLocalAssignment(chatId);
+      // NOTE: Харилцагч руу дараалалд буцаалаа гэсэн мессеж илгээхгүй
+      return { success: true };
+    } catch (e: any) {
+      console.warn('[OpenlinesSync] Error returning chat to queue:', e.message);
+      return null;
+    }
   }
 
   async transferOperatorChat(chatId: number, targetUserId: number): Promise<any> {
@@ -973,6 +1113,9 @@ export class BitrixOpenlinesSyncService {
       const answerRes = await vibeRequest('POST', '/v1/openlines/operator/answer', payload);
       // Also intercept the session to guarantee immediate operator takeover
       const interceptRes = await vibeRequest('POST', '/v1/openlines/sessions/intercept', payload);
+      if (userId && !isNaN(userId) && userId > 0) {
+        await vibeRequest('POST', `/v1/chats/${chatId}/users`, { users: [userId] }).catch(() => {});
+      }
       return interceptRes?.success ? interceptRes : answerRes;
     } catch (e: any) {
       console.warn('[OpenlinesSync] Error answering openline chat:', e.message);

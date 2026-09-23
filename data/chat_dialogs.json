@@ -1,5 +1,135 @@
 [
   {
+    "id": "chat-79440",
+    "dialogId": "chat79440",
+    "customer": {
+      "name": "Guest",
+      "tags": [
+        "LIVECHAT",
+        "Битрикс24 Live"
+      ],
+      "crmLeadId": "LEAD-53821"
+    },
+    "channelId": 1,
+    "channelName": "Бидэнтэй чатлаарай! BSB.mn",
+    "channelType": "webchat",
+    "status": "new",
+    "priority": "high",
+    "assignedAgentId": null,
+    "assignedAgentName": null,
+    "assignedAgentAvatar": null,
+    "lastMessageText": "Ажилуулах заавар цаанаасаа өгөөгүй гээд байх юм тэгээд быстро температур тааруулж болохгүй маааа",
+    "lastMessageTime": "2026-09-23T09:31:22+03:00",
+    "lastMessageSender": "customer",
+    "unreadCount": 1,
+    "createdAt": "2026-09-23T09:29:51+03:00",
+    "botActive": false,
+    "messages": [
+      {
+        "id": "bx-1128688",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Conversation #21296 started",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128690",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Data received:",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128692",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Enquiry assigned to all agents in the queue",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128694",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Баталгаат засварын дугаар",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128696",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Сайн байна уу, та асуух зүйлээ үлдээнэ үү?",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128700",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form link sent: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-23T09:29:51+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128706",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Танайхаас авсан toshiba угаалгын машин талаар мэдээлэл авяа",
+        "timestamp": "2026-09-23T09:30:19+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128722",
+        "sender": "customer",
+        "senderName": "Guest",
+        "text": "Ажилуулах заавар цаанаасаа өгөөгүй гээд байх юм тэгээд быстро температур тааруулж болохгүй маааа",
+        "timestamp": "2026-09-23T09:31:22+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "sys-1790145534415",
+        "sender": "system",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг ерөнхий дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T06:38:54.415Z"
+      },
+      {
+        "id": "bx-1128764",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Form completed: \"Интернэт дэлгүүр - Гараар илгээх form\"",
+        "timestamp": "2026-09-23T09:39:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128766",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the contact",
+        "timestamp": "2026-09-23T09:39:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128768",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Contact information saved to the lead",
+        "timestamp": "2026-09-23T09:39:44+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128770",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Уучлаарай, одоогоор таны хүсэлтэд хариу өгөх боломжгүй байна. Бид тантай удахгүй эргэн холбогдох болно",
+        "timestamp": "2026-09-23T09:39:59+03:00",
+        "status": "delivered"
+      }
+    ]
+  },
+  {
     "id": "chat-79414",
     "dialogId": "chat79414",
     "customer": {
@@ -688,7 +818,7 @@
     "channelId": 39,
     "channelName": "БСБ Мебель - Facebook - Comments",
     "channelType": "facebook",
-    "status": "closed",
+    "status": "in_progress",
     "priority": "normal",
     "assignedAgentId": "bx-4605",
     "assignedAgentName": "Энхзаяа А.",
@@ -698,7 +828,6 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-23T07:05:22+03:00",
-    "closedAt": "2026-09-23T08:13:55+03:00",
     "botActive": false,
     "messages": [
       {
@@ -1275,7 +1404,7 @@
     "channelId": 39,
     "channelName": "БСБ Мебель - Facebook - Comments",
     "channelType": "facebook",
-    "status": "closed",
+    "status": "in_progress",
     "priority": "normal",
     "assignedAgentId": "bx-4605",
     "assignedAgentName": "Энхзаяа А.",
@@ -1285,7 +1414,6 @@
     "lastMessageSender": "customer",
     "unreadCount": 0,
     "createdAt": "2026-09-23T05:40:45+03:00",
-    "closedAt": "2026-09-23T08:13:55+03:00",
     "botActive": false,
     "messages": [
       {
@@ -20569,11 +20697,11 @@
     "channelId": 11,
     "channelName": "Интернэт дэлгүүр - Facebook - Messenger",
     "channelType": "facebook",
-    "status": "new",
+    "status": "in_progress",
     "priority": "normal",
-    "assignedAgentId": null,
-    "assignedAgentName": null,
-    "assignedAgentAvatar": null,
+    "assignedAgentId": "bx-15",
+    "assignedAgentName": "Цогтгэрэл Ч",
+    "assignedAgentAvatar": "https://cdn.bitrix24.com/b34916009/main/b75/b75eff490a1525475b7590c61b35b412/zurag.jpg.png",
     "lastMessageText": "hi",
     "lastMessageTime": "2026-09-23T07:17:25+03:00",
     "lastMessageSender": "customer",
@@ -20616,54 +20744,6 @@
         "sender": "system",
         "text": "Систем: Bitrix24 дээрх Сэжим (LEAD-60488)-ийн төлөв \"Амжилттай / Converted\" болж хаагдлаа.",
         "timestamp": "2026-09-23T03:28:17.187Z"
-      },
-      {
-        "id": "bx-1128020",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "This Open Channel limits agent's response time. Learn more in this article.",
-        "timestamp": "2026-09-23T06:46:59+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1128022",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "A new lead was created",
-        "timestamp": "2026-09-23T06:47:01+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1128024",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Order attached to chat",
-        "timestamp": "2026-09-23T06:47:01+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1128026",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Contact information saved to the contact",
-        "timestamp": "2026-09-23T06:47:01+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1128028",
-        "sender": "system",
-        "senderName": "Систем",
-        "text": "Enquiry assigned to all agents in the queue",
-        "timestamp": "2026-09-23T06:47:01+03:00",
-        "status": "delivered"
-      },
-      {
-        "id": "bx-1128030",
-        "sender": "customer",
-        "senderName": "Linos Noto",
-        "text": "hi",
-        "timestamp": "2026-09-23T06:47:01+03:00",
-        "status": "delivered"
       },
       {
         "id": "bx-1128032",
@@ -20775,6 +20855,60 @@
         "senderName": "Систем",
         "text": "Цогтгэрэл Ч picked conversation",
         "timestamp": "2026-09-23T09:08:13+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "sys-1790145389872",
+        "sender": "system",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг ерөнхий дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T06:36:29.872Z"
+      },
+      {
+        "id": "bx-1128746",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:36:30+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128748",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:36:39+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128750",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:36:43+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128790",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:43:52+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128792",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:44:03+03:00",
+        "status": "delivered"
+      },
+      {
+        "id": "bx-1128800",
+        "sender": "system",
+        "senderName": "Систем",
+        "text": "Систем: Оператор Цогтгэрэл Ч харилцан яриаг дараалалд буцаалаа.",
+        "timestamp": "2026-09-23T09:45:25+03:00",
         "status": "delivered"
       }
     ],
