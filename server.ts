@@ -1107,11 +1107,18 @@ async function startServer() {
           const isAssigned = Boolean(dAgentId && myIdSet.has(dAgentId));
           const isClosed = Boolean(dClosedId && myIdSet.has(dClosedId));
 
-          if (!isUnassigned && !isAssigned && !isClosed) {
+          // Allow dialog:update events for chats in allowed channels so agent UI immediately reflects transfers
+          if (eventData.type !== 'dialog:update' && !isUnassigned && !isAssigned && !isClosed) {
             return;
           }
         }
 
+        console.log(`[SSE:StateSync] Pushing ${eventData.type || 'message'} event to client:`, {
+          dialogId: eventData.dialogId,
+          assignedAgentId: eventData.dialog?.assignedAgentId,
+          assignedAgentName: eventData.dialog?.assignedAgentName,
+          status: eventData.dialog?.status,
+        });
         res.write(`event: ${eventData.type || 'message'}\ndata: ${JSON.stringify(eventData)}\n\n`);
       } catch {
         // Socket may have closed
@@ -1290,7 +1297,11 @@ async function startServer() {
         if (match) {
           try {
             const numericChatId = parseInt(match[0], 10);
-            await bitrixOpenlinesSync.sendMessageToBitrixChat(`chat${numericChatId}`, text.trim());
+            await bitrixOpenlinesSync.sendMessageToBitrixChat(
+              `chat${numericChatId}`,
+              text.trim(),
+              senderName || outcome.dialog.assignedAgentName
+            );
           } catch (sendErr: any) {
             console.warn('[Server] Could not send message to Bitrix Chat:', sendErr.message);
           }
@@ -1449,11 +1460,22 @@ async function startServer() {
     try {
       const updated = chatManager.updateDialog(req.params.id, req.body);
       const match = (updated.dialogId || updated.id)?.match(/\d+/);
-      if (req.body.status === 'in_progress' && match) {
-        const numId = parseInt(match[0], 10);
-        if (!isNaN(numId) && numId > 0) {
-          await bitrixOpenlinesSync.answerOperatorChat(numId);
+      const numId = match ? parseInt(match[0], 10) : NaN;
+
+      if (req.body.status === 'in_progress' && !isNaN(numId) && numId > 0) {
+        let bxUserId: number | undefined;
+        if (req.body.assignedAgentId) {
+          const agent = worktimeManager.getAgentById(req.body.assignedAgentId);
+          if (agent?.bitrixUserId) {
+            bxUserId = agent.bitrixUserId;
+          } else {
+            const parsed = parseInt(String(req.body.assignedAgentId).replace(/^bx-/, ''), 10);
+            if (!isNaN(parsed) && parsed > 0) bxUserId = parsed;
+          }
         }
+        await bitrixOpenlinesSync.answerOperatorChat(numId, bxUserId);
+      } else if ((req.body.status === 'new' || req.body.assignedAgentId === null) && !isNaN(numId) && numId > 0) {
+        bitrixOpenlinesSync.clearLocalAssignment(numId);
       }
 
       let isHandoff = false;
@@ -1559,14 +1581,57 @@ async function startServer() {
       if (!targetAgentId || !targetAgentName) {
         return res.status(400).json({ success: false, error: { message: 'Target agent details required' } });
       }
-      const dialog = chatManager.transferDialog(req.params.id, targetAgentId, targetAgentName, targetAgentAvatar);
+
+      // Resolve Bitrix user ID for target agent
+      let bxUserId: number | undefined;
+      const agent = worktimeManager.getAgentById(targetAgentId);
+      if (agent?.bitrixUserId) {
+        bxUserId = agent.bitrixUserId;
+      } else {
+        const parsed = parseInt(String(targetAgentId).replace(/^bx-/, ''), 10);
+        if (!isNaN(parsed) && parsed > 0) bxUserId = parsed;
+      }
+
+      const finalAgentId = agent?.id || targetAgentId;
+      const finalAgentName = agent?.name || targetAgentName;
+      const finalAgentAvatar = agent?.avatar || targetAgentAvatar;
+
+      const dialog = chatManager.transferDialog(req.params.id, finalAgentId, finalAgentName, finalAgentAvatar);
+
+      console.log(`[Transfer:StateSync] Chat ${req.params.id} transferred to ${finalAgentName} (${finalAgentId}):`, {
+        dialogId: dialog.id,
+        numericId: dialog.dialogId,
+        assignedAgentId: dialog.assignedAgentId,
+        assignedAgentName: dialog.assignedAgentName,
+        status: dialog.status,
+      });
+
+      // Perform transfer in Bitrix24 Openlines
+      const match = (dialog.dialogId || dialog.id)?.match(/\d+/);
+      if (match && bxUserId) {
+        const numId = parseInt(match[0], 10);
+        if (!isNaN(numId) && numId > 0) {
+          bitrixOpenlinesSync.recordLocalAssignment(numId, bxUserId);
+          await bitrixOpenlinesSync.transferOperatorChat(numId, bxUserId);
+          try {
+            await bitrixOpenlinesSync.sendMessageToBitrixChat(
+              dialog.dialogId || `chat${numId}`,
+              `Систем: Харилцан яриаг оператор ${finalAgentName}-д шилжүүллээ.`
+            );
+          } catch (mErr: any) {
+            console.warn('[Transfer] Failed to send bitrix transfer notice:', mErr.message);
+          }
+        }
+      }
+
       if (dialog.dialogId) {
         await botWorker.leaveChat(dialog.dialogId);
       }
       botWorker.clearActiveSessionState(req.params.id, {
         reason: 'transferred_to_agent',
-        transferredToAgent: targetAgentName,
+        transferredToAgent: finalAgentName,
       });
+
       res.json({
         success: true,
         data: dialog,
@@ -1574,7 +1639,7 @@ async function startServer() {
         signal: 'handoff',
         sessionCleared: true,
         chatId: req.params.id,
-        transferredToAgent: targetAgentName,
+        transferredToAgent: finalAgentName,
       });
     } catch (e: any) {
       res.status(500).json({ success: false, error: { message: e.message } });
@@ -1821,12 +1886,25 @@ async function startServer() {
         comments: comment || `Төлөв өөрчилсөн: ${stageId}. Оператор: ${operatorName || 'Оператор'}`,
       });
 
-      const updatedDialog = chatManager.updateCustomerCrm(
+      let updatedDialog = chatManager.updateCustomerCrm(
         dialog.id,
         `LEAD-${numericLeadId}`,
         `Lead ${stageId}`,
         `Систем: Bitrix24 дээрх Сэжим (LEAD-${numericLeadId})-ийн төлөв "${stageId}" болж шинэчлэгдлээ.`
       );
+
+      if (stageId === 'CONVERTED' || stageId === 'JUNK') {
+        const dialogNum = dialog.dialogId ? parseInt(dialog.dialogId.replace(/\D/g, ''), 10) : null;
+        if (dialogNum) {
+          await bitrixOpenlinesSync.finishOperatorChat(dialogNum).catch(() => {});
+        }
+        updatedDialog = chatManager.closeDialog(
+          dialog.id,
+          `Lead ${stageId === 'CONVERTED' ? 'Амжилттай' : 'Ашиггүй/Цуцалсан'}`,
+          undefined,
+          operatorName || 'Оператор'
+        );
+      }
 
       res.json({
         success: true,
@@ -1954,13 +2032,22 @@ async function startServer() {
    * POST /api/chats/:id/reopen
    * Хаагдсан чатыг дахин сэргээж нээх.
    */
-  app.post('/api/chats/:id/reopen', (req, res) => {
+  app.post('/api/chats/:id/reopen', async (req, res) => {
     try {
-      const dialog = chatManager.reopenDialog(req.params.id);
+      const { agentId, agentName, agentAvatar } = req.body || {};
+      const dialog = chatManager.reopenDialog(req.params.id, agentId, agentName, agentAvatar);
       if (dialog.dialogId?.startsWith('chat')) {
         const numId = parseInt(dialog.dialogId.replace('chat', ''), 10);
         if (!isNaN(numId)) {
-          bitrixOpenlinesSync.markChatReopened(numId);
+          let bitrixUserId = 0;
+          if (dialog.assignedAgentId) {
+            bitrixUserId = parseInt(String(dialog.assignedAgentId).replace(/^bx-/, ''), 10);
+          }
+          bitrixOpenlinesSync.markChatReopened(numId, bitrixUserId > 0 ? bitrixUserId : undefined);
+          if (bitrixUserId > 0) {
+            bitrixOpenlinesSync.recordLocalAssignment(numId, bitrixUserId);
+            await bitrixOpenlinesSync.answerOperatorChat(numId, bitrixUserId).catch(() => {});
+          }
         }
       }
       res.json({ success: true, data: dialog });
@@ -2194,10 +2281,31 @@ async function startServer() {
    */
   app.post('/api/worktime/switch-agent', async (req, res) => {
     try {
-      const { agentId, bitrixUserId } = req.body;
-      if (!agentId && !bitrixUserId) {
+      let { agentId, bitrixUserId, chatId } = req.body;
+      console.log('[API /api/worktime/switch-agent] Request payload:', { agentId, bitrixUserId, chatId });
+
+      if (!agentId && !bitrixUserId && !chatId) {
         return res.status(400).json({ success: false, error: { message: 'agentId or bitrixUserId required' } });
       }
+
+      // Check if agentId is in fact a chat ID (e.g. 'chat-8049', 'chat8049', or matches an existing dialog)
+      const targetChatKey = chatId || (typeof agentId === 'string' && (agentId.startsWith('chat') || chatManager.getDialogById(agentId)) ? agentId : null);
+      let matchedDialog = null;
+      if (targetChatKey) {
+        matchedDialog = chatManager.getDialogById(targetChatKey);
+        if (matchedDialog) {
+          console.log(`[SwitchAgent:StateSync] Recognized chat ID: ${matchedDialog.id} (Bitrix: ${matchedDialog.dialogId})`);
+          if (matchedDialog.assignedAgentId && matchedDialog.assignedAgentId !== 'unassigned') {
+            agentId = matchedDialog.assignedAgentId;
+            console.log(`[SwitchAgent:StateSync] Resolved operator from chat assignment: ${agentId} (${matchedDialog.assignedAgentName || ''})`);
+          } else {
+            const current = worktimeManager.getCurrentAgent();
+            agentId = current.id;
+            console.log(`[SwitchAgent:StateSync] Chat has no assigned operator. Fallback to active operator: ${agentId}`);
+          }
+        }
+      }
+
       let agent = worktimeManager.setCurrentAgent(agentId || `bx-${bitrixUserId}`, bitrixUserId ? Number(bitrixUserId) : undefined);
       
       // Сонгогдсон операторын Bitrix24 timeman төлөвийг синхрончлох
@@ -2214,8 +2322,46 @@ async function startServer() {
       }
 
       const shift = worktimeManager.getCurrentShift(agent.id);
-      res.json({ success: true, data: { agent, shift } });
+      const perf = inquiryAnalyticsService.getAgentPerformanceStats(undefined, 'today').find(
+        (s) => s.agentId === agent.id || s.name.trim().toLowerCase() === agent.name.trim().toLowerCase()
+      );
+      const personalPerformance = perf
+        ? {
+            chatsHandledToday: perf.totalChatsHandled,
+            resolvedToday: perf.resolvedChatsCount,
+            activeChatsCount: perf.activeChatsCount,
+            avgResponseTimeSeconds: perf.avgResponseTimeSeconds,
+            avgResponseTimeFormatted: perf.avgResponseTimeFormatted,
+            rating: perf.rating,
+          }
+        : null;
+
+      console.log(`[SwitchAgent:StateSync] State synchronization complete:`, {
+        switchedAgentId: agent.id,
+        switchedAgentName: agent.name,
+        targetChatId: matchedDialog?.id || targetChatKey,
+        targetChatAssignedAgentId: matchedDialog?.assignedAgentId,
+        targetChatAssignedAgentName: matchedDialog?.assignedAgentName,
+      });
+
+      res.json({
+        success: true,
+        data: {
+          agent,
+          shift,
+          personalPerformance,
+          targetChat: matchedDialog
+            ? {
+                id: matchedDialog.id,
+                dialogId: matchedDialog.dialogId,
+                assignedAgentId: matchedDialog.assignedAgentId,
+                assignedAgentName: matchedDialog.assignedAgentName,
+              }
+            : null,
+        },
+      });
     } catch (e: any) {
+      console.error('[SwitchAgent] Error during switch:', e.message);
       res.status(500).json({ success: false, error: { message: e.message } });
     }
   });
@@ -2262,33 +2408,54 @@ async function startServer() {
       // 1. Bitrix24 portal дээр timeman.open дуудах
       if (targetAgent.bitrixUserId) {
         try {
+          console.log(`[WorkdaySync] Opening workday in Bitrix24 for user ${targetAgent.bitrixUserId} (${targetAgent.name})...`);
           const bxRes = await vibeRequest('POST', '/v1/workday/open', { userId: targetAgent.bitrixUserId });
-          if (bxRes.success && bxRes.data) {
+          if (bxRes.success && bxRes.data && bxRes.data.status === 'OPENED') {
             bitrixResult = bxRes.data;
           } else {
             bitrixError = bxRes.error;
-            // Хэрэв аль хэдийн нээгдсэн гэж алдаа өгсөн бол одоогийн төлөвийг татах
-            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
-            if (check.success && check.data) {
-              bitrixResult = check.data;
+            // Handle WORKDAY_EXPIRED: If user had an expired shift from yesterday/earlier, close it first and open fresh
+            if (bxRes.error?.code === 'WORKDAY_EXPIRED' || bxRes.error?.message?.toLowerCase().includes('expired')) {
+              console.log(`[WorkdaySync] Workday was EXPIRED for user ${targetAgent.bitrixUserId}. Automatically closing expired shift to open new one...`);
+              try {
+                const statusCheck = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+                const expiredData = statusCheck.data;
+                await vibeRequest('POST', '/v1/workday/close', {
+                  userId: targetAgent.bitrixUserId,
+                  report: 'Өмнөх хугацаа дууссан ээлжийг хааж шинэ өдөр нээв',
+                  time: expiredData?.timeFinishDefault || expiredData?.timeStart || new Date().toISOString(),
+                });
+                // Re-open fresh workday in Bitrix24
+                const retryOpen = await vibeRequest('POST', '/v1/workday/open', { userId: targetAgent.bitrixUserId });
+                if (retryOpen.success && retryOpen.data && retryOpen.data.status === 'OPENED') {
+                  bitrixResult = retryOpen.data;
+                  bitrixError = null;
+                  console.log(`[WorkdaySync] Successfully opened new Bitrix24 workday for user ${targetAgent.bitrixUserId}`);
+                }
+              } catch (autoCloseErr: any) {
+                console.warn(`[WorkdaySync] Could not auto-close expired shift in Bitrix24:`, autoCloseErr.message);
+              }
+            }
+
+            if (!bitrixResult) {
+              // Хэрэв аль хэдийн нээгдсэн (OPENED) бол төлөвийг шалгах
+              const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
+              if (check.success && check.data && check.data.status === 'OPENED') {
+                bitrixResult = check.data;
+              }
             }
           }
         } catch (err: any) {
           console.error('[WorkdaySync] /v1/workday/open error:', err?.message || err);
-          try {
-            const check = await vibeRequest('GET', `/v1/workday/status?userId=${targetAgent.bitrixUserId}`);
-            if (check.success && check.data) {
-              bitrixResult = check.data;
-            }
-          } catch {}
         }
       }
 
-      // 2. Системийн дотоод төлөвийг Bitrix24-тэй синхрон шинэчлэх
+      // 2. Системийн дотоод төлөвийг Bitrix24 эсвэл дотоод clockIn-ээр баталгаатай эхлүүлэх
       let outcome;
-      if (bitrixResult) {
+      if (bitrixResult && bitrixResult.status === 'OPENED') {
         outcome = worktimeManager.syncAgentWorkdayFromBitrix(targetAgent.id, bitrixResult);
       } else {
+        // Баталгаатай Clock-In: Bitrix алдаатай эсвэл EXPIRED байсан ч операторын ээлжийг найдвартай эхлүүлнэ
         outcome = worktimeManager.clockIn(targetAgent.id);
       }
 
@@ -2297,11 +2464,12 @@ async function startServer() {
         data: outcome,
         bitrixResult,
         bitrixError,
-        message: bitrixResult
+        message: bitrixResult?.status === 'OPENED'
           ? `Bitrix24 портал дээр ${targetAgent.name} ажилтны өдөр амжилттай нээгдлээ.`
           : 'Ажлын ээлж амжилттай эхэллээ.',
       });
     } catch (e: any) {
+      console.error('[ClockIn] Error:', e.message);
       res.status(500).json({ success: false, error: { message: e.message } });
     }
   });

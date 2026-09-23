@@ -48,6 +48,7 @@ import {
   ExternalLink,
   MoreVertical,
   Package,
+  CheckCircle,
 } from 'lucide-react';
 import { ChatDialog, ChatMessage, Agent, KnowledgeArticle, OpenLineItem, BotConfig, TypingUser } from '../types';
 import { QuickRepliesPanel } from './QuickRepliesPanel';
@@ -82,6 +83,7 @@ interface OpenChannelChatWorkplaceProps {
   targetChatId?: string | null;
   onBindLine?: (lineId: number, lineName: string) => Promise<void>;
   onUnbindLine?: (lineId: number) => Promise<void>;
+  onSwitchAgent?: (agentId: string) => Promise<void>;
 }
 
 /**
@@ -100,6 +102,17 @@ async function apiFetch<T = any>(url: string, init?: RequestInit): Promise<T | n
   }
 }
 
+/**
+ * Flexible chat ID matcher supporting both internal format ('chat-8049') and Bitrix format ('chat8049' / '8049')
+ */
+export const isDialogMatch = (dialog: ChatDialog | null | undefined, idOrKey: string | null | undefined): boolean => {
+  if (!dialog || !idOrKey) return false;
+  if (dialog.id === idOrKey || dialog.dialogId === idOrKey) return true;
+  const matchA = dialog.id.match(/\d+/);
+  const matchB = idOrKey.match(/\d+/);
+  return Boolean(matchA && matchB && matchA[0] === matchB[0]);
+};
+
 export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> = ({
   currentAgent,
   team,
@@ -110,6 +123,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   targetChatId,
   onBindLine,
   onUnbindLine,
+  onSwitchAgent,
 }) => {
   // State
   const [dialogs, setDialogs] = useState<ChatDialog[]>([]);
@@ -122,11 +136,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   // Jump to targeted chat if passed
   useEffect(() => {
     if (targetChatId) {
-      setSelectedDialogId(targetChatId);
+      console.log('[ChatWorkplace:targetChatId] Jump to targeted chat requested:', targetChatId);
       setMobileView('chat');
-      const found = dialogs.find((d) => d.id === targetChatId || d.dialogId === targetChatId);
+      const found = dialogs.find((d) => isDialogMatch(d, targetChatId));
       if (found) {
+        console.log('[ChatWorkplace:targetChatId] Found matching dialog in local state:', {
+          id: found.id,
+          dialogId: found.dialogId,
+          assignedAgentId: found.assignedAgentId,
+          assignedAgentName: found.assignedAgentName,
+        });
+        setSelectedDialogId(found.id);
         setSelectedDialog(found);
+      } else {
+        console.log('[ChatWorkplace:targetChatId] Dialog not loaded in local state yet. Preserving target ID:', targetChatId);
+        setSelectedDialogId(targetChatId);
       }
     }
   }, [targetChatId, dialogs]);
@@ -244,6 +268,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const [isSyncingBitrix, setIsSyncingBitrix] = useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isBotActionLoading, setIsBotActionLoading] = useState(false);
+  const [isTakingDialog, setIsTakingDialog] = useState(false);
+  const [isTransferring, setIsTransferring] = useState(false);
+  const [transferSuccessMsg, setTransferSuccessMsg] = useState<string | null>(null);
   const [isRealtimeConnected, setIsRealtimeConnected] = useState(true);
   const lastSyncVersionRef = useRef<number>(0);
 
@@ -309,17 +336,23 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     const targetId = dialogId || updatedDialog?.id;
     if (!targetId) return;
 
+    const dialogCandidate = updatedDialog || dialogs.find((d) => d.id === targetId);
+    const isNowInQueue = Boolean(dialogCandidate && (dialogCandidate.status === 'new' || !dialogCandidate.assignedAgentId));
+
     const isAlreadyKnown = knownDialogIdsRef.current.has(targetId);
     if (!isAlreadyKnown) {
       knownDialogIdsRef.current.add(targetId);
       // If initial load already completed, this is a brand new incoming inquiry!
       if (isInitialLoadCompletedRef.current) {
-        const dialogCandidate = updatedDialog || dialogs.find((d) => d.id === targetId);
-        if (dialogCandidate && (dialogCandidate.status === 'new' || !dialogCandidate.assignedAgentId)) {
+        if (isNowInQueue && dialogCandidate) {
           triggerNewInquiryAlert(dialogCandidate, message?.text);
           return;
         }
       }
+    } else if (isInitialLoadCompletedRef.current && isNowInQueue && message && message.sender === 'customer' && dialogCandidate) {
+      // Chat was previously closed and customer wrote back, returning it into Queue ('Дараалал')!
+      triggerNewInquiryAlert(dialogCandidate, message.text);
+      return;
     }
 
     // Standard incoming message sound for existing conversations
@@ -517,8 +550,18 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           setSelectedDialogId(res.data[0].id);
           setSelectedDialog(res.data[0]);
         } else if (selectedDialogId) {
-          const matched = res.data.find((d: ChatDialog) => d.id === selectedDialogId);
-          if (matched) setSelectedDialog(matched);
+          const matched = res.data.find((d: ChatDialog) => isDialogMatch(d, selectedDialogId));
+          if (matched) {
+            setSelectedDialogId(matched.id);
+            setSelectedDialog(matched);
+            console.log('[ChatWorkplace:loadDialogs] Synchronized selectedDialog with backend data:', {
+              id: matched.id,
+              dialogId: matched.dialogId,
+              assignedAgentId: matched.assignedAgentId,
+              assignedAgentName: matched.assignedAgentName,
+              currentAgentId: currentAgent?.id,
+            });
+          }
         }
       }
     } catch (e) {
@@ -571,8 +614,9 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
           });
 
           if (selectedDialogId) {
-            const matched = changedDialogs.find((d: ChatDialog) => d.id === selectedDialogId);
+            const matched = changedDialogs.find((d: ChatDialog) => isDialogMatch(d, selectedDialogId));
             if (matched) {
+              setSelectedDialogId(matched.id);
               setSelectedDialog((prev) => {
                 if (!prev || prev.id !== matched.id) return matched;
                 if (
@@ -622,8 +666,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             setSelectedDialogId(res.data.dialogs[0].id);
             setSelectedDialog(res.data.dialogs[0]);
           } else if (selectedDialogId) {
-            const matched = res.data.dialogs.find((d: ChatDialog) => d.id === selectedDialogId);
-            if (matched) setSelectedDialog(matched);
+            const matched = res.data.dialogs.find((d: ChatDialog) => isDialogMatch(d, selectedDialogId));
+            if (matched) {
+              setSelectedDialogId(matched.id);
+              setSelectedDialog(matched);
+            }
           }
         }
         const updated = res.data.updated ?? 0;
@@ -781,9 +828,16 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
             }
           }
 
+          console.log('[ChatWorkplace:SSE:dialog:update] Received real-time dialog update:', {
+            targetId,
+            newAssignedAgentId: updatedDialog?.assignedAgentId,
+            newAssignedAgentName: updatedDialog?.assignedAgentName,
+            currentAgentId: currentAgent?.id,
+          });
+
           setSelectedDialog((prev) => {
             if (!prev) return prev;
-            if (prev.id === targetId || prev.dialogId === targetId) {
+            if (isDialogMatch(prev, targetId)) {
               return updatedDialog ? { ...prev, ...updatedDialog } : prev;
             }
             return prev;
@@ -791,7 +845,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
           setDialogs((prev) =>
             prev.map((d) => {
-              if (d.id === targetId || d.dialogId === targetId) {
+              if (isDialogMatch(d, targetId)) {
                 return updatedDialog ? { ...d, ...updatedDialog } : d;
               }
               return d;
@@ -1089,7 +1143,10 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               if (
                 freshDialog.messages.length !== prev.messages.length ||
                 freshDialog.lastMessageTime !== prev.lastMessageTime ||
-                freshDialog.status !== prev.status
+                freshDialog.status !== prev.status ||
+                freshDialog.assignedAgentId !== prev.assignedAgentId ||
+                freshDialog.assignedAgentName !== prev.assignedAgentName ||
+                freshDialog.botActive !== prev.botActive
               ) {
                 return { ...prev, ...freshDialog };
               }
@@ -1246,10 +1303,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     }
   };
 
-  // Assign to current agent
+  // Assign to current agent (Өөртөө авах)
   const handleTakeDialog = async () => {
-    if (!selectedDialog) return;
+    if (!selectedDialog || isTakingDialog) return;
     setSendErrorMessage(null);
+    setIsTakingDialog(true);
 
     // Fallback if currentAgent is not yet available in props
     let agent = currentAgent;
@@ -1266,6 +1324,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
     if (!agent) {
       setSendErrorMessage('Операторын мэдээлэл олдсонгүй. Дахин нэвтэрнэ үү.');
+      setIsTakingDialog(false);
       return;
     }
 
@@ -1281,15 +1340,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         }),
       }).then((r) => r.json());
 
-      if (res.success) {
-        setSelectedDialog(res.data);
-        setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+      if (res.success && res.data) {
+        const updated = res.data;
+        // Keep current chat strictly selected and active
+        setSelectedDialogId(updated.id);
+        setSelectedDialog(updated);
+        setDialogs((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
         setTimeout(() => {
           chatInputRef.current?.focus();
-        }, 100);
+        }, 150);
+      } else {
+        const errorMsg = res.error?.message || 'Чатыг өөртөө авахад алдаа гарлаа';
+        setSendErrorMessage(errorMsg);
       }
-    } catch (e) {
+    } catch (e: any) {
       console.error('Failed to take dialog:', e);
+      setSendErrorMessage('Сервертэй холбогдоход алдаа гарлаа: ' + (e.message || ''));
+    } finally {
+      setIsTakingDialog(false);
     }
   };
 
@@ -1339,7 +1407,19 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
   // Transfer to another agent
   const handleTransfer = async (targetAgent: Agent) => {
-    if (!selectedDialog) return;
+    if (!selectedDialog || isTransferring) return;
+    setIsTransferring(true);
+    setSendErrorMessage(null);
+    setTransferSuccessMsg(null);
+
+    console.log('[handleTransfer:StateSync] Initiating chat transfer:', {
+      chatId: selectedDialog.id,
+      bitrixDialogId: selectedDialog.dialogId,
+      previousAssignedAgent: { id: selectedDialog.assignedAgentId, name: selectedDialog.assignedAgentName },
+      targetAgent: { id: targetAgent.id, name: targetAgent.name, bitrixUserId: targetAgent.bitrixUserId },
+      frontendCurrentAgent: { id: currentAgent?.id, name: currentAgent?.name },
+    });
+
     try {
       const res = await fetch(`/api/chats/${selectedDialog.id}/transfer`, {
         method: 'POST',
@@ -1351,13 +1431,38 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         }),
       }).then((r) => r.json());
 
-      if (res.success) {
-        setSelectedDialog(res.data);
-        setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+      console.log('[handleTransfer:StateSync] Backend transfer response:', res);
+
+      if (res.success && res.data) {
+        const updated = res.data;
+        console.log('[handleTransfer:StateSync] Transfer verified on backend. Synchronizing frontend agent view:', {
+          dialogId: updated.id,
+          dialogNumericId: updated.dialogId,
+          newAssignedAgentId: updated.assignedAgentId,
+          newAssignedAgentName: updated.assignedAgentName,
+          previousAgentId: selectedDialog.assignedAgentId,
+          frontendCurrentAgentId: currentAgent?.id,
+          isAssignedToCurrentAgent: isAgentMatch(updated.assignedAgentId, updated.assignedAgentName, currentAgent),
+        });
+
+        setSelectedDialogId(updated.id);
+        setSelectedDialog(updated);
+        setDialogs((prev) => prev.map((d) => (isDialogMatch(d, updated.id) ? updated : d)));
         setShowTransferModal(false);
+        setTransferSuccessMsg(`Чатыг оператор ${targetAgent.name}-д амжилттай шилжүүллээ.`);
+        setTimeout(() => {
+          setTransferSuccessMsg(null);
+        }, 6000);
+      } else {
+        const err = res.error?.message || 'Чатыг шилжүүлэхэд алдаа гарлаа';
+        console.error('[handleTransfer:StateSync] Transfer failed on backend:', err);
+        setSendErrorMessage(err);
       }
-    } catch (e) {
-      console.error('Failed to transfer dialog:', e);
+    } catch (e: any) {
+      console.error('[handleTransfer:StateSync] Failed to transfer dialog:', e);
+      setSendErrorMessage('Сервертэй холбогдоход алдаа гарлаа: ' + (e.message || ''));
+    } finally {
+      setIsTransferring(false);
     }
   };
 
@@ -1491,10 +1596,21 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   const handleReopenDialog = async () => {
     if (!selectedDialog) return;
     try {
-      const res = await fetch(`/api/chats/${selectedDialog.id}/reopen`, { method: 'POST' }).then((r) => r.json());
-      if (res.success) {
+      const res = await fetch(`/api/chats/${selectedDialog.id}/reopen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentId: currentAgent?.id,
+          agentName: currentAgent?.name,
+          agentAvatar: currentAgent?.avatar,
+        }),
+      }).then((r) => r.json());
+      if (res.success && res.data) {
         setSelectedDialog(res.data);
         setDialogs((prev) => prev.map((d) => (d.id === res.data.id ? res.data : d)));
+        setTimeout(() => {
+          chatInputRef.current?.focus();
+        }, 150);
       }
     } catch (e) {
       console.error('Failed to reopen dialog:', e);
@@ -1638,6 +1754,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
   // Sorts conversations by 'Newest', 'Oldest', 'Pending AI Action', 'Closed Newest', 'Closed Oldest'
   const filteredDialogs = useMemo(() => {
     let result = dialogs.filter((d) => {
+      // If this dialog is the currently active/selected dialog and was just taken by the current agent,
+      // keep it visible so it doesn't suddenly disappear from the list!
+      const isSelectedChat = selectedDialogId && (d.id === selectedDialogId || d.dialogId === selectedDialogId);
+      const isMine = d.assignedAgentId === currentAgent?.id || isAgentMatch(d.assignedAgentId, d.assignedAgentName, currentAgent);
+
       if (statusFilter === 'new') {
         return (!d.assignedAgentId || d.assignedAgentId === 'unassigned') && d.status !== 'in_progress' && d.status !== 'assigned';
       }
@@ -1648,7 +1769,12 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
         );
       }
       if (statusFilter === 'my_closed') return d.status === 'closed' && isMyClosedDialog(d, currentAgent);
-      if (statusFilter === 'bot') return d.status === 'bot';
+      if (statusFilter === 'bot') {
+        if (isSelectedChat && isMine && d.status !== 'closed') {
+          return true;
+        }
+        return d.status === 'bot';
+      }
       if (statusFilter === 'closed') return d.status === 'closed';
       if (statusFilter === 'starred') return Boolean(d.isStarred);
       return true;
@@ -1751,18 +1877,26 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
     });
 
     return result;
-  }, [dialogs, statusFilter, channelFilter, searchQuery, sortBy, dateRangeFilter, resolutionFilter, closedAgentFilter, currentAgent?.id, team]);
+  }, [dialogs, statusFilter, channelFilter, searchQuery, sortBy, dateRangeFilter, resolutionFilter, closedAgentFilter, currentAgent?.id, team, selectedDialogId]);
 
-  // Auto-switch selected dialog when filter changes and current selection is not visible
+  const prevFilterStateRef = useRef({ statusFilter, channelFilter, searchQuery });
+  // Auto-switch selected dialog ONLY when filter changes and current selection is not visible
   useEffect(() => {
+    const filterChanged =
+      prevFilterStateRef.current.statusFilter !== statusFilter ||
+      prevFilterStateRef.current.channelFilter !== channelFilter ||
+      prevFilterStateRef.current.searchQuery !== searchQuery;
+
+    prevFilterStateRef.current = { statusFilter, channelFilter, searchQuery };
+
     if (filteredDialogs.length > 0) {
-      const isCurrentInFiltered = filteredDialogs.some((d) => d.id === selectedDialogId);
-      if (!isCurrentInFiltered) {
+      const isCurrentInFiltered = filteredDialogs.some((d) => isDialogMatch(d, selectedDialogId));
+      if (!selectedDialogId || (filterChanged && !isCurrentInFiltered)) {
         setSelectedDialogId(filteredDialogs[0].id);
         setSelectedDialog(filteredDialogs[0]);
       }
     }
-  }, [statusFilter, channelFilter, sortBy, searchQuery, filteredDialogs.length]);
+  }, [statusFilter, channelFilter, searchQuery, filteredDialogs, selectedDialogId]);
 
   // Channel badge styling helper
   const getChannelBadge = (type: ChatDialog['channelType']) => {
@@ -2383,7 +2517,7 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
               </div>
             ) : (
               filteredDialogs.map((d) => {
-                const isSelected = d.id === selectedDialogId;
+                const isSelected = isDialogMatch(d, selectedDialogId);
                 const channelBadge = getChannelBadge(d.channelType);
                 const statusBadge = getStatusBadge(d.status);
 
@@ -2662,17 +2796,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
               {/* Row 2: Action Buttons Bar (Exact layout and colors from image.png) */}
               <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-0.5 shrink-0">
-                {/* 1. Take Dialog Button (Green solid) */}
+                {/* 1. Take Dialog Button (Green solid) or Assigned to Me badge */}
                 {selectedDialog.status !== 'closed' && !isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
                   <button
                     id="take-dialog-btn"
                     onClick={handleTakeDialog}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95 cursor-pointer shrink-0"
+                    disabled={isTakingDialog}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition shadow-xs active:scale-95 cursor-pointer shrink-0 disabled:opacity-60"
                     title={selectedDialog.status === 'bot' || selectedDialog.botActive ? "Чатыг өөртөө авч, ботыг салгах" : "Чатыг өөртөө авах"}
                   >
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>Өөртөө авах</span>
+                    <span>{isTakingDialog ? 'Өөртөө авч байна...' : 'Өөртөө авах'}</span>
                   </button>
+                )}
+                {selectedDialog.status !== 'closed' && isAgentMatch(selectedDialog.assignedAgentId, selectedDialog.assignedAgentName, currentAgent) && (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold shadow-2xs shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Та хариуцаж байна</span>
+                  </span>
                 )}
 
                 {/* 2. Bot Connect/Detach Button (Light purple/rose) */}
@@ -3091,6 +3232,23 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                 return null;
               })()}
 
+              {/* Transfer Success Confirmation Alert */}
+              {transferSuccessMsg && (
+                <div id="transfer-success-alert" className="flex items-center justify-between gap-2 p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-800">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="font-medium truncate">{transferSuccessMsg}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTransferSuccessMsg(null)}
+                    className="text-emerald-500 hover:text-emerald-700 p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
               {/* Error Alert Message if validation fails */}
               {sendErrorMessage && (
                 <div id="send-error-alert" className="flex items-center justify-between gap-2 p-2 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-800">
@@ -3269,6 +3427,24 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
 
                 return (
                   <form onSubmit={handleSendMessage} className="space-y-2">
+                    {isUnassignedChat && (
+                      <div className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-between gap-2 text-xs text-emerald-900 shadow-2xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                          <span className="truncate font-medium">Энэ чатыг өөртөө авснаар харилцагчид шууд хариу бичих боломжтой болно.</span>
+                        </div>
+                        <button
+                          type="button"
+                          id="take-dialog-banner-btn"
+                          onClick={handleTakeDialog}
+                          disabled={isTakingDialog}
+                          className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-xs font-semibold transition shrink-0 cursor-pointer shadow-xs active:scale-95 disabled:opacity-60 flex items-center gap-1"
+                        >
+                          <UserCheck className="w-3.5 h-3.5" />
+                          <span>{isTakingDialog ? 'Авч байна...' : 'Өөртөө авах'}</span>
+                        </button>
+                      </div>
+                    )}
                     <div className="relative">
                       <textarea
                         ref={chatInputRef}
@@ -3289,15 +3465,15 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                         disabled={isUnassignedChat}
                         placeholder={
                           isUnassignedChat
-                            ? 'Хариу бичихийн тулд эхлээд дээд талын "Өөртөө авах" товчийг дарна уу...'
+                            ? 'Хариу бичихийн тулд "Өөртөө авах" товчийг дарна уу...'
                             : isInternalNote
                             ? 'Дотоод тэмдэглэл бичих...'
                             : 'Хэрэглэгчид илгээх хариултаа бичнэ үү (Enter илгээх, Shift+Enter шинэ мөр)...'
                         }
                         rows={2}
-                        className={`w-full p-2.5 sm:p-3 pr-20 sm:pr-32 rounded-xl text-xs focus:outline-none transition border resize-none ${
+                        className={`w-full p-2.5 sm:p-3 pr-28 sm:pr-36 rounded-xl text-xs focus:outline-none transition border resize-none ${
                           isUnassignedChat
-                            ? 'bg-slate-100/90 border-slate-200 text-slate-400 cursor-not-allowed placeholder-slate-400'
+                            ? 'bg-slate-50 border-slate-200 text-slate-500 placeholder-slate-400'
                             : isInternalNote
                             ? 'bg-amber-50/50 border-amber-300 focus:border-amber-500 text-amber-950 placeholder-amber-600/60'
                             : 'bg-slate-50 border-slate-300 focus:border-blue-500 focus:bg-white text-slate-900'
@@ -3308,13 +3484,13 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                           <button
                             type="button"
                             id="take-dialog-inline-btn"
-                            disabled
-                            className="inline-flex items-center gap-1 px-3 sm:px-4 py-1.5 rounded-lg text-xs font-medium text-slate-400 bg-slate-200 cursor-not-allowed"
-                            title="Дээр байрлах 'Өөртөө авах' товчоор эхлээд чатыг өөртөө онооно уу"
+                            onClick={handleTakeDialog}
+                            disabled={isTakingDialog}
+                            className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 shadow-xs transition active:scale-95 cursor-pointer disabled:opacity-60"
+                            title="Чатыг өөртөө авч, шууд хариу бичих"
                           >
-                            <Send className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline">Илгээх</span>
-                            <span className="sm:hidden">Илгээх</span>
+                            <UserCheck className="w-3.5 h-3.5" />
+                            <span>{isTakingDialog ? 'Авч байна...' : 'Өөртөө авах'}</span>
                           </button>
                         ) : (
                           <button
@@ -4005,8 +4181,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                             {channelAgents.map((agent) => (
                               <button
                                 key={agent.id}
+                                disabled={isTransferring}
                                 onClick={() => handleTransfer(agent)}
-                                className="w-full flex items-center gap-3 p-2.5 rounded-xl border-2 border-blue-200 bg-blue-50/40 hover:border-blue-500 hover:bg-blue-50 transition text-left"
+                                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border-2 border-blue-200 bg-blue-50/40 hover:border-blue-500 hover:bg-blue-50 transition text-left ${
+                                  isTransferring ? 'opacity-60 cursor-not-allowed' : ''
+                                }`}
                               >
                                 <img
                                   src={agent.avatar}
@@ -4046,8 +4225,11 @@ export const OpenChannelChatWorkplace: React.FC<OpenChannelChatWorkplaceProps> =
                             {otherAgents.map((agent) => (
                               <button
                                 key={agent.id}
+                                disabled={isTransferring}
                                 onClick={() => handleTransfer(agent)}
-                                className="w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition text-left"
+                                className={`w-full flex items-center gap-3 p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 transition text-left ${
+                                  isTransferring ? 'opacity-60 cursor-not-allowed' : ''
+                                }`}
                               >
                                 <img
                                   src={agent.avatar}

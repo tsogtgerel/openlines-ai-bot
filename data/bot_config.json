@@ -1,7 +1,7 @@
 {
   "botId": 19170,
   "botCode": "kb_ai_helper",
-  "botName": "BSB AI Туслах",
+  "botName": "BSB AI Assistant",
   "selectedLineId": null,
   "selectedLineName": "",
   "isPollingActive": true,

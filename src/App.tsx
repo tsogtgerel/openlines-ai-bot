@@ -195,7 +195,7 @@ export default function App() {
     }
   };
 
-  // Helper to persist and sync operator session locally (per-tab sessionStorage + cross-session localStorage)
+  // Helper to persist and sync operator session locally strictly per-tab (sessionStorage)
   const setLocalAgentSession = (agent: Agent) => {
     currentAgentRef.current = agent;
     setCurrentAgent(agent);
@@ -203,12 +203,13 @@ export default function App() {
       try {
         if (agent.id) {
           sessionStorage.setItem('bsb_operator_agent_id', agent.id);
-          localStorage.setItem('bsb_operator_agent_id', agent.id);
         }
         if (agent.bitrixUserId) {
           sessionStorage.setItem('bsb_operator_bitrix_user_id', String(agent.bitrixUserId));
-          localStorage.setItem('bsb_operator_bitrix_user_id', String(agent.bitrixUserId));
         }
+        // Clean up legacy shared localStorage to prevent cross-tab or cross-window contamination
+        localStorage.removeItem('bsb_operator_agent_id');
+        localStorage.removeItem('bsb_operator_bitrix_user_id');
       } catch (err) {
         console.warn('Storage sync error:', err);
       }
@@ -219,8 +220,7 @@ export default function App() {
   const loadWorktimeAndChats = async (agentOverrideId?: string) => {
     try {
       const sessionAgentId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : null;
-      const savedAgentId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_agent_id') : null;
-      const activeAgentId = agentOverrideId || currentAgentRef.current?.id || sessionAgentId || savedAgentId || undefined;
+      const activeAgentId = agentOverrideId || currentAgentRef.current?.id || sessionAgentId || undefined;
       const statusUrl = activeAgentId
         ? `/api/worktime/status?agentId=${encodeURIComponent(activeAgentId)}`
         : '/api/worktime/status';
@@ -268,6 +268,37 @@ export default function App() {
         setChatsCount(chatsRes.data.length);
         const unread = chatsRes.data.reduce((acc: number, d: any) => acc + (d.unreadCount || 0), 0);
         setUnreadCount(unread);
+
+        // Explicit logging to inspect API response data for chat8049 & verify assignedAgentId against current operator's bitrixUserId
+        const chat8049 = chatsRes.data.find(
+          (d: any) => d.id === 'chat-8049' || d.dialogId === 'chat8049' || d.id === '8049' || String(d.id).includes('8049')
+        );
+        const currentOperator = currentAgentRef.current;
+        const operatorBxUserId = currentOperator?.bitrixUserId !== undefined ? String(currentOperator.bitrixUserId) : null;
+        const assignedAgentId = chat8049 ? chat8049.assignedAgentId : undefined;
+        const assignedBxId = assignedAgentId ? String(assignedAgentId).replace(/^bx-/, '') : null;
+        const isBxUserMatch = Boolean(
+          assignedBxId && operatorBxUserId && assignedBxId === operatorBxUserId
+        );
+
+        console.log('[loadWorktimeAndChats] Chats API Response Inspection for chat8049:', {
+          found: Boolean(chat8049),
+          chatId: chat8049?.id,
+          dialogId: chat8049?.dialogId,
+          status: chat8049?.status,
+          hasAssignedAgentIdField: chat8049 ? Object.prototype.hasOwnProperty.call(chat8049, 'assignedAgentId') : false,
+          assignedAgentId: assignedAgentId !== undefined ? assignedAgentId : null,
+          assignedAgentName: chat8049?.assignedAgentName ?? null,
+          currentOperator: currentOperator
+            ? {
+                id: currentOperator.id,
+                name: currentOperator.name,
+                bitrixUserId: currentOperator.bitrixUserId,
+              }
+            : null,
+          currentOperatorBitrixUserId: operatorBxUserId,
+          assignedMatchesOperatorBitrixUserId: isBxUserMatch,
+        });
       }
     } catch (e) {
       console.error('Failed to load worktime/chats:', e);
@@ -288,8 +319,6 @@ export default function App() {
     const agentId = urlParams.get('agent_id') || urlParams.get('agentId');
     const sessionAgentId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : null;
     const sessionBxUserId = typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_bitrix_user_id') : null;
-    const savedAgentId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_agent_id') : null;
-    const savedBxUserId = typeof window !== 'undefined' ? localStorage.getItem('bsb_operator_bitrix_user_id') : null;
 
     const trySwitch = (idToSwitch?: string | null, bxToSwitch?: string | number | null) => {
       fetch('/api/worktime/switch-agent', {
@@ -322,18 +351,16 @@ export default function App() {
           trySwitch(undefined, bxUser.id);
         } else if (sessionAgentId || sessionBxUserId) {
           trySwitch(sessionAgentId, sessionBxUserId);
-        } else if (savedAgentId || savedBxUserId) {
-          trySwitch(savedAgentId, savedBxUserId);
         } else {
           loadWorktimeAndChats();
         }
       });
     }
 
-    // Poll chats and shifts periodically, always scoped to this client's active agent
+    // Poll chats and shifts periodically, strictly scoped to this client/tab's active agent
     const pollInterval = setInterval(() => {
       const activeId = currentAgentRef.current?.id ||
-        (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') || localStorage.getItem('bsb_operator_agent_id') : null);
+        (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : null);
       loadWorktimeAndChats(activeId || undefined);
     }, 12000);
     return () => clearInterval(pollInterval);
@@ -349,10 +376,11 @@ export default function App() {
   // Worktime Handlers - Bitrix24 Timeman бүрэн синхрончлол
   const handleClockIn = async () => {
     try {
+      const activeAgentId = currentAgent?.id || (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : undefined);
       const res = await fetch('/api/worktime/clock-in', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: currentAgent?.id }),
+        body: JSON.stringify({ agentId: activeAgentId }),
       }).then((r) => r.json());
 
       // If running inside Bitrix24 iframe, also notify Bitrix24 portal UI
@@ -362,8 +390,14 @@ export default function App() {
         } catch {}
       }
 
-      if (res.success) {
-        await loadWorktimeAndChats(currentAgent?.id);
+      if (res.success && res.data) {
+        if (res.data.agent) {
+          setLocalAgentSession(res.data.agent);
+        }
+        if (res.data.shift) {
+          setCurrentShift(res.data.shift);
+        }
+        await loadWorktimeAndChats(res.data.agent?.id || activeAgentId);
       } else {
         alert(res.error?.message || 'Clock In хийхэд алдаа гарлаа');
       }
@@ -374,10 +408,11 @@ export default function App() {
 
   const handleClockOut = async (report?: string) => {
     try {
+      const activeAgentId = currentAgent?.id || (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : undefined);
       const res = await fetch('/api/worktime/clock-out', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ dailyReport: report, agentId: currentAgent?.id }),
+        body: JSON.stringify({ dailyReport: report, agentId: activeAgentId }),
       }).then((r) => r.json());
 
       // If running inside Bitrix24 iframe, also notify Bitrix24 portal UI
@@ -387,8 +422,14 @@ export default function App() {
         } catch {}
       }
 
-      if (res.success) {
-        await loadWorktimeAndChats(currentAgent?.id);
+      if (res.success && res.data) {
+        if (res.data.agent) {
+          setLocalAgentSession(res.data.agent);
+        }
+        if (res.data.shift !== undefined) {
+          setCurrentShift(res.data.shift);
+        }
+        await loadWorktimeAndChats(res.data.agent?.id || activeAgentId);
       } else {
         alert(res.error?.message || 'Clock Out хийхэд алдаа гарлаа');
       }
@@ -399,10 +440,11 @@ export default function App() {
 
   const handleStartBreak = async () => {
     try {
+      const activeAgentId = currentAgent?.id || (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : undefined);
       const res = await fetch('/api/worktime/break/start', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: currentAgent?.id }),
+        body: JSON.stringify({ agentId: activeAgentId }),
       }).then((r) => r.json());
 
       if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
@@ -411,8 +453,14 @@ export default function App() {
         } catch {}
       }
 
-      if (res.success) {
-        await loadWorktimeAndChats(currentAgent?.id);
+      if (res.success && res.data) {
+        if (res.data.agent) {
+          setLocalAgentSession(res.data.agent);
+        }
+        if (res.data.shift) {
+          setCurrentShift(res.data.shift);
+        }
+        await loadWorktimeAndChats(res.data.agent?.id || activeAgentId);
       }
     } catch (err) {
       console.error('Failed to start break:', err);
@@ -421,10 +469,11 @@ export default function App() {
 
   const handleResumeWork = async () => {
     try {
+      const activeAgentId = currentAgent?.id || (typeof window !== 'undefined' ? sessionStorage.getItem('bsb_operator_agent_id') : undefined);
       const res = await fetch('/api/worktime/break/resume', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId: currentAgent?.id }),
+        body: JSON.stringify({ agentId: activeAgentId }),
       }).then((r) => r.json());
 
       if (typeof window !== 'undefined' && (window as any).BX24?.callMethod) {
@@ -433,8 +482,14 @@ export default function App() {
         } catch {}
       }
 
-      if (res.success) {
-        await loadWorktimeAndChats(currentAgent?.id);
+      if (res.success && res.data) {
+        if (res.data.agent) {
+          setLocalAgentSession(res.data.agent);
+        }
+        if (res.data.shift) {
+          setCurrentShift(res.data.shift);
+        }
+        await loadWorktimeAndChats(res.data.agent?.id || activeAgentId);
       }
     } catch (err) {
       console.error('Failed to resume work:', err);
@@ -474,23 +529,100 @@ export default function App() {
   };
 
   const handleSwitchAgent = async (agentId: string) => {
+    console.log('[handleSwitchAgent] >>> Invoked with target identifier:', agentId);
+    if (!agentId) {
+      console.warn('[handleSwitchAgent] Cannot switch agent: agentId is undefined or empty string');
+      return;
+    }
+
     try {
-      const res = await fetch('/api/worktime/switch-agent', {
+      console.log('[handleSwitchAgent] Sending POST /api/worktime/switch-agent with payload:', { agentId });
+      const rawRes = await fetch('/api/worktime/switch-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agentId }),
-      }).then((r) => r.json());
+      });
 
-      if (res.success && res.data) {
-        setLocalAgentSession(res.data.agent);
-        setCurrentShift(res.data.shift);
-        if (res.data.personalPerformance) {
-          setPersonalPerformance(res.data.personalPerformance);
+      console.log('[handleSwitchAgent] HTTP Response status:', rawRes.status, rawRes.statusText);
+      const res = await rawRes.json();
+      console.log('[handleSwitchAgent] Full API response structure received:', JSON.stringify(res, null, 2));
+
+      if (res && res.success && res.data) {
+        const { agent, shift, personalPerformance } = res.data;
+
+        // Verify API response fields
+        console.log('[handleSwitchAgent] Validating returned agent entity:', {
+          id: agent?.id,
+          name: agent?.name,
+          role: agent?.role,
+          accessRole: agent?.accessRole,
+          bitrixUserId: agent?.bitrixUserId,
+          assignedChannelsCount: agent?.assignedChannelIds?.length,
+          status: agent?.status,
+        });
+        console.log('[handleSwitchAgent] Shift payload:', shift);
+        console.log('[handleSwitchAgent] Personal performance payload:', personalPerformance);
+
+        if (!agent || !agent.id) {
+          console.error('[handleSwitchAgent] API response data does not contain a valid agent object:', res.data);
+          return;
         }
-        await loadWorktimeAndChats(res.data.agent.id);
+
+        // Apply state updates to App.tsx
+        setLocalAgentSession(agent);
+        console.log('[handleSwitchAgent] Updated localAgentSession for:', agent.name, `(${agent.id})`);
+
+        if (shift) {
+          setCurrentShift(shift);
+          console.log('[handleSwitchAgent] Current shift state updated successfully');
+        }
+
+        if (personalPerformance) {
+          setPersonalPerformance(personalPerformance);
+          console.log('[handleSwitchAgent] Personal performance state updated successfully');
+        }
+
+        // Check if the switch action was triggered by a chat transfer or targeted chat ID (e.g. 'chat8049', 'chat-8049')
+        const isChatTarget = typeof agentId === 'string' && (agentId.startsWith('chat') || Boolean(res.data?.targetChat));
+        if (isChatTarget) {
+          const rawChatKey = res.data?.targetChat?.id || agentId;
+          const normalizedChatId = rawChatKey.startsWith('chat-')
+            ? rawChatKey
+            : (rawChatKey.startsWith('chat') ? rawChatKey.replace('chat', 'chat-') : `chat-${rawChatKey}`);
+
+          console.log('[handleSwitchAgent:StateSync] Detected chat transfer / chat ID switch target:', {
+            targetChatId: normalizedChatId,
+            assignedAgentId: agent.id,
+            assignedAgentName: agent.name,
+            backendTargetChat: res.data?.targetChat,
+          });
+
+          setTargetChatId(normalizedChatId);
+          setActiveTab('chat');
+        }
+
+        // Scope worktime and chat queue strictly to newly switched agent
+        console.log('[handleSwitchAgent] Refreshing worktime & dialog queues for agentId:', agent.id);
+        await loadWorktimeAndChats(agent.id);
+
+        console.log('[handleSwitchAgent:StateSync] State synchronization complete between backend and frontend:', {
+          currentAgentId: agent.id,
+          currentAgentName: agent.name,
+          currentAgentRefId: currentAgentRef.current?.id,
+          activeShiftId: shift?.id,
+          targetChatId: isChatTarget ? (res.data?.targetChat?.id || agentId) : targetChatId,
+        });
+        console.log('[handleSwitchAgent] <<< Switch agent routine completed successfully for:', agent.name);
+      } else {
+        console.error('[handleSwitchAgent] API returned failure or unexpected payload:', res?.error || res);
       }
-    } catch (err) {
-      console.error('Failed to switch agent:', err);
+    } catch (err: any) {
+      console.error('[handleSwitchAgent] Exception/Network failure during switchAgent:', {
+        agentId,
+        errorMessage: err?.message,
+        errorStack: err?.stack,
+        errorObj: err,
+      });
     }
   };
 
@@ -860,6 +992,7 @@ export default function App() {
             targetChatId={targetChatId}
             onBindLine={handleBindLine}
             onUnbindLine={handleUnbindLine}
+            onSwitchAgent={handleSwitchAgent}
           />
         </div>
       ) : (
