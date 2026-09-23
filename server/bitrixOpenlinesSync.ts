@@ -134,11 +134,21 @@ export class BitrixOpenlinesSyncService {
       const localTakeTime = (existing as any)?.localAssignedAt ? Number((existing as any).localAssignedAt) : 0;
       const hasLocalTakeAfterCust = localTakeTime > 0 && localTakeTime >= lastCustTime;
 
+      const botCfg = botWorker.getConfig();
+      const hasCachedBitrixOp = Boolean(
+        cachedSession?.operatorId &&
+        Number(cachedSession.operatorId) > 0 &&
+        Number(cachedSession.operatorId) !== 19170 &&
+        Number(cachedSession.operatorId) !== botCfg.botId &&
+        (cachedSession.status === 'answered' || cachedSession.status === 'in_progress' || Boolean(cachedSession.dateOperatorAnswer))
+      );
+
       const isCurrentlyUnassignedOrQueue =
-        (hasCustomerAfterClose && !hasLocalTakeAfterCust) ||
+        !hasCachedBitrixOp &&
+        ((hasCustomerAfterClose && !hasLocalTakeAfterCust) ||
         existing?.status === 'new' ||
         !existing?.assignedAgentId ||
-        existing?.assignedAgentId === 'unassigned';
+        existing?.assignedAgentId === 'unassigned');
 
       const localOperatorId = (hasLocalTakeAfterCust && existing?.assignedAgentId) ? parseInt(String(existing.assignedAgentId).replace(/^bx-/, ''), 10) : 0;
       const validLocalOpId = !isNaN(localOperatorId) && localOperatorId > 0 ? localOperatorId : 0;
@@ -326,11 +336,33 @@ export class BitrixOpenlinesSyncService {
       const localAssignedTime = (existingDialog as any)?.localAssignedAt ? Number((existingDialog as any).localAssignedAt) : 0;
       const isTakenLocallyAfterCust = localAssignedTime > 0 && localAssignedTime >= custTimeInRaw;
 
+      // Check if an operator picked the conversation in Bitrix messages (e.g. "[USER=4605 REPLACE]Энхзаяа А.[/USER] picked conversation")
+      const pickMsgInRaw = [...rawMsgsList].reverse().find((m: any) => {
+        const txt = (m.text || '').toLowerCase();
+        return txt.includes('picked conversation') || txt.includes('харилцан яриаг өөртөө авлаа') || txt.includes('взял диалог');
+      });
+      const pickTimeInRaw = pickMsgInRaw ? new Date(pickMsgInRaw.date).getTime() : 0;
+      const isPickedInBitrixAfterCust = pickTimeInRaw > 0 && pickTimeInRaw >= custTimeInRaw;
+
+      // Check if operator answered or session is marked answered/in_progress in Bitrix
+      const opAnswerTime = s.dateOperatorAnswer ? new Date(s.dateOperatorAnswer).getTime() : 0;
+      const isAnsweredByOpInBitrix = opAnswerTime > 0 && opAnswerTime >= custTimeInRaw;
+
+      const isPickedOrAnsweredInBitrix = hasActiveOperator && (
+        s.status === 'answered' ||
+        s.status === 'in_progress' ||
+        isPickedInBitrixAfterCust ||
+        isAnsweredByOpInBitrix
+      );
+
       const isQueueChatSession =
-        (hasCustomerAfterLastClose && !isTakenLocallyAfterCust) ||
-        s.status === 'new' ||
-        existingDialog?.status === 'new' ||
-        (!s.operatorId && !isTakenLocallyAfterCust);
+        !isPickedOrAnsweredInBitrix &&
+        !isTakenLocallyAfterCust &&
+        (
+          (hasCustomerAfterLastClose && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust) ||
+          s.status === 'new' ||
+          !s.operatorId
+        );
 
       // prevAgentId can ONLY be preserved if the chat was actively in progress and not returned to queue
       const prevAgentId = (!isQueueChatSession && existingDialog?.status === 'in_progress' && existingDialog?.assignedAgentId && existingDialog.assignedAgentId !== 'unassigned')
@@ -351,7 +383,7 @@ export class BitrixOpenlinesSyncService {
           finalAssignedAgentAvatar = prevAgentAvatar || null;
         } else if (hasActiveOperator) {
           const opUser = worktimeManager.getAgentById(String(s.operatorId));
-          finalAssignedAgentId = opUser?.id || String(s.operatorId);
+          finalAssignedAgentId = opUser?.id || `bx-${s.operatorId}`;
           finalAssignedAgentName = opUser?.name || assignedOperatorUser?.name || `Оператор #${s.operatorId}`;
           finalAssignedAgentAvatar = opUser?.avatar || (assignedOperatorUser?.avatar && assignedOperatorUser.avatar !== '/bitrix/js/im/images/blank.gif' ? assignedOperatorUser.avatar : null);
         }
@@ -510,7 +542,7 @@ export class BitrixOpenlinesSyncService {
       const isChatClosedInMessages = closeTimeInRaw > 0 && closeTimeInRaw >= custTimeInRaw;
 
       let status: ChatDialog['status'] = 'new';
-      if (isQueueChatSession || (hasCustomerAfterLastClose && !isTakenLocallyAfterCust)) {
+      if (isQueueChatSession || (hasCustomerAfterLastClose && !isTakenLocallyAfterCust && !isPickedInBitrixAfterCust)) {
         status = 'new';
         finalAssignedAgentId = null;
         finalAssignedAgentName = null;
@@ -679,7 +711,9 @@ export class BitrixOpenlinesSyncService {
       for (const [chatId, s] of latestSessionsByChat.entries()) {
         const prevCached = this.latestSessionsCache.get(chatId);
         const existingDialog = chatManager.getDialogById(`chat-${chatId}`) || chatManager.getDialogById(`chat${chatId}`);
-        const isQueueChat = s.status === 'new' || existingDialog?.status === 'new' || !existingDialog?.assignedAgentId || existingDialog?.assignedAgentId === 'unassigned';
+        const hasBitrixOp = s.operatorId && Number(s.operatorId) > 0 && Number(s.operatorId) !== 19170 && Number(s.operatorId) !== botCfg.botId;
+        const isBitrixAnsweredOrPicked = hasBitrixOp && (s.status === 'answered' || s.status === 'in_progress' || Boolean(s.dateOperatorAnswer));
+        const isQueueChat = !isBitrixAnsweredOrPicked && (s.status === 'new' || !s.operatorId);
         const hasRecentLocal = !isQueueChat && Boolean(
           (prevCached?.localAssignedAt && (Date.now() - prevCached.localAssignedAt < 86400000)) ||
           ((existingDialog as any)?.localAssignedAt && (Date.now() - (existingDialog as any).localAssignedAt < 86400000))
@@ -718,14 +752,16 @@ export class BitrixOpenlinesSyncService {
         const hasNoCachedMessages = !existing || existing.messages.length === 0;
         const isActiveChat = this.activeChatId !== null && Number(this.activeChatId) === Number(s.chatId);
 
-        if (countChanged || statusChanged || hasNoCachedMessages || isActiveChat) {
+        const hasBitrixOp = s.operatorId && Number(s.operatorId) > 0 && Number(s.operatorId) !== 19170 && Number(s.operatorId) !== botCfg.botId;
+        const isBitrixAnsweredOrPicked = hasBitrixOp && (s.status === 'answered' || s.status === 'in_progress' || Boolean(s.dateOperatorAnswer));
+        const isBitrixOpAnsweredQueue = isBitrixAnsweredOrPicked && existing && (existing.status === 'new' || !existing.assignedAgentId || existing.assignedAgentId === 'unassigned');
+
+        if (countChanged || statusChanged || hasNoCachedMessages || isActiveChat || isBitrixOpAnsweredQueue) {
           sessionsToFetch.push(s);
         } else {
-          // Чатад шинэ мессеж байхгүй - зөвхөн одоо идэвхтэй оператортой ярианы хувьд л операторын өөрчлөлтийг шинэчилнэ.
-          // Дараалалд байгаа (new) эсвэл хаагдсан (closed) чатын статусыг хэзээ ч дур мэдэн in_progress болгож өөрчилж болохгүй!
-          if (existing && existing.status !== 'new' && existing.status !== 'closed' && existing.assignedAgentId && existing.assignedAgentId !== 'unassigned') {
-            const hasBitrixOp = s.operatorId && Number(s.operatorId) > 0 && Number(s.operatorId) !== 19170 && Number(s.operatorId) !== botCfg.botId;
-            if (hasBitrixOp) {
+          // Чатад шинэ мессеж байхгүй - Bitrix дээр оператор авсан эсвэл өөрчлөгдсөн эсэхийг шалгана
+          if (existing && existing.status !== 'closed') {
+            if (isBitrixAnsweredOrPicked) {
               const cached = this.latestSessionsCache.get(Number(s.chatId));
               const isRecentLocalAssignment = cached?.localAssignedAt && (Date.now() - cached.localAssignedAt < 86400000);
               const isRecentExistingAssignment = (existing as any)?.localAssignedAt && (Date.now() - (existing as any).localAssignedAt < 86400000);
@@ -734,9 +770,16 @@ export class BitrixOpenlinesSyncService {
                 const existingOpNum = existing.assignedAgentId ? String(existing.assignedAgentId).replace(/^bx-/, '') : null;
                 if (opStr !== existingOpNum && opStr !== existing.assignedAgentId) {
                   const resolvedAgent = worktimeManager.getAgentById(opStr);
-                  existing.assignedAgentId = resolvedAgent?.id || opStr;
-                  existing.assignedAgentName = resolvedAgent?.name || existing.assignedAgentName;
+                  existing.assignedAgentId = resolvedAgent?.id || `bx-${opStr}`;
+                  existing.assignedAgentName = resolvedAgent?.name || existing.assignedAgentName || `Оператор #${opStr}`;
+                  existing.assignedAgentAvatar = resolvedAgent?.avatar || null;
                   existing.status = 'in_progress';
+                  chatManager.updateDialog(existing.id, {
+                    assignedAgentId: existing.assignedAgentId,
+                    assignedAgentName: existing.assignedAgentName,
+                    assignedAgentAvatar: existing.assignedAgentAvatar,
+                    status: existing.status,
+                  });
                 }
               }
             }

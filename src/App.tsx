@@ -535,12 +535,22 @@ export default function App() {
       return;
     }
 
+    if (
+      currentAgent &&
+      currentAgent.accessRole === 'agent' &&
+      currentAgent.id !== agentId &&
+      `bx-${currentAgent.bitrixUserId}` !== agentId
+    ) {
+      console.warn('[handleSwitchAgent] Operators are not allowed to switch identity to other operators.');
+      return;
+    }
+
     try {
-      console.log('[handleSwitchAgent] Sending POST /api/worktime/switch-agent with payload:', { agentId });
+      console.log('[handleSwitchAgent] Sending POST /api/worktime/switch-agent with payload:', { agentId, requesterAgentId: currentAgent?.id });
       const rawRes = await fetch('/api/worktime/switch-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agentId }),
+        body: JSON.stringify({ agentId, requesterAgentId: currentAgent?.id }),
       });
 
       console.log('[handleSwitchAgent] HTTP Response status:', rawRes.status, rawRes.statusText);

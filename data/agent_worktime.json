@@ -698,7 +698,7 @@
         "БСБ Мебель - Facebook - Messenger",
         "БСБ Мебель - Facebook - Comments"
       ],
-      "activeSessions": 33,
+      "activeSessions": 42,
       "accessRole": "agent",
       "canAccessAllChannels": false
     },
@@ -1341,7 +1341,7 @@
       "clockOutTime": null,
       "isClockedIn": true,
       "isOnBreak": false,
-      "totalBreakSeconds": 0,
+      "totalBreakSeconds": 3,
       "workedSeconds": 74,
       "chatsResolved": 1,
       "bitrixWorkdayStatus": "OPENED",

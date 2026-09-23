@@ -96,254 +96,7 @@ export interface ChatDialog {
 const DATA_DIR = path.resolve(process.cwd(), 'data');
 const CHATS_FILE = path.join(DATA_DIR, 'chat_dialogs.json');
 
-const INITIAL_DIALOGS: ChatDialog[] = [
-  {
-    id: 'chat-101',
-    dialogId: 'chat-fb-101',
-    customer: {
-      name: 'Бат-Эрдэнэ Төмөр',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      phone: '9911-2345',
-      email: 'bat-erdene@gmail.com',
-      city: 'Улаанбаатар',
-      address: 'Хан-Уул дүүрэг, 15-р хороо, Ривер Гарден',
-      crmLeadId: 'LEAD-8842',
-      totalOrders: 3,
-      lastOrderDate: '2026-08-10',
-      tags: ['Байнгын харилцагч', 'Тавилга', 'VIP'],
-    },
-    channelId: 39,
-    channelName: 'БСБ Мебель - Facebook - Comments',
-    channelType: 'facebook',
-    status: 'new',
-    priority: 'urgent',
-    assignedAgentId: null,
-    assignedAgentName: null,
-    assignedAgentAvatar: null,
-    lastMessageText: 'Надад оператор хэрэгтэй байна, хүнтэй холбогдоод өгөөч',
-    lastMessageTime: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-    lastMessageSender: 'customer',
-    unreadCount: 2,
-    isStarred: true,
-    createdAt: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-    messages: [
-      {
-        id: 'msg-101-1',
-        sender: 'customer',
-        senderName: 'Бат-Эрдэнэ Төмөр',
-        text: 'Сайн байна уу, манай захиалсан буйдан хэзээ хүргэгдэж ирэх вэ? Захиалгын дугаар #BSB-88329',
-        timestamp: new Date(Date.now() - 25 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-101-2',
-        sender: 'bot',
-        senderName: 'BSB AI Туслах',
-        text: 'Сайн байна уу! Улаанбаатар хот дотор хүргэлт 24-48 цагийн дотор гэрийн хаягаар хүргэгдэж мэргэжлийн баг угсарч өгдөг. Нарийвчилсан мэдээлэл авахыг хүсвэл оператор дуудах боломжтой.',
-        timestamp: new Date(Date.now() - 24 * 60 * 1000).toISOString(),
-        keyboard: [{ text: 'Оператор дуудах', action: '/operator' }],
-      },
-      {
-        id: 'msg-101-3',
-        sender: 'customer',
-        senderName: 'Бат-Эрдэнэ Төмөр',
-        text: 'Надад оператор хэрэгтэй байна, хүнтэй холбогдоод өгөөч',
-        timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-101-4',
-        sender: 'system',
-        text: 'Систем: Бот чатнаас гарч, хэрэглэгчийг операторын дараалалд шилжүүллээ.',
-        timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'chat-102',
-    dialogId: 'chat-web-102',
-    customer: {
-      name: 'Оюунчимэг Даш',
-      avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150',
-      phone: '8801-9988',
-      email: 'oyunaa.d@yahoo.com',
-      city: 'Улаанбаатар',
-      address: 'Баянгол дүүрэг, 3-р хороолол',
-      crmLeadId: 'LEAD-9014',
-      totalOrders: 1,
-      lastOrderDate: '2026-09-02',
-      tags: ['StorePay', 'Цахилгаан бараа'],
-    },
-    channelId: 40,
-    channelName: 'БСБ Онлайн Их Дэлгүүр (Web Live Chat)',
-    channelType: 'webchat',
-    status: 'in_progress',
-    priority: 'normal',
-    assignedAgentId: 'agent-1',
-    assignedAgentName: 'Болдбаатар (Ахлах оператор)',
-    assignedAgentAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
-    lastMessageText: 'Танд зориулж 0% хүүтэй 6 хувааж төлөх линкийг илгээлээ.',
-    lastMessageTime: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-    lastMessageSender: 'agent',
-    unreadCount: 0,
-    isStarred: false,
-    createdAt: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-    messages: [
-      {
-        id: 'msg-102-1',
-        sender: 'customer',
-        senderName: 'Оюунчимэг Даш',
-        text: 'Сайн байна уу? Угаалгын машиныг StorePay болон PocketZero-оор хүүгүй хувааж төлөхөд урьдчилгаа төлөх шаардлагатай юу?',
-        timestamp: new Date(Date.now() - 40 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-102-2',
-        sender: 'bot',
-        senderName: 'BSB AI Туслах',
-        text: 'Сайн байна уу! StorePay болон PocketZero үйлчилгээгээр урьдчилгаагүй, 0% хүүтэйгээр 4-өөс 6 хуваан төлөх боломжтой байдаг.',
-        timestamp: new Date(Date.now() - 39 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-102-3',
-        sender: 'agent',
-        senderName: 'Болдбаатар',
-        text: 'Сайн байна уу Оюунчимэг эгчээ! Танд зориулж 0% хүүтэй 6 хувааж төлөх линкийг илгээлээ. Та апп-аараа уншуулаад шууд захиалгаа баталгаажуулах боломжтой.',
-        timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'chat-103',
-    dialogId: 'chat-ig-103',
-    customer: {
-      name: 'Мөнхжин Сүхбат',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150',
-      phone: '9555-1234',
-      email: 'munkhjin@gmail.com',
-      city: 'Улаанбаатар',
-      address: 'Сүхбаатар дүүрэг, 1-р хороо',
-      tags: ['Instagram Lead', 'Sony TV'],
-    },
-    channelId: 41,
-    channelName: 'Instagram Direct (@bsb_mongolia)',
-    channelType: 'instagram',
-    status: 'bot',
-    priority: 'normal',
-    assignedAgentId: null,
-    assignedAgentName: null,
-    assignedAgentAvatar: null,
-    lastMessageText: 'БСБ-гийн бүх салбар их дэлгүүрүүд Даваа-Ням гаригт 10:00 - 20:00 цаг хүртэл ажиллаж байна.',
-    lastMessageTime: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-    lastMessageSender: 'bot',
-    unreadCount: 0,
-    isStarred: false,
-    createdAt: new Date(Date.now() - 20 * 60 * 1000).toISOString(),
-    messages: [
-      {
-        id: 'msg-103-1',
-        sender: 'customer',
-        senderName: 'Мөнхжин Сүхбат',
-        text: 'Өнөөдөр салбар дэлгүүрүүд чинь хэд хүртэл онгорхой байгаа вэ?',
-        timestamp: new Date(Date.now() - 19 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-103-2',
-        sender: 'bot',
-        senderName: 'BSB AI Туслах',
-        text: 'БСБ-гийн бүх салбар их дэлгүүрүүд Даваа-Ням гаригт 10:00 - 20:00 цаг хүртэл ажиллаж байна.',
-        timestamp: new Date(Date.now() - 18 * 60 * 1000).toISOString(),
-        keyboard: [{ text: 'Оператор дуудах', action: '/operator' }],
-      },
-    ],
-  },
-  {
-    id: 'chat-104',
-    dialogId: 'chat-tg-104',
-    customer: {
-      name: 'Анужин Энхтайван',
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
-      phone: '9900-7711',
-      email: 'anujin.e@company.mn',
-      city: 'Улаанбаатар',
-      address: 'Сүхбаатар дүүрэг, Олимпийн гудамж',
-      crmLeadId: 'DEAL-4412',
-      totalOrders: 5,
-      tags: ['Байгууллагын худалдан авалт', 'НӨАТ', 'B2B'],
-    },
-    channelId: 42,
-    channelName: 'Telegram Support (@bsb_corporate_bot)',
-    channelType: 'telegram',
-    status: 'new',
-    priority: 'high',
-    assignedAgentId: null,
-    assignedAgentName: null,
-    assignedAgentAvatar: null,
-    lastMessageText: 'Манай компани дээр НӨАТ-ын нэхэмжлэх яаралтай гаргаад өгөх боломж байна уу?',
-    lastMessageTime: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-    lastMessageSender: 'customer',
-    unreadCount: 1,
-    isStarred: true,
-    createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-    messages: [
-      {
-        id: 'msg-104-1',
-        sender: 'customer',
-        senderName: 'Анужин Энхтайван',
-        text: 'Манай компани дээр 10 ширхэг DELL зөөврийн компьютерын НӨАТ-ын нэхэмжлэх яаралтай гаргаад өгөх боломж байна уу? Рег: 5839201',
-        timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-  {
-    id: 'chat-105',
-    dialogId: 'chat-wa-105',
-    customer: {
-      name: 'Ганзориг Цэнд',
-      avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150',
-      phone: '9988-4422',
-      email: 'ganzorig@gmail.com',
-      city: 'Дархан-Уул',
-      tags: ['Орон нутаг', 'Баталгаа'],
-    },
-    channelId: 43,
-    channelName: 'WhatsApp Business (+976 7722-0222)',
-    channelType: 'whatsapp',
-    status: 'closed',
-    priority: 'normal',
-    assignedAgentId: 'agent-2',
-    assignedAgentName: 'Ану (Борлуулалтын зөвлөх)',
-    assignedAgentAvatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150',
-    lastMessageText: 'Баярлалаа, Дархан хотын сервис төвөөс очиж авлаа!',
-    lastMessageTime: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-    lastMessageSender: 'customer',
-    unreadCount: 0,
-    isStarred: false,
-    resolutionSummary: 'Дархан хот дахь сервис төвийн хаяг утас зааж өгч асуудлыг шийдвэрлэсэн.',
-    closedAt: new Date(Date.now() - 90 * 60 * 1000).toISOString(),
-    createdAt: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-    messages: [
-      {
-        id: 'msg-105-1',
-        sender: 'customer',
-        senderName: 'Ганзориг Цэнд',
-        text: 'Дархан хотод танай албан ёсны сервис төв хаана байдаг вэ?',
-        timestamp: new Date(Date.now() - 180 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-105-2',
-        sender: 'agent',
-        senderName: 'Ану',
-        text: 'Сайн байна уу Ганзориг ахаа. Дархан хот, 14-р баг, БСБ Их Дэлгүүрийн 1 давхарт манай албан ёсны сервис төв өдөр бүр 10:00-19:00 цагт ажиллаж байна. Лавлах: 7037-0222',
-        timestamp: new Date(Date.now() - 140 * 60 * 1000).toISOString(),
-      },
-      {
-        id: 'msg-105-3',
-        sender: 'customer',
-        senderName: 'Ганзориг Цэнд',
-        text: 'Баярлалаа, Дархан хотын сервис төвөөс очиж авлаа!',
-        timestamp: new Date(Date.now() - 120 * 60 * 1000).toISOString(),
-      },
-    ],
-  },
-];
+const INITIAL_DIALOGS: ChatDialog[] = [];
 
 export class ChatManagerService extends EventEmitter {
   private dialogs: ChatDialog[] = [];
@@ -383,10 +136,8 @@ export class ChatManagerService extends EventEmitter {
         'bx-15': 'Цогтгэрэл Ч',
         '123': 'Чойжамц Нацагдорж',
         'bx-123': 'Чойжамц Нацагдорж',
-        'agent-1': 'Болдбаатар Ц.',
-        'agent-2': 'Анударь Э.',
-        'agent-3': 'Тэмүүлэн М.',
-        'agent-4': 'Сарнай Б.',
+        '17': 'Хосмөнх Түвшинбаяр',
+        'bx-17': 'Хосмөнх Түвшинбаяр',
       };
 
       const sampleResolutions = [
@@ -428,36 +179,28 @@ export class ChatManagerService extends EventEmitter {
         }
       }
 
-      // Ensure agent-1 (Болдбаатар Ц.) has some closed chats
-      const agent1Closed = this.dialogs.filter(
-        (d) => d.status === 'closed' && (d.closedByAgentId === 'agent-1' || d.assignedAgentId === 'agent-1')
-      );
-      if (agent1Closed.length === 0) {
-        const closedToAssign = this.dialogs.filter((d) => d.status === 'closed').slice(0, 5);
-        closedToAssign.forEach((d, idx) => {
-          d.closedByAgentId = 'agent-1';
-          d.closedByAgentName = 'Болдбаатар Ц.';
-          d.assignedAgentId = 'agent-1';
-          d.assignedAgentName = 'Болдбаатар Ц.';
-          d.resolutionSummary = sampleResolutions[idx % sampleResolutions.length];
-          hasChanges = true;
-        });
+      // Filter out any demo / mock chats
+      const DEMO_CHAT_IDS = new Set(['chat-0273', 'chat-101', 'chat-102', 'chat-103', 'chat-104', 'chat-105', 'chat-106']);
+      const filtered = this.dialogs.filter((d) => !DEMO_CHAT_IDS.has(d.id) && !d.id.startsWith('mock-'));
+      if (filtered.length !== this.dialogs.length) {
+        this.dialogs = filtered;
+        hasChanges = true;
       }
 
-      // Ensure agent-2 (Анударь Э.) has some closed chats
-      const agent2Closed = this.dialogs.filter(
-        (d) => d.status === 'closed' && (d.closedByAgentId === 'agent-2' || d.assignedAgentId === 'agent-2')
-      );
-      if (agent2Closed.length <= 1) {
-        const closedToAssign = this.dialogs.filter((d) => d.status === 'closed' && d.closedByAgentId !== 'agent-1').slice(0, 4);
-        closedToAssign.forEach((d, idx) => {
-          d.closedByAgentId = 'agent-2';
-          d.closedByAgentName = 'Анударь Э.';
-          d.assignedAgentId = 'agent-2';
-          d.assignedAgentName = 'Анударь Э.';
-          d.resolutionSummary = sampleResolutions[(idx + 2) % sampleResolutions.length];
+      // Clean up any remaining references to demo agent Болдбаатар Ц. or agent-1
+      for (const d of this.dialogs) {
+        if (d.assignedAgentId === 'agent-1' || d.assignedAgentName?.includes('Болдбаатар')) {
+          d.assignedAgentId = null;
+          d.assignedAgentName = null;
+          d.assignedAgentAvatar = null;
           hasChanges = true;
-        });
+        }
+        if (d.closedByAgentId === 'agent-1' || d.closedByAgentName?.includes('Болдбаатар')) {
+          d.closedByAgentId = null;
+          d.closedByAgentName = null;
+          d.closedByAgentAvatar = null;
+          hasChanges = true;
+        }
       }
 
       if (hasChanges) {

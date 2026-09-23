@@ -2281,11 +2281,25 @@ async function startServer() {
    */
   app.post('/api/worktime/switch-agent', async (req, res) => {
     try {
-      let { agentId, bitrixUserId, chatId } = req.body;
-      console.log('[API /api/worktime/switch-agent] Request payload:', { agentId, bitrixUserId, chatId });
+      let { agentId, bitrixUserId, chatId, requesterAgentId } = req.body;
+      console.log('[API /api/worktime/switch-agent] Request payload:', { agentId, bitrixUserId, chatId, requesterAgentId });
 
       if (!agentId && !bitrixUserId && !chatId) {
         return res.status(400).json({ success: false, error: { message: 'agentId or bitrixUserId required' } });
+      }
+
+      // If requester is a standard operator (not admin or supervisor), prevent unauthorized switching to other operators
+      if (requesterAgentId) {
+        const reqAgent = worktimeManager.getAgentById(requesterAgentId);
+        if (reqAgent && reqAgent.accessRole === 'agent') {
+          const targetId = agentId || (bitrixUserId ? `bx-${bitrixUserId}` : null);
+          if (targetId && targetId !== reqAgent.id && targetId !== `bx-${reqAgent.bitrixUserId}`) {
+            return res.status(403).json({
+              success: false,
+              error: { message: 'Эрх хүрэхгүй: Оператор бусад операторын нэр дээр шилжих эрхгүй.' },
+            });
+          }
+        }
       }
 
       // Check if agentId is in fact a chat ID (e.g. 'chat-8049', 'chat8049', or matches an existing dialog)
@@ -2744,7 +2758,7 @@ async function startServer() {
         addLog('📦 Алхам 2/3: Deploy багцыг архивлан (tar.gz) бэлтгэж байна...');
         const archivePath = `/tmp/vibecode_deploy_${Date.now()}.tar.gz`;
         await new Promise<void>((resolve, reject) => {
-          exec(`tar -czf ${archivePath} dist package.json`, { cwd: process.cwd() }, (err) => {
+          exec(`tar -czf ${archivePath} dist package.json data`, { cwd: process.cwd() }, (err) => {
             if (err) reject(err);
             else resolve();
           });
@@ -2760,7 +2774,7 @@ async function startServer() {
           try {
             const listResp = await vibeRequest('GET', '/v1/infra/servers');
             const servers = Array.isArray(listResp.data) ? listResp.data : [];
-            const activeServer = servers.find((s: any) => s.kind === 'GALAXY_APP' || s.id === '48204c21-ddf0-4bfa-baa6-188da8e439c3') || servers[0];
+            const activeServer = servers.find((s: any) => s.kind === 'GALAXY_APP' || s.id === '6757724a-0351-40b7-9269-89838be9e9cd') || servers[0];
             if (activeServer) {
               serverId = activeServer.id;
               deployState.targetServer = {
@@ -2778,7 +2792,7 @@ async function startServer() {
         }
 
         if (!serverId) {
-          serverId = '48204c21-ddf0-4bfa-baa6-188da8e439c3';
+          serverId = '6757724a-0351-40b7-9269-89838be9e9cd';
         }
 
         addLog(`🌐 Алхам 3/3: VibeCode Үүлэн Сервер (${serverId}) рүү илгээж контейнерийг дахин асааж байна...`);

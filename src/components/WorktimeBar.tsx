@@ -236,37 +236,65 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
               </div>
             </div>
 
-            {/* Agent Switcher Button */}
+            {/* Agent Profile & Switcher */}
             <div className="relative">
-              <button
-                id="switch-agent-btn"
-                onClick={() => setShowAgentDropdown(!showAgentDropdown)}
-                className="flex items-center gap-1.5 p-1 pr-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition"
-                title="Агент солих / Профайл"
-              >
-                <div className="relative shrink-0">
-                  <img
-                    src={currentAgent.avatar}
-                    alt={currentAgent.name}
-                    className="w-6 h-6 rounded-full object-cover border border-slate-600"
-                  />
-                  <span
-                    className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-slate-900 ${
-                      statusConfig[currentAgent.status]?.color || 'bg-slate-500'
-                    }`}
-                  />
-                </div>
-                <div className="text-left min-w-0">
-                  <div className="font-semibold text-white leading-tight flex items-center gap-1">
-                    <span className="truncate max-w-[70px] sm:max-w-[130px]">{currentAgent.name}</span>
-                    <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">#{currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')}</span>
-                    <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+              {currentAgent.accessRole === 'agent' ? (
+                /* Regular operator: Just display their profile, no dropdown to impersonate others */
+                <div
+                  className="flex items-center gap-1.5 p-1 pr-2 rounded-lg bg-slate-800/80 border border-slate-700/80 select-none"
+                  title={`${currentAgent.name} (Оператор #${currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')})`}
+                >
+                  <div className="relative shrink-0">
+                    <img
+                      src={currentAgent.avatar}
+                      alt={currentAgent.name}
+                      className="w-6 h-6 rounded-full object-cover border border-slate-600"
+                    />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-slate-900 ${
+                        statusConfig[currentAgent.status]?.color || 'bg-slate-500'
+                      }`}
+                    />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <div className="font-semibold text-white leading-tight flex items-center gap-1">
+                      <span className="truncate max-w-[70px] sm:max-w-[130px]">{currentAgent.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">#{currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')}</span>
+                    </div>
                   </div>
                 </div>
-              </button>
+              ) : (
+                /* Admin or Supervisor: Can switch */
+                <button
+                  id="switch-agent-btn"
+                  onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+                  className="flex items-center gap-1.5 p-1 pr-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition"
+                  title="Агент солих / Профайл"
+                >
+                  <div className="relative shrink-0">
+                    <img
+                      src={currentAgent.avatar}
+                      alt={currentAgent.name}
+                      className="w-6 h-6 rounded-full object-cover border border-slate-600"
+                    />
+                    <span
+                      className={`absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full ring-2 ring-slate-900 ${
+                        statusConfig[currentAgent.status]?.color || 'bg-slate-500'
+                      }`}
+                    />
+                  </div>
+                  <div className="text-left min-w-0">
+                    <div className="font-semibold text-white leading-tight flex items-center gap-1">
+                      <span className="truncate max-w-[70px] sm:max-w-[130px]">{currentAgent.name}</span>
+                      <span className="text-[10px] text-slate-400 font-mono hidden sm:inline">#{currentAgent.bitrixUserId || currentAgent.id.replace('bx-', '')}</span>
+                      <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                    </div>
+                  </div>
+                </button>
+              )}
 
-              {/* Agent Switch Dropdown */}
-              {showAgentDropdown && (
+              {/* Agent Switch Dropdown (Only for Admin / Supervisor) */}
+              {showAgentDropdown && currentAgent.accessRole !== 'agent' && (
                 <div className="absolute left-0 mt-1.5 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 p-1.5 space-y-1">
                   <div className="px-2.5 py-1 text-[11px] font-medium text-slate-400 border-b border-slate-800 flex items-center justify-between">
                     <span>Оператор солих</span>
@@ -536,50 +564,79 @@ export const WorktimeBar: React.FC<WorktimeBarProps> = ({
             {/* Top / Left Section: Agent info, status */}
             <div className="flex items-center justify-between md:justify-start gap-2 sm:gap-3">
               <div className="relative">
-                <button
-                  id="switch-agent-btn"
-                  onClick={() => setShowAgentDropdown(!showAgentDropdown)}
-                  className="flex items-center gap-2 p-1 pr-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition"
-                  title="Агент солих"
-                >
-                  <div className="relative shrink-0">
-                    <img
-                      src={currentAgent.avatar}
-                      alt={currentAgent.name}
-                      className="w-7 h-7 rounded-full object-cover border border-slate-600"
-                    />
-                    <span
-                      className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
-                        statusConfig[currentAgent.status]?.color || 'bg-slate-500'
-                      }`}
-                    />
-                  </div>
-                  <div className="text-left min-w-0">
-                    <div className="font-semibold text-white leading-tight flex items-center gap-1.5">
-                      <span className="truncate max-w-[100px] sm:max-w-none">{currentAgent.name}</span>
+                {currentAgent.accessRole === 'agent' ? (
+                  <div
+                    className="flex items-center gap-2 p-1 pr-2 rounded-lg bg-slate-800/80 border border-slate-700/80 select-none"
+                    title={`${currentAgent.name} (Оператор)`}
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={currentAgent.avatar}
+                        alt={currentAgent.name}
+                        className="w-7 h-7 rounded-full object-cover border border-slate-600"
+                      />
                       <span
-                        className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md ${
-                          currentAgent.accessRole === 'admin'
-                            ? 'bg-purple-900/80 text-purple-300 border border-purple-700/60'
-                            : currentAgent.accessRole === 'supervisor'
-                            ? 'bg-blue-900/80 text-blue-300 border border-blue-700/60'
-                            : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
+                          statusConfig[currentAgent.status]?.color || 'bg-slate-500'
                         }`}
-                      >
-                        {currentAgent.accessRole === 'admin'
-                          ? 'Админ'
-                          : currentAgent.accessRole === 'supervisor'
-                          ? 'Ахлах'
-                          : 'Оператор'}
-                      </span>
-                      <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                      />
                     </div>
-                    <div className="text-[10px] text-slate-400 leading-tight truncate">{currentAgent.role}</div>
+                    <div className="text-left min-w-0">
+                      <div className="font-semibold text-white leading-tight flex items-center gap-1.5">
+                        <span className="truncate max-w-[100px] sm:max-w-none">{currentAgent.name}</span>
+                        <span className="text-[9px] font-semibold px-1.5 py-0.2 rounded-md bg-emerald-950 text-emerald-300 border border-emerald-800/60">
+                          Оператор
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate">{currentAgent.role}</div>
+                    </div>
                   </div>
-                </button>
+                ) : (
+                  <button
+                    id="switch-agent-btn"
+                    onClick={() => setShowAgentDropdown(!showAgentDropdown)}
+                    className="flex items-center gap-2 p-1 pr-2 rounded-lg bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 transition"
+                    title="Агент солих"
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={currentAgent.avatar}
+                        alt={currentAgent.name}
+                        className="w-7 h-7 rounded-full object-cover border border-slate-600"
+                      />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full ring-2 ring-slate-900 ${
+                          statusConfig[currentAgent.status]?.color || 'bg-slate-500'
+                        }`}
+                      />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <div className="font-semibold text-white leading-tight flex items-center gap-1.5">
+                        <span className="truncate max-w-[100px] sm:max-w-none">{currentAgent.name}</span>
+                        <span
+                          className={`text-[9px] font-semibold px-1.5 py-0.2 rounded-md ${
+                            currentAgent.accessRole === 'admin'
+                              ? 'bg-purple-900/80 text-purple-300 border border-purple-700/60'
+                              : currentAgent.accessRole === 'supervisor'
+                              ? 'bg-blue-900/80 text-blue-300 border border-blue-700/60'
+                              : 'bg-emerald-950 text-emerald-300 border border-emerald-800/60'
+                          }`}
+                        >
+                          {currentAgent.accessRole === 'admin'
+                            ? 'Админ'
+                            : currentAgent.accessRole === 'supervisor'
+                            ? 'Ахлах'
+                            : 'Оператор'}
+                        </span>
+                        <ChevronDown className="w-3 h-3 text-slate-400 shrink-0" />
+                      </div>
+                      <div className="text-[10px] text-slate-400 leading-tight truncate">{currentAgent.role}</div>
+                    </div>
+                  </button>
+                )}
 
                 {/* Agent Switch Dropdown */}
-                {showAgentDropdown && (
+                {showAgentDropdown && currentAgent.accessRole !== 'agent' && (
                   <div className="absolute left-0 mt-1.5 w-64 bg-slate-900 border border-slate-700 rounded-xl shadow-xl z-50 p-1.5 space-y-1">
                     <div className="px-2.5 py-1 text-[11px] font-medium text-slate-400 border-b border-slate-800 flex items-center justify-between">
                       <span>Оператор сонгох</span>

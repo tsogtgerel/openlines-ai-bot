@@ -262,7 +262,7 @@ export const WorktimeModal: React.FC<WorktimeModalProps> = ({
                         <span className="text-slate-500">
                           {agent.isClockedIn ? '🟢 Ажилдаа гарсан' : '⚪ Ажил тарсан'}
                         </span>
-                        {!isCurrent && (
+                        {!isCurrent && (currentAgent?.accessRole === 'admin' || currentAgent?.accessRole === 'supervisor') && (
                           <button
                             onClick={async () => {
                               await onSwitchAgent(agent.id);
